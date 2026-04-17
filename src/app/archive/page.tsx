@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
@@ -14,11 +14,13 @@ import {
   Filter, 
   Search,
   MoreVertical,
-  Calendar
+  Calendar,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const mockArchives = [
   { id: '1', name: 'أحمد محمود علي', regId: '20210045', subject: 'رياضيات 1', year: '2024', term: 'الفصل الأول', date: '2024-05-20' },
@@ -31,6 +33,18 @@ const mockArchives = [
 
 export default function ArchivePage() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [showFilters, setShowFilters] = useState(false);
+  const [academicYears, setAcademicYears] = useState<string[]>([]);
+
+  useEffect(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = 0; i < 5; i++) {
+      const year = currentYear - i;
+      years.push(`${year - 1} / ${year}`);
+    }
+    setAcademicYears(years);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,7 +80,7 @@ export default function ArchivePage() {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-3xl shadow-lg border-none mb-10 flex flex-wrap items-center gap-4">
+        <div className="bg-white p-4 rounded-3xl shadow-lg border-none mb-6 flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-[300px] relative">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input 
@@ -75,11 +89,55 @@ export default function ArchivePage() {
               className="w-full h-12 pr-12 pl-4 rounded-xl border border-border bg-muted/20 outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
-          <Button variant="outline" className="h-12 rounded-xl gap-2 font-bold px-6 border-2">
-            <Filter className="w-4 h-4" />
+          <Button 
+            variant={showFilters ? "default" : "outline"} 
+            onClick={() => setShowFilters(!showFilters)}
+            className="h-12 rounded-xl gap-2 font-bold px-6 border-2"
+          >
+            {showFilters ? <X className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
             تصفية النتائج
           </Button>
         </div>
+
+        {showFilters && (
+          <Card className="p-6 border-none shadow-xl rounded-3xl bg-white mb-10 animate-slide-up">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground">السنة الدراسية</label>
+                <select className="w-full h-11 px-3 rounded-xl border border-border bg-muted/10 outline-none text-sm font-bold text-primary">
+                  <option value="all">الكل</option>
+                  {academicYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground">الفصل الدراسي</label>
+                <select className="w-full h-11 px-3 rounded-xl border border-border bg-muted/10 outline-none text-sm font-bold text-primary">
+                  <option value="all">الكل</option>
+                  <option value="الفصل الأول">الفصل الأول</option>
+                  <option value="الفصل الثاني">الفصل الثاني</option>
+                  <option value="الفصل التكميلي">الفصل التكميلي</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground">التخصص</label>
+                <select className="w-full h-11 px-3 rounded-xl border border-border bg-muted/10 outline-none text-sm font-bold text-primary">
+                  <option value="all">الكل</option>
+                  <option>تقنية المعلومات</option>
+                  <option>هندسة البرمجيات</option>
+                  <option>علوم الحاسوب</option>
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <Button className="w-full h-11 rounded-xl font-bold gradient-blue shadow-lg">تطبيق الفلاتر</Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {view === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
