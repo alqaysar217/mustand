@@ -9,10 +9,8 @@ import {
   Search as SearchIcon, 
   Filter, 
   History, 
-  User, 
-  Calendar,
   BookOpen,
-  ArrowLeft
+  Calendar
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -20,7 +18,7 @@ import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const searchSuggestions = [
-  'أحمد محمود علي', 'رياضيات 1', '20210045', 'فيزياء عامة', 'خريف 2024'
+  'أحمد محمود علي', 'رياضيات 1', '20210045', 'فيزياء عامة', '2023 / 2024'
 ];
 
 export default function SearchPage() {
@@ -28,6 +26,7 @@ export default function SearchPage() {
   const [academicYears, setAcademicYears] = useState<string[]>([]);
 
   useEffect(() => {
+    // Generates the last 5 years of study automatically based on today’s date
     const currentYear = new Date().getFullYear();
     const years = [];
     for (let i = 0; i < 5; i++) {
@@ -84,7 +83,7 @@ export default function SearchPage() {
               <div className="space-y-2">
                 <label className="text-xs font-bold text-muted-foreground">الفصل الدراسي</label>
                 <div className="flex flex-wrap gap-2">
-                  {['الكل', 'الخريف', 'الربيع', 'الصيف'].map(t => (
+                  {['الكل', 'الفصل الأول', 'الفصل الثاني', 'الفصل التكميلي'].map(t => (
                     <button 
                       key={t} 
                       className={cn(
@@ -133,7 +132,7 @@ export default function SearchPage() {
                           </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1"><BookOpen className="w-4 h-4" /> رياضيات 1</span>
-                            <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> خريف 2024</span>
+                            <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> 2023 / 2024</span>
                           </div>
                         </div>
                         <Button className="rounded-xl gradient-blue h-10 px-6 font-bold shadow-lg">عرض</Button>

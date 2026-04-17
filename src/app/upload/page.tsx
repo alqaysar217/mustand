@@ -29,11 +29,12 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
   const [extractedData, setExtractedData] = useState({ id: '', name: '' });
-  const [formData, setFormData] = useState({ year: '', term: 'الخريف', subject: 'برمجة 1' });
+  const [formData, setFormData] = useState({ year: '', term: 'الفصل الأول', subject: 'برمجة 1' });
   const [academicYears, setAcademicYears] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
+    // Generates the last 5 years of study automatically based on today’s date
     const currentYear = new Date().getFullYear();
     const years = [];
     for (let i = 0; i < 5; i++) {
@@ -146,9 +147,9 @@ export default function UploadPage() {
                     onChange={(e) => setFormData({...formData, term: e.target.value})}
                     className="w-full h-12 px-4 rounded-xl border border-border outline-none focus:ring-2 focus:ring-primary appearance-none bg-muted/20"
                   >
-                    <option value="الخريف">الخريف</option>
-                    <option value="الربيع">الربيع</option>
-                    <option value="الصيف">الصيف</option>
+                    <option value="الفصل الأول">الفصل الأول</option>
+                    <option value="الفصل الثاني">الفصل الثاني</option>
+                    <option value="الفصل التكميلي">الفصل التكميلي</option>
                   </select>
                 </div>
                 <div className="md:col-span-2 space-y-2">

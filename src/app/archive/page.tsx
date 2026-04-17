@@ -14,20 +14,19 @@ import {
   Filter, 
   Search,
   MoreVertical,
-  Calendar,
-  BookOpen
+  Calendar
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Badge } from "@/components/ui/badge";
 
 const mockArchives = [
-  { id: '1', name: 'أحمد محمود علي', regId: '20210045', subject: 'رياضيات 1', year: '2024', term: 'الخريف', date: '2024-05-20' },
-  { id: '2', name: 'سارة خالد يوسف', regId: '20220112', subject: 'فيزياء عامة', year: '2023', term: 'الربيع', date: '2024-05-18' },
-  { id: '3', name: 'وليد جاسم مرزوق', regId: '20210567', subject: 'برمجة 2', year: '2024', term: 'الخريف', date: '2024-05-15' },
-  { id: '4', name: 'مريم سعيد سالم', regId: '20230001', subject: 'اللغة الإنجليزية', year: '2024', term: 'الربيع', date: '2024-05-10' },
-  { id: '5', name: 'فيصل عبدالرحمن', regId: '20210089', subject: 'كيمياء عضوية', year: '2023', term: 'الخريف', date: '2024-05-08' },
-  { id: '6', name: 'نورة عيسى محمد', regId: '20220334', subject: 'مقدمة حاسب', year: '2024', term: 'الربيع', date: '2024-05-05' },
+  { id: '1', name: 'أحمد محمود علي', regId: '20210045', subject: 'رياضيات 1', year: '2024', term: 'الفصل الأول', date: '2024-05-20' },
+  { id: '2', name: 'سارة خالد يوسف', regId: '20220112', subject: 'فيزياء عامة', year: '2023', term: 'الفصل الثاني', date: '2024-05-18' },
+  { id: '3', name: 'وليد جاسم مرزوق', regId: '20210567', subject: 'برمجة 2', year: '2024', term: 'الفصل الأول', date: '2024-05-15' },
+  { id: '4', name: 'مريم سعيد سالم', regId: '20230001', subject: 'اللغة الإنجليزية', year: '2024', term: 'الفصل التكميلي', date: '2024-05-10' },
+  { id: '5', name: 'فيصل عبدالرحمن', regId: '20210089', subject: 'كيمياء عضوية', year: '2023', term: 'الفصل الثاني', date: '2024-05-08' },
+  { id: '6', name: 'نورة عيسى محمد', regId: '20220334', subject: 'مقدمة حاسب', year: '2024', term: 'الفصل الأول', date: '2024-05-05' },
 ];
 
 export default function ArchivePage() {
