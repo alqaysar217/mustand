@@ -18,13 +18,13 @@ import { Button } from "@/components/ui/button";
 const menuItems = [
   { label: 'الرئيسية', icon: LayoutDashboard, href: '/dashboard' },
   { label: 'رفع اختبار', icon: UploadCloud, href: '/upload' },
-  { label: 'الأرشيف', icon: '/archive', href: '/archive' }, // Custom handling for paths
+  { label: 'الأرشيف', icon: Archive, href: '/archive' },
   { label: 'البحث', icon: Search, href: '/search' },
   { label: 'الإعدادات', icon: Settings, href: '/settings' },
 ];
 
-// Fixed Lucide mismatch for 'Archive'
-const ArchiveIcon = Archive;
+// Reference for the logo
+const LogoIcon = Archive;
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -33,7 +33,7 @@ export function Sidebar() {
     <aside className="w-64 h-screen bg-primary text-white hidden md:flex flex-col fixed right-0 top-0 z-40 border-l border-white/10 shadow-2xl">
       <div className="p-8 flex items-center gap-3">
         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-          <ArchiveIcon className="w-6 h-6" />
+          <LogoIcon className="w-6 h-6" />
         </div>
         <span className="text-xl font-bold tracking-tight">أرشيفا سمارت</span>
       </div>
