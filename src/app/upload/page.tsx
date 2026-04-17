@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
@@ -29,9 +29,10 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
   const [extractedData, setExtractedData] = useState({ id: '', name: '' });
-  const [formData, setFormData] = useState({ year: '', term: 'الفصل الأول', subject: 'برمجة 1' });
+  const [formData, setFormData] = useState({ year: '', term: 'الفصل الأول', subject: 'مقدمة في البرمجة' });
   const [academicYears, setAcademicYears] = useState<string[]>([]);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Generates the last 5 years of study automatically based on today’s date
@@ -52,14 +53,25 @@ export default function UploadPage() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
-    if (fileList) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setFiles([...files, event.target.result as string]);
-        }
-      };
-      reader.readAsDataURL(fileList[0]);
+    if (fileList && fileList.length > 0) {
+      const filesArray = Array.from(fileList);
+      const readers = filesArray.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            if (event.target?.result) {
+              resolve(event.target.result as string);
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(readers).then(newFiles => {
+        setFiles(prev => [...prev, ...newFiles]);
+        // Reset input value to allow uploading same file again if needed
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      });
     }
   };
 
@@ -121,6 +133,16 @@ export default function UploadPage() {
         </div>
 
         <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white overflow-hidden min-h-[450px] flex flex-col">
+          {/* Shared hidden file input */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            multiple 
+            accept="image/*"
+            onChange={handleFileUpload} 
+          />
+
           {step === 1 && (
             <div className="space-y-6 animate-slide-up flex-1">
               <h2 className="text-2xl font-bold text-primary mb-6 flex items-center gap-2">
@@ -170,7 +192,10 @@ export default function UploadPage() {
 
           {step === 2 && (
             <div className="flex-1 flex flex-col items-center justify-center animate-slide-up">
-              <label className="w-full max-w-lg h-64 border-4 border-dashed border-primary/20 rounded-3xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group">
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full max-w-lg h-64 border-4 border-dashed border-primary/20 rounded-3xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group"
+              >
                 <div className="p-6 bg-primary/5 rounded-full group-hover:scale-110 transition-transform">
                   <FileUp className="w-12 h-12 text-primary" />
                 </div>
@@ -178,8 +203,7 @@ export default function UploadPage() {
                   <p className="text-lg font-bold text-primary">اضغط هنا أو اسحب الملفات لرفعها</p>
                   <p className="text-sm text-muted-foreground">يدعم صور PNG, JPG حتى 10 ميجابايت</p>
                 </div>
-                <input type="file" className="hidden" multiple onChange={handleFileUpload} />
-              </label>
+              </div>
               {files.length > 0 && (
                 <p className="mt-4 text-secondary font-bold">تم اختيار {files.length} ملفات</p>
               )}
@@ -207,7 +231,10 @@ export default function UploadPage() {
                      لا توجد ملفات حالياً
                    </div>
                  )}
-                 <button className="aspect-[3/4] rounded-2xl border-2 border-dashed border-primary/30 flex flex-col items-center justify-center gap-2 hover:bg-primary/5 transition-all group">
+                 <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="aspect-[3/4] rounded-2xl border-2 border-dashed border-primary/30 flex flex-col items-center justify-center gap-2 hover:bg-primary/5 transition-all group"
+                 >
                     <Plus className="w-8 h-8 text-primary/50 group-hover:scale-110 transition-transform" />
                     <span className="text-xs font-bold text-primary/50">إضافة صفحة</span>
                  </button>
@@ -317,3 +344,4 @@ export default function UploadPage() {
     </div>
   );
 }
+
