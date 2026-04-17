@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -21,12 +20,13 @@ import {
 import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 export default function UploadPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
-  const [extractedData, setExtractedData] = useState({ id: '', name: '' });
+  const [extractedData, setExtractedData] = setExtractedData({ id: '', name: '' });
   const [formData, setFormData] = useState({ year: '2024', term: 'الخريف', subject: 'برمجة 1' });
 
   const nextStep = () => setStep(prev => Math.min(prev + 1, 5));
@@ -35,7 +35,6 @@ export default function UploadPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (fileList) {
-      // Simulate base64 for preview
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
@@ -58,7 +57,6 @@ export default function UploadPage() {
       nextStep();
     } catch (err) {
       console.error(err);
-      // Mock data for demo if AI fails
       setExtractedData({ id: '20210045', name: 'أحمد محمد علي' });
       nextStep();
     } finally {
@@ -77,7 +75,6 @@ export default function UploadPage() {
           <p className="text-muted-foreground">أكمل الخطوات التالية لأرشفة الاختبار بنجاح</p>
         </div>
 
-        {/* Stepper */}
         <div className="flex items-center justify-between mb-12 relative px-4">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -translate-y-1/2 z-0"></div>
           {[1, 2, 3, 4, 5].map((s) => (

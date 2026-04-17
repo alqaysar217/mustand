@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -15,6 +14,9 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
+import Image from "next/image";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const searchSuggestions = [
   'أحمد محمود علي', 'رياضيات 1', '20210045', 'فيزياء عامة', 'خريف 2024'
@@ -70,7 +72,13 @@ export default function SearchPage() {
                 <label className="text-xs font-bold text-muted-foreground">الفصل الدراسي</label>
                 <div className="flex flex-wrap gap-2">
                   {['الكل', 'الخريف', 'الربيع', 'الصيف'].map(t => (
-                    <button key={t} className={cn("px-3 py-1.5 rounded-lg text-xs font-bold transition-colors", t === 'الكل' ? "bg-primary text-white" : "bg-muted hover:bg-muted/70 text-primary")}>
+                    <button 
+                      key={t} 
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-bold transition-colors", 
+                        t === 'الكل' ? "bg-primary text-white" : "bg-muted hover:bg-muted/70 text-primary"
+                      )}
+                    >
                       {t}
                     </button>
                   ))}
