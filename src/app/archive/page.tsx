@@ -15,12 +15,22 @@ import {
   Search,
   MoreVertical,
   Calendar,
-  X
+  X,
+  User as UserIcon,
+  BookOpen,
+  Building
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const mockArchives = [
   { id: '1', name: 'أحمد محمود علي', regId: '20210045', subject: 'رياضيات 1', year: '2023 / 2024', term: 'الفصل الأول', department: 'تقنية المعلومات', date: '2024-05-20' },
@@ -35,6 +45,8 @@ export default function ArchivePage() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [academicYears, setAcademicYears] = useState<string[]>([]);
+  const [viewingExam, setViewingExam] = useState<any>(null);
+  const { toast } = useToast();
   
   // Filtering states
   const [searchTerm, setSearchTerm] = useState("");
@@ -78,6 +90,13 @@ export default function ArchivePage() {
     setSearchTerm("");
   };
 
+  const handleDownload = () => {
+    toast({
+      title: "بدء التحميل",
+      description: "يتم الآن تجهيز نسخة PDF من الاختبار...",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -86,8 +105,8 @@ export default function ArchivePage() {
       <main className="mr-0 md:mr-64 p-6 md:p-10 animate-fade-in">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-3xl font-bold text-primary mb-1">الأرشيف الرقمي</h1>
-            <p className="text-muted-foreground">استعرض وابحث في جميع الاختبارات المؤرشفة</p>
+            <h1 className="text-3xl font-bold text-primary mb-1 text-right">الأرشيف الرقمي</h1>
+            <p className="text-muted-foreground text-right">استعرض وابحث في جميع الاختبارات المؤرشفة</p>
           </div>
           
           <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border">
@@ -120,7 +139,7 @@ export default function ArchivePage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="ابحث باسم الطالب، رقم القيد، أو المادة..." 
-              className="w-full h-12 pr-12 pl-4 rounded-xl border border-border bg-muted/20 outline-none focus:ring-2 focus:ring-primary"
+              className="w-full h-12 pr-12 pl-4 rounded-xl border border-border bg-muted/20 outline-none focus:ring-2 focus:ring-primary text-right"
             />
           </div>
           <Button 
@@ -136,7 +155,7 @@ export default function ArchivePage() {
         {showFilters && (
           <Card className="p-6 border-none shadow-xl rounded-3xl bg-white mb-10 animate-slide-up">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="space-y-2">
+              <div className="space-y-2 text-right">
                 <label className="text-xs font-bold text-muted-foreground">السنة الدراسية</label>
                 <select 
                   value={selectedYear}
@@ -150,7 +169,7 @@ export default function ArchivePage() {
                 </select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 text-right">
                 <label className="text-xs font-bold text-muted-foreground">الفصل الدراسي</label>
                 <select 
                   value={selectedTerm}
@@ -164,7 +183,7 @@ export default function ArchivePage() {
                 </select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 text-right">
                 <label className="text-xs font-bold text-muted-foreground">التخصص</label>
                 <select 
                   value={selectedDept}
@@ -210,11 +229,11 @@ export default function ArchivePage() {
                       className="object-cover group-hover:scale-110 transition-transform duration-500" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end gap-3">
-                      <Button className="w-full rounded-xl bg-white text-primary hover:bg-white/90 font-bold">
+                      <Button onClick={() => setViewingExam(item)} className="w-full rounded-xl bg-white text-primary hover:bg-white/90 font-bold">
                         <Eye className="w-4 h-4 ml-2" />
                         عرض الاختبار
                       </Button>
-                      <Button variant="outline" className="w-full rounded-xl bg-white/10 text-white border-white/20 hover:bg-white/20 font-bold backdrop-blur-md">
+                      <Button onClick={handleDownload} variant="outline" className="w-full rounded-xl bg-white/10 text-white border-white/20 hover:bg-white/20 font-bold backdrop-blur-md">
                         <Download className="w-4 h-4 ml-2" />
                         تحميل PDF
                       </Button>
@@ -223,7 +242,7 @@ export default function ArchivePage() {
                       <Badge className="bg-primary/80 backdrop-blur-md border-none">{item.term}</Badge>
                     </div>
                   </div>
-                  <div className="p-6">
+                  <div className="p-6 text-right">
                     <h3 className="text-lg font-bold text-primary truncate mb-1">{item.name}</h3>
                     <p className="text-sm text-secondary font-bold mb-4">{item.subject}</p>
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground border-t pt-4">
@@ -232,7 +251,7 @@ export default function ArchivePage() {
                         {item.date}
                       </div>
                       <div className="flex items-center gap-1 font-bold">
-                        ID: {item.regId}
+                        رقم القيد: {item.regId}
                       </div>
                     </div>
                   </div>
@@ -246,10 +265,10 @@ export default function ArchivePage() {
                   <thead>
                     <tr className="bg-muted/30 text-primary border-b">
                       <th className="p-6 font-bold">اسم الطالب</th>
-                      <th className="p-6 font-bold">رقم القيد</th>
-                      <th className="p-6 font-bold">المادة</th>
-                      <th className="p-6 font-bold">الفصل / السنة</th>
-                      <th className="p-6 font-bold">تاريخ الأرشفة</th>
+                      <th className="p-6 font-bold text-right">رقم القيد</th>
+                      <th className="p-6 font-bold text-right">المادة</th>
+                      <th className="p-6 font-bold text-right">الفصل / السنة</th>
+                      <th className="p-6 font-bold text-right">تاريخ الأرشفة</th>
                       <th className="p-6 font-bold text-center">الإجراءات</th>
                     </tr>
                   </thead>
@@ -257,17 +276,17 @@ export default function ArchivePage() {
                     {filteredResults.map((item) => (
                       <tr key={item.id} className="hover:bg-muted/10 transition-colors group">
                         <td className="p-6">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 justify-end">
+                            <span className="font-bold text-primary">{item.name}</span>
                             <div className="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center font-bold text-primary">
                               {item.name[0]}
                             </div>
-                            <span className="font-bold text-primary">{item.name}</span>
                           </div>
                         </td>
                         <td className="p-6 font-mono text-muted-foreground">{item.regId}</td>
                         <td className="p-6 text-secondary font-bold">{item.subject}</td>
                         <td className="p-6">
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-1 items-end">
                             <span className="text-xs font-bold text-primary">{item.term}</span>
                             <span className="text-[10px] text-muted-foreground">{item.year}</span>
                           </div>
@@ -275,8 +294,8 @@ export default function ArchivePage() {
                         <td className="p-6 text-xs text-muted-foreground">{item.date}</td>
                         <td className="p-6">
                           <div className="flex items-center justify-center gap-2">
-                             <Button variant="ghost" size="icon" className="rounded-xl text-primary hover:bg-primary/5"><Eye className="w-4 h-4" /></Button>
-                             <Button variant="ghost" size="icon" className="rounded-xl text-secondary hover:bg-secondary/5"><Download className="w-4 h-4" /></Button>
+                             <Button onClick={() => setViewingExam(item)} variant="ghost" size="icon" className="rounded-xl text-primary hover:bg-primary/5"><Eye className="w-4 h-4" /></Button>
+                             <Button onClick={handleDownload} variant="ghost" size="icon" className="rounded-xl text-secondary hover:bg-secondary/5"><Download className="w-4 h-4" /></Button>
                              <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:bg-muted"><MoreVertical className="w-4 h-4" /></Button>
                           </div>
                         </td>
@@ -303,6 +322,67 @@ export default function ArchivePage() {
             </Button>
           </Card>
         )}
+
+        <Dialog open={!!viewingExam} onOpenChange={(open) => !open && setViewingExam(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+            {viewingExam && (
+              <div className="flex flex-col md:flex-row h-full">
+                <div className="relative w-full md:w-1/2 aspect-[3/4] bg-muted">
+                  <Image src={PlaceHolderImages[1].imageUrl} alt="Exam Preview" fill className="object-cover" />
+                </div>
+                <div className="p-8 flex-1 flex flex-col">
+                  <DialogHeader className="text-right mb-6">
+                    <DialogTitle className="text-2xl font-bold text-primary mb-2">{viewingExam.name}</DialogTitle>
+                    <p className="text-secondary font-bold flex items-center justify-end gap-2">
+                      {viewingExam.subject}
+                      <BookOpen className="w-4 h-4" />
+                    </p>
+                  </DialogHeader>
+                  <div className="space-y-4 text-right flex-1">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-muted/30 rounded-2xl flex flex-col items-end">
+                        <p className="text-[10px] text-muted-foreground font-bold flex items-center gap-1 mb-1">
+                           رقم القيد
+                           <UserIcon className="w-3 h-3" />
+                        </p>
+                        <p className="text-primary font-bold">{viewingExam.regId}</p>
+                      </div>
+                      <div className="p-4 bg-muted/30 rounded-2xl flex flex-col items-end">
+                        <p className="text-[10px] text-muted-foreground font-bold flex items-center gap-1 mb-1">
+                          السنة الدراسية
+                          <Calendar className="w-3 h-3" />
+                        </p>
+                        <p className="text-primary font-bold">{viewingExam.year}</p>
+                      </div>
+                      <div className="p-4 bg-muted/30 rounded-2xl flex flex-col items-end">
+                        <p className="text-[10px] text-muted-foreground font-bold flex items-center gap-1 mb-1">
+                          الفصل الدراسي
+                          <BookOpen className="w-3 h-3" />
+                        </p>
+                        <p className="text-primary font-bold">{viewingExam.term}</p>
+                      </div>
+                      <div className="p-4 bg-muted/30 rounded-2xl flex flex-col items-end">
+                        <p className="text-[10px] text-muted-foreground font-bold flex items-center gap-1 mb-1">
+                          القسم
+                          <Building className="w-3 h-3" />
+                        </p>
+                        <p className="text-primary font-bold">{viewingExam.department}</p>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center justify-between">
+                      <p className="text-primary font-bold">{viewingExam.date}</p>
+                      <p className="text-[10px] text-muted-foreground font-bold">تاريخ الأرشفة</p>
+                    </div>
+                  </div>
+                  <div className="mt-8 flex gap-3">
+                    <Button onClick={handleDownload} className="flex-1 rounded-xl gradient-blue font-bold shadow-lg">تحميل نسخة PDF</Button>
+                    <Button variant="outline" className="rounded-xl font-bold border-2" onClick={() => setViewingExam(null)}>إغلاق</Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
