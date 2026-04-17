@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
@@ -21,13 +22,29 @@ import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function UploadPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
   const [extractedData, setExtractedData] = useState({ id: '', name: '' });
-  const [formData, setFormData] = useState({ year: '2024', term: 'الخريف', subject: 'برمجة 1' });
+  const [formData, setFormData] = useState({ year: '', term: 'الخريف', subject: 'برمجة 1' });
+  const [academicYears, setAcademicYears] = useState<string[]>([]);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = 0; i < 5; i++) {
+      const year = currentYear - i;
+      years.push(`${year - 1} / ${year}`);
+    }
+    setAcademicYears(years);
+    if (years.length > 0) {
+      setFormData(prev => ({ ...prev, year: years[0] }));
+    }
+  }, []);
 
   const nextStep = () => setStep(prev => Math.min(prev + 1, 5));
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
@@ -55,8 +72,13 @@ export default function UploadPage() {
         name: result.studentName || 'أحمد محمد علي'
       });
       nextStep();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast({
+        variant: "destructive",
+        title: "خطأ في التحليل",
+        description: err.message || "فشل النظام في استخراج البيانات. يرجى التأكد من مفتاح API وإدخال البيانات يدوياً.",
+      });
       setExtractedData({ id: '20210045', name: 'أحمد محمد علي' });
       nextStep();
     } finally {
@@ -107,25 +129,38 @@ export default function UploadPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-primary">السنة الدراسية</label>
-                  <select className="w-full h-12 px-4 rounded-xl border border-border outline-none focus:ring-2 focus:ring-primary appearance-none bg-muted/20">
-                    <option>2023 / 2024</option>
-                    <option>2022 / 2023</option>
+                  <select 
+                    value={formData.year}
+                    onChange={(e) => setFormData({...formData, year: e.target.value})}
+                    className="w-full h-12 px-4 rounded-xl border border-border outline-none focus:ring-2 focus:ring-primary appearance-none bg-muted/20"
+                  >
+                    {academicYears.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-primary">الفصل الدراسي</label>
-                  <select className="w-full h-12 px-4 rounded-xl border border-border outline-none focus:ring-2 focus:ring-primary appearance-none bg-muted/20">
-                    <option>الخريف</option>
-                    <option>الربيع</option>
-                    <option>الصيف</option>
+                  <select 
+                    value={formData.term}
+                    onChange={(e) => setFormData({...formData, term: e.target.value})}
+                    className="w-full h-12 px-4 rounded-xl border border-border outline-none focus:ring-2 focus:ring-primary appearance-none bg-muted/20"
+                  >
+                    <option value="الخريف">الخريف</option>
+                    <option value="الربيع">الربيع</option>
+                    <option value="الصيف">الصيف</option>
                   </select>
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <label className="text-sm font-bold text-primary">المادة</label>
-                  <select className="w-full h-12 px-4 rounded-xl border border-border outline-none focus:ring-2 focus:ring-primary appearance-none bg-muted/20">
-                    <option>مقدمة في البرمجة</option>
-                    <option>فيزياء عامة</option>
-                    <option>رياضيات متقدمة</option>
+                  <select 
+                    value={formData.subject}
+                    onChange={(e) => setFormData({...formData, subject: e.target.value})}
+                    className="w-full h-12 px-4 rounded-xl border border-border outline-none focus:ring-2 focus:ring-primary appearance-none bg-muted/20"
+                  >
+                    <option value="مقدمة في البرمجة">مقدمة في البرمجة</option>
+                    <option value="فيزياء عامة">فيزياء عامة</option>
+                    <option value="رياضيات متقدمة">رياضيات متقدمة</option>
                   </select>
                 </div>
               </div>

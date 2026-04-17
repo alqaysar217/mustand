@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -13,7 +14,7 @@ import {
   BookOpen,
   ArrowLeft
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -24,6 +25,17 @@ const searchSuggestions = [
 
 export default function SearchPage() {
   const [isSearching, setIsSearching] = useState(false);
+  const [academicYears, setAcademicYears] = useState<string[]>([]);
+
+  useEffect(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = 0; i < 5; i++) {
+      const year = currentYear - i;
+      years.push(`${year - 1} / ${year}`);
+    }
+    setAcademicYears(years);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,9 +74,10 @@ export default function SearchPage() {
               <div className="space-y-2">
                 <label className="text-xs font-bold text-muted-foreground">السنة الدراسية</label>
                 <select className="w-full h-11 px-3 rounded-xl border border-border bg-muted/10 outline-none text-sm">
-                  <option>الكل</option>
-                  <option>2023 / 2024</option>
-                  <option>2022 / 2023</option>
+                  <option value="all">الكل</option>
+                  {academicYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
                 </select>
               </div>
 
