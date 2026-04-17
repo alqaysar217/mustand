@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
@@ -29,6 +30,18 @@ const recentActivity = [
 ];
 
 export default function Dashboard() {
+  const [formattedDate, setFormattedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Set the date only on the client side to avoid hydration mismatch
+    setFormattedDate(new Date().toLocaleDateString('ar-EG', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }));
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -42,7 +55,9 @@ export default function Dashboard() {
           </div>
           <div className="bg-primary/5 px-4 py-2 rounded-2xl flex items-center gap-2 border border-primary/10">
             <Clock className="w-4 h-4 text-primary" />
-            <span className="text-sm font-bold text-primary">{new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            <span className="text-sm font-bold text-primary">
+              {formattedDate || '...'}
+            </span>
           </div>
         </div>
 
