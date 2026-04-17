@@ -18,7 +18,8 @@ import {
   X,
   User as UserIcon,
   BookOpen,
-  Building
+  Building,
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -33,12 +34,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 const mockArchives = [
-  { id: '1', name: 'أحمد محمود علي', regId: '20210045', subject: 'رياضيات 1', year: '2023 / 2024', term: 'الفصل الأول', department: 'تقنية المعلومات', date: '2024-05-20' },
-  { id: '2', name: 'سارة خالد يوسف', regId: '20220112', subject: 'فيزياء عامة', year: '2022 / 2023', term: 'الفصل الثاني', department: 'علوم الحاسوب', date: '2024-05-18' },
-  { id: '3', name: 'وليد جاسم مرزوق', regId: '20210567', subject: 'برمجة 2', year: '2023 / 2024', term: 'الفصل الأول', department: 'هندسة البرمجيات', date: '2024-05-15' },
-  { id: '4', name: 'مريم سعيد سالم', regId: '20230001', subject: 'اللغة الإنجليزية', year: '2023 / 2024', term: 'الفصل التكميلي', department: 'تقنية المعلومات', date: '2024-05-10' },
-  { id: '5', name: 'فيصل عبدالرحمن', regId: '20210089', subject: 'كيمياء عضوية', year: '2022 / 2023', term: 'الفصل الثاني', department: 'علوم الحاسوب', date: '2024-05-08' },
-  { id: '6', name: 'نورة عيسى محمد', regId: '20220334', subject: 'مقدمة حاسب', year: '2023 / 2024', term: 'الفصل الأول', department: 'تقنية المعلومات', date: '2024-05-05' },
+  { id: '1', name: 'أحمد محمود علي', regId: '20210045', subject: 'رياضيات 1', year: '2023 / 2024', term: 'الفصل الأول', department: 'تقنية المعلومات', date: '2024-05-20', fileUrl: PlaceHolderImages[1].imageUrl },
+  { id: '2', name: 'سارة خالد يوسف', regId: '20220112', subject: 'فيزياء عامة', year: '2022 / 2023', term: 'الفصل الثاني', department: 'علوم الحاسوب', date: '2024-05-18', fileUrl: PlaceHolderImages[1].imageUrl },
+  { id: '3', name: 'وليد جاسم مرزوق', regId: '20210567', subject: 'برمجة 2', year: '2023 / 2024', term: 'الفصل الأول', department: 'هندسة البرمجيات', date: '2024-05-15', fileUrl: PlaceHolderImages[1].imageUrl },
+  { id: '4', name: 'مريم سعيد سالم', regId: '20230001', subject: 'اللغة الإنجليزية', year: '2023 / 2024', term: 'الفصل التكميلي', department: 'تقنية المعلومات', date: '2024-05-10', fileUrl: PlaceHolderImages[1].imageUrl },
+  { id: '5', name: 'فيصل عبدالرحمن', regId: '20210089', subject: 'كيمياء عضوية', year: '2022 / 2023', term: 'الفصل الثاني', department: 'علوم الحاسوب', date: '2024-05-08', fileUrl: PlaceHolderImages[1].imageUrl },
+  { id: '6', name: 'نورة عيسى محمد', regId: '20220334', subject: 'مقدمة حاسب', year: '2023 / 2024', term: 'الفصل الأول', department: 'تقنية المعلومات', date: '2024-05-05', fileUrl: PlaceHolderImages[1].imageUrl },
 ];
 
 export default function ArchivePage() {
@@ -46,6 +47,7 @@ export default function ArchivePage() {
   const [showFilters, setShowFilters] = useState(false);
   const [academicYears, setAcademicYears] = useState<string[]>([]);
   const [viewingExam, setViewingExam] = useState<any>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Filtering states
@@ -90,11 +92,56 @@ export default function ArchivePage() {
     setSearchTerm("");
   };
 
-  const handleDownload = () => {
-    toast({
-      title: "بدء التحميل",
-      description: "يتم الآن تجهيز نسخة PDF من الاختبار...",
-    });
+  const getDownloadLabel = (url: string) => {
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.includes('.pdf')) return 'تحميل PDF';
+    if (lowerUrl.match(/\.(jpg|jpeg|png|webp|gif|svg)/i) || lowerUrl.includes('picsum.photos') || lowerUrl.includes('placehold.co')) return 'تحميل IMG';
+    return 'تحميل';
+  };
+
+  const handleDownload = async (item: any) => {
+    setDownloadingId(item.id);
+    try {
+      toast({
+        title: "جاري التحميل",
+        description: `يتم الآن معالجة ملف: ${item.name}`,
+      });
+
+      const response = await fetch(item.fileUrl);
+      if (!response.ok) throw new Error('فشل في الوصول للملف');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      
+      const extension = blob.type.includes('pdf') ? 'pdf' : 'jpg';
+      const cleanName = item.name.replace(/\s+/g, '_');
+      const cleanSubject = item.subject.replace(/\s+/g, '_');
+      a.download = `${cleanName}_${cleanSubject}.${extension}`;
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "تم التحميل بنجاح",
+        description: "تم حفظ الملف على جهازك.",
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "خطأ في التحميل",
+        description: "عذراً، تعذر تحميل الملف حالياً. يرجى المحاولة مرة أخرى.",
+      });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -223,7 +270,7 @@ export default function ArchivePage() {
                 <Card key={item.id} className="group overflow-hidden border-none shadow-xl rounded-3xl bg-white hover:-translate-y-2 transition-all">
                   <div className="relative aspect-[3/4] bg-muted/30 overflow-hidden">
                     <Image 
-                      src={PlaceHolderImages[1].imageUrl} 
+                      src={item.fileUrl} 
                       alt="Exam Preview" 
                       fill 
                       className="object-cover group-hover:scale-110 transition-transform duration-500" 
@@ -233,9 +280,18 @@ export default function ArchivePage() {
                         <Eye className="w-4 h-4 ml-2" />
                         عرض الاختبار
                       </Button>
-                      <Button onClick={handleDownload} variant="outline" className="w-full rounded-xl bg-white/10 text-white border-white/20 hover:bg-white/20 font-bold backdrop-blur-md">
-                        <Download className="w-4 h-4 ml-2" />
-                        تحميل PDF
+                      <Button 
+                        onClick={() => handleDownload(item)} 
+                        disabled={downloadingId === item.id}
+                        variant="outline" 
+                        className="w-full rounded-xl bg-white/10 text-white border-white/20 hover:bg-white/20 font-bold backdrop-blur-md"
+                      >
+                        {downloadingId === item.id ? (
+                          <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4 ml-2" />
+                        )}
+                        {getDownloadLabel(item.fileUrl)}
                       </Button>
                     </div>
                     <div className="absolute top-4 right-4">
@@ -295,7 +351,20 @@ export default function ArchivePage() {
                         <td className="p-6">
                           <div className="flex items-center justify-center gap-2">
                              <Button onClick={() => setViewingExam(item)} variant="ghost" size="icon" className="rounded-xl text-primary hover:bg-primary/5"><Eye className="w-4 h-4" /></Button>
-                             <Button onClick={handleDownload} variant="ghost" size="icon" className="rounded-xl text-secondary hover:bg-secondary/5"><Download className="w-4 h-4" /></Button>
+                             <Button 
+                                onClick={() => handleDownload(item)} 
+                                disabled={downloadingId === item.id}
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-xl text-secondary hover:bg-secondary/5"
+                                title={getDownloadLabel(item.fileUrl)}
+                              >
+                                {downloadingId === item.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Download className="w-4 h-4" />
+                                )}
+                             </Button>
                              <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:bg-muted"><MoreVertical className="w-4 h-4" /></Button>
                           </div>
                         </td>
@@ -328,7 +397,7 @@ export default function ArchivePage() {
             {viewingExam && (
               <div className="flex flex-col md:flex-row h-full">
                 <div className="relative w-full md:w-1/2 aspect-[3/4] bg-muted">
-                  <Image src={PlaceHolderImages[1].imageUrl} alt="Exam Preview" fill className="object-cover" />
+                  <Image src={viewingExam.fileUrl} alt="Exam Preview" fill className="object-cover" />
                 </div>
                 <div className="p-8 flex-1 flex flex-col">
                   <DialogHeader className="text-right mb-6">
@@ -375,7 +444,18 @@ export default function ArchivePage() {
                     </div>
                   </div>
                   <div className="mt-8 flex gap-3">
-                    <Button onClick={handleDownload} className="flex-1 rounded-xl gradient-blue font-bold shadow-lg">تحميل نسخة PDF</Button>
+                    <Button 
+                      onClick={() => handleDownload(viewingExam)} 
+                      disabled={downloadingId === viewingExam.id}
+                      className="flex-1 rounded-xl gradient-blue font-bold shadow-lg"
+                    >
+                      {downloadingId === viewingExam.id ? (
+                        <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 ml-2" />
+                      )}
+                      {getDownloadLabel(viewingExam.fileUrl)}
+                    </Button>
                     <Button variant="outline" className="rounded-xl font-bold border-2" onClick={() => setViewingExam(null)}>إغلاق</Button>
                   </div>
                 </div>
