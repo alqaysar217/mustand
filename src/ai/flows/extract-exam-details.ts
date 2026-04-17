@@ -52,7 +52,7 @@ const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
   input: {schema: ExtractExamDetailsInputSchema},
   output: {schema: ExtractExamDetailsOutputSchema},
-  model: 'googleai/gemini-1.5-flash', // Use a multimodal model for image processing
+  model: 'googleai/gemini-1.5-flash',
   prompt: `Analyze the provided exam image and extract the student's registration ID (رقم القيد) and the student's full name (اسم الطالب). Output the extracted information strictly in JSON format as defined by the output schema. If a field cannot be found, provide an empty string for that field.
 Image: {{media url=examImageDataUri}}`,
 });
