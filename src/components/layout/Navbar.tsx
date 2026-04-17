@@ -30,12 +30,12 @@ export function Navbar() {
           </SheetTrigger>
           <SheetContent side="right" className="p-0 bg-primary border-none w-72">
             <div className="flex flex-col h-full text-white">
-              <div className="p-8 flex items-center gap-3 border-b border-white/10">
+              <SheetHeader className="p-8 flex items-center gap-3 border-b border-white/10 text-right space-y-0">
                 <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
                   <Archive className="w-6 h-6" />
                 </div>
-                <span className="text-xl font-bold tracking-tight">أرشيفا سمارت</span>
-              </div>
+                <SheetTitle className="text-xl font-bold tracking-tight text-white">أرشيفا سمارت</SheetTitle>
+              </SheetHeader>
               
               <nav className="flex-1 px-4 py-6 space-y-2">
                 {menuItems.map((item) => {
