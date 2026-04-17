@@ -26,7 +26,7 @@ export default function UploadPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
-  const [extractedData, setExtractedData] = setExtractedData({ id: '', name: '' });
+  const [extractedData, setExtractedData] = useState({ id: '', name: '' });
   const [formData, setFormData] = useState({ year: '2024', term: 'الخريف', subject: 'برمجة 1' });
 
   const nextStep = () => setStep(prev => Math.min(prev + 1, 5));
