@@ -69,13 +69,60 @@ export default function ReportsPage() {
 
   const handleExport = (format: 'excel' | 'zip') => {
     setExporting(format);
+    
+    // Simulate processing time
     setTimeout(() => {
+      if (format === 'excel') {
+        try {
+          // Define CSV headers
+          const headers = ["الطالب", "رقم القيد", "عدد الاختبارات", "آخر تحديث", "الحالة"];
+          
+          // Convert data to CSV rows
+          const rows = MOCK_STUDENT_REPORTS.map(r => [
+            r.name,
+            r.regId,
+            r.exams.toString(),
+            r.lastUpload,
+            r.status === 'active' ? 'نشط' : 'موقوف'
+          ]);
+
+          // Combine headers and rows
+          const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.join(","))
+          ].join("\n");
+
+          // Add UTF-8 BOM for Arabic support in Excel
+          const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `student_report_${new Date().toISOString().split('T')[0]}.csv`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          toast({
+            title: "تم التصدير بنجاح",
+            description: "تم تحميل ملف بيانات الطلاب بصيغة CSV بنجاح.",
+          });
+        } catch (error) {
+          toast({
+            variant: "destructive",
+            title: "خطأ في التصدير",
+            description: "حدث خطأ أثناء محاولة توليد الملف.",
+          });
+        }
+      } else if (format === 'zip') {
+        toast({
+          title: "تنبيه النظام",
+          description: "ميزة تنزيل الصور الجماعية تتطلب الوصول إلى التخزين السحابي. سيتم تفعيلها قريباً.",
+        });
+      }
+      
       setExporting(null);
-      toast({
-        title: "تم التصدير بنجاح",
-        description: `تم تجهيز وتحميل ملف التقرير بصيغة ${format.toUpperCase()} بنجاح.`,
-      });
-    }, 2000);
+    }, 1500);
   };
 
   const handleRefreshData = () => {
