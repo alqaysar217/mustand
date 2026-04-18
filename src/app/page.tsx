@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { GraduationCap, Briefcase, Settings2, Loader2 } from "lucide-react";
+import { GraduationCap, Briefcase, Settings2, Loader2, Archive } from "lucide-react";
 
 export default function Home() {
   const [stage, setStage] = useState<'splash' | 'role' | 'login'>('splash');
@@ -45,16 +45,11 @@ export default function Home() {
   if (stage === 'splash') {
     return (
       <div className="fixed inset-0 gradient-blue flex flex-col items-center justify-center text-white z-50">
-        <div className="relative w-32 h-32 mb-6 animate-pulse">
-           <div className="absolute inset-0 bg-white/20 rounded-full blur-xl animate-pulse" />
-           <Image 
-            src={PlaceHolderImages[0].imageUrl} 
-            alt="Logo" 
-            width={128} 
-            height={128} 
-            className="rounded-full relative border-4 border-white/30"
-            data-ai-hint="archive logo"
-          />
+        <div className="relative w-32 h-32 mb-6 flex items-center justify-center">
+           <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl animate-pulse" />
+           <div className="w-24 h-24 bg-white/10 rounded-3xl flex items-center justify-center border-2 border-white/20 relative z-10 shadow-2xl animate-fade-in">
+              <Archive className="w-12 h-12 text-white" />
+           </div>
         </div>
         <h1 className="text-4xl font-bold mb-2 tracking-tight">مستند</h1>
         <p className="text-white/70 mb-8 font-light">مستقبلك الرقمي يبدأ هنا</p>
@@ -94,14 +89,8 @@ export default function Home() {
     <div className="min-h-screen flex items-center justify-center p-6 bg-background animate-fade-in">
       <Card className="w-full max-w-md p-8 shadow-2xl rounded-3xl bg-white border-none">
         <div className="text-center mb-10">
-          <div className="inline-block p-4 bg-primary/5 rounded-full mb-4">
-            <Image 
-              src={PlaceHolderImages[0].imageUrl} 
-              alt="Logo" 
-              width={64} 
-              height={64} 
-              className="rounded-full"
-            />
+          <div className="inline-block p-5 bg-primary/5 rounded-2xl mb-4 border border-primary/10">
+            <Archive className="w-10 h-10 text-primary" />
           </div>
           <h2 className="text-2xl font-bold text-primary">تسجيل الدخول - {selectedRole === 'manager' ? 'الإدارة' : selectedRole === 'employee' ? 'الموظفين' : 'الطلاب'}</h2>
           <p className="text-muted-foreground mt-1">أهلاً بك مرة أخرى في نظام الأرشفة</p>
