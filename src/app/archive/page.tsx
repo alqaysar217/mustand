@@ -20,7 +20,8 @@ import {
   BookOpen,
   Building,
   Loader2,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -32,9 +33,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
-const mockArchives = [
+const INITIAL_ARCHIVES = [
   { id: '1', name: 'أحمد محمود علي', regId: '20210045', subject: 'رياضيات 1', year: '2023 / 2024', term: 'الفصل الأول', department: 'تقنية المعلومات', date: '2024-05-20', fileUrl: PlaceHolderImages[1].imageUrl },
   { id: '2', name: 'سارة خالد يوسف', regId: '20220112', subject: 'فيزياء عامة', year: '2022 / 2023', term: 'الفصل الثاني', department: 'علوم الحاسوب', date: '2024-05-18', fileUrl: PlaceHolderImages[1].imageUrl },
   { id: '3', name: 'وليد جاسم مرزوق', regId: '20210567', subject: 'برمجة 2', year: '2023 / 2024', term: 'الفصل الأول', department: 'هندسة البرمجيات', date: '2024-05-15', fileUrl: PlaceHolderImages[1].imageUrl },
@@ -44,11 +55,13 @@ const mockArchives = [
 ];
 
 export default function ArchivePage() {
+  const [archives, setArchives] = useState(INITIAL_ARCHIVES);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [academicYears, setAcademicYears] = useState<string[]>([]);
   const [viewingExam, setViewingExam] = useState<any>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
   const { toast } = useToast();
   
   // Filtering states
@@ -68,7 +81,7 @@ export default function ArchivePage() {
   }, []);
 
   const filteredResults = useMemo(() => {
-    return mockArchives.filter(item => {
+    return archives.filter(item => {
       const matchesSearch = 
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.regId.includes(searchTerm) ||
@@ -80,7 +93,7 @@ export default function ArchivePage() {
 
       return matchesSearch && matchesYear && matchesTerm && matchesDept;
     });
-  }, [searchTerm, selectedYear, selectedTerm, selectedDept]);
+  }, [archives, searchTerm, selectedYear, selectedTerm, selectedDept]);
 
   const handleApplyFilters = () => {
     setShowFilters(false);
@@ -93,14 +106,9 @@ export default function ArchivePage() {
     setSearchTerm("");
   };
 
-  /**
-   * Determines the appropriate download label based on the file type in the URL.
-   */
   const getDownloadLabel = (url: string) => {
     if (!url) return 'تحميل';
     const lowerUrl = url.toLowerCase();
-    
-    // Check for common image extensions or placeholder services
     const isImage = 
       lowerUrl.match(/\.(jpg|jpeg|png|webp|gif|svg|bmp)$/i) || 
       lowerUrl.includes('picsum.photos') || 
@@ -108,14 +116,9 @@ export default function ArchivePage() {
     
     if (lowerUrl.includes('.pdf')) return 'تحميل PDF';
     if (isImage) return 'تحميل IMG';
-    
     return 'تحميل';
   };
 
-  /**
-   * Handles the file download process using fetch and blob to ensure 
-   * the file is downloaded directly to the device.
-   */
   const handleDownload = async (item: any) => {
     if (!item?.fileUrl) return;
     
@@ -126,30 +129,23 @@ export default function ArchivePage() {
         description: `يتم الآن معالجة ملف: ${item.name}`,
       });
 
-      // Fetch the file as a blob
       const response = await fetch(item.fileUrl);
       if (!response.ok) throw new Error('تعذر الوصول إلى مصدر الملف');
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       
-      // Create a temporary hidden anchor element
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
       
-      // Determine file extension from blob type or URL fallback
-      let extension = 'bin';
+      let extension = 'jpg';
       if (blob.type.includes('pdf')) {
         extension = 'pdf';
       } else if (blob.type.includes('image')) {
         extension = blob.type.split('/')[1] || 'jpg';
-      } else {
-        const urlParts = item.fileUrl.split('.');
-        extension = urlParts.length > 1 ? urlParts.pop() : 'jpg';
       }
 
-      // Format clean Arabic filename: [StudentName]_[Subject].[ext]
       const cleanName = item.name.trim().replace(/\s+/g, '_');
       const cleanSubject = item.subject.trim().replace(/\s+/g, '_');
       a.download = `${cleanName}_${cleanSubject}.${extension}`;
@@ -157,7 +153,6 @@ export default function ArchivePage() {
       document.body.appendChild(a);
       a.click();
       
-      // Cleanup
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
@@ -166,26 +161,28 @@ export default function ArchivePage() {
         description: "تم حفظ الملف على جهازك بنجاح.",
       });
     } catch (error: any) {
-      console.error("Download Error:", error);
       toast({
         variant: "destructive",
         title: "فشل التحميل",
-        description: "عذراً، حدث خطأ أثناء محاولة تحميل الملف. يرجى المحاولة لاحقاً.",
+        description: "عذراً، حدث خطأ أثناء محاولة تحميل الملف.",
       });
     } finally {
       setDownloadingId(null);
     }
   };
 
-  /**
-   * Simulates the deletion of an exam record from the archive.
-   */
-  const handleDelete = (item: any) => {
+  const confirmDelete = () => {
+    if (!itemToDelete) return;
+
+    setArchives(prev => prev.filter(a => a.id !== itemToDelete.id));
+    
     toast({
       variant: "destructive",
-      title: "تم الحذف",
-      description: `تم حذف ملف الطالب ${item.name} من الأرشيف بنجاح.`,
+      title: "تم الحذف بنجاح",
+      description: `تم إزالة ملف الطالب ${itemToDelete.name} من الأرشيف نهائياً.`,
     });
+    
+    setItemToDelete(null);
   };
 
   return (
@@ -339,7 +336,7 @@ export default function ArchivePage() {
                       </Button>
                       <Button 
                         variant="destructive"
-                        onClick={() => handleDelete(item)}
+                        onClick={() => setItemToDelete(item)}
                         className="w-full rounded-xl font-bold"
                       >
                         <Trash2 className="w-4 h-4 ml-2" />
@@ -402,7 +399,7 @@ export default function ArchivePage() {
                         <td className="p-6 text-xs text-muted-foreground">{item.date}</td>
                         <td className="p-6">
                           <div className="flex items-center justify-center gap-2">
-                             <Button onClick={() => setViewingExam(item)} variant="ghost" size="icon" className="rounded-xl text-primary hover:bg-primary/5"><Eye className="w-4 h-4" /></Button>
+                             <Button onClick={() => setViewingExam(item)} variant="ghost" size="icon" className="rounded-xl text-primary hover:bg-primary/5" title="عرض"><Eye className="w-4 h-4" /></Button>
                              <Button 
                                 onClick={() => handleDownload(item)} 
                                 disabled={downloadingId === item.id}
@@ -420,8 +417,9 @@ export default function ArchivePage() {
                              <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                onClick={() => handleDelete(item)}
+                                onClick={() => setItemToDelete(item)}
                                 className="rounded-xl text-destructive hover:bg-destructive/5"
+                                title="حذف"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -451,6 +449,35 @@ export default function ArchivePage() {
             </Button>
           </Card>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+          <AlertDialogContent className="rounded-3xl border-none p-8 max-w-md text-right">
+            <AlertDialogHeader className="items-end">
+              <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-4">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
+              <AlertDialogTitle className="text-2xl font-bold text-primary">هل أنت متأكد من الحذف؟</AlertDialogTitle>
+              <AlertDialogDescription className="text-muted-foreground text-sm leading-relaxed pt-2">
+                أنت على وشك حذف ملف الطالب <span className="font-bold text-primary">{itemToDelete?.name}</span> نهائياً من الأرشيف. هذه العملية لا يمكن التراجع عنها.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-row-reverse gap-3 mt-8">
+              <AlertDialogAction 
+                onClick={confirmDelete}
+                className="flex-1 rounded-xl bg-destructive text-white hover:bg-destructive/90 font-bold h-12"
+              >
+                تأكيد الحذف
+              </AlertDialogAction>
+              <AlertDialogCancel 
+                onClick={() => setItemToDelete(null)}
+                className="flex-1 rounded-xl font-bold h-12 border-2"
+              >
+                إلغاء
+              </AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <Dialog open={!!viewingExam} onOpenChange={(open) => !open && setViewingExam(null)}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
