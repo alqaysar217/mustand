@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -15,10 +15,10 @@ import {
   Edit2, 
   Trash2,
   Filter,
-  ArrowUpDown,
   CheckCircle2,
   XCircle,
-  Clock
+  Clock,
+  X
 } from "lucide-react";
 import {
   Table,
@@ -62,11 +62,25 @@ export default function StudentsPage() {
   const [students, setStudents] = useState(INITIAL_STUDENTS);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Filter States
+  const [filterDept, setFilterDept] = useState("all");
+  const [filterLevel, setFilterLevel] = useState("all");
+  const [filterType, setFilterType] = useState("all");
+
   const { toast } = useToast();
 
-  const filteredStudents = students.filter(student => 
-    student.name.includes(searchTerm) || student.regId.includes(searchTerm)
-  );
+  const filteredStudents = useMemo(() => {
+    return students.filter(student => {
+      const matchesSearch = student.name.includes(searchTerm) || student.regId.includes(searchTerm);
+      const matchesDept = filterDept === "all" || student.department === filterDept;
+      const matchesLevel = filterLevel === "all" || student.level === filterLevel;
+      const matchesType = filterType === "all" || student.admissionType === filterType;
+      
+      return matchesSearch && matchesDept && matchesLevel && matchesType;
+    });
+  }, [students, searchTerm, filterDept, filterLevel, filterType]);
 
   const handleExport = () => {
     toast({
@@ -80,6 +94,13 @@ export default function StudentsPage() {
       title: "استيراد البيانات",
       description: "يرجى اختيار ملف Excel المتوافق مع النظام.",
     });
+  };
+
+  const resetFilters = () => {
+    setFilterDept("all");
+    setFilterLevel("all");
+    setFilterType("all");
+    setSearchTerm("");
   };
 
   const getStatusBadge = (status: string) => {
@@ -188,11 +209,72 @@ export default function StudentsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" className="h-12 rounded-2xl border-2 px-6 gap-2 font-bold">
-            <Filter className="w-5 h-5" />
+          <Button 
+            variant={showFilters ? "default" : "outline"} 
+            onClick={() => setShowFilters(!showFilters)}
+            className="h-12 rounded-2xl border-2 px-6 gap-2 font-bold transition-all"
+          >
+            {showFilters ? <X className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
             تصفية متقدمة
           </Button>
         </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 p-6 bg-muted/20 rounded-2xl animate-slide-up">
+            <div className="space-y-2">
+              <Label className="text-primary font-bold mr-1 text-xs">التخصص</Label>
+              <Select value={filterDept} onValueChange={setFilterDept}>
+                <SelectTrigger className="rounded-xl h-11 border-muted bg-white">
+                  <SelectValue placeholder="الكل" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all">جميع التخصصات</SelectItem>
+                  <SelectItem value="تقنية المعلومات">تقنية المعلومات</SelectItem>
+                  <SelectItem value="علوم الحاسوب">علوم الحاسوب</SelectItem>
+                  <SelectItem value="هندسة البرمجيات">هندسة البرمجيات</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-primary font-bold mr-1 text-xs">المستوى</Label>
+              <Select value={filterLevel} onValueChange={setFilterLevel}>
+                <SelectTrigger className="rounded-xl h-11 border-muted bg-white">
+                  <SelectValue placeholder="الكل" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all">جميع المستويات</SelectItem>
+                  <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                  <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                  <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                  <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-primary font-bold mr-1 text-xs">نوع القبول</Label>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="rounded-xl h-11 border-muted bg-white">
+                  <SelectValue placeholder="الكل" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all">جميع الأنواع</SelectItem>
+                  <SelectItem value="عام">عام</SelectItem>
+                  <SelectItem value="موازي">موازي</SelectItem>
+                  <SelectItem value="منحة">منحة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button 
+                variant="ghost" 
+                onClick={resetFilters}
+                className="w-full h-11 rounded-xl font-bold text-muted-foreground hover:text-primary"
+              >
+                إعادة ضبط
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="rounded-2xl border overflow-hidden">
           <Table>
