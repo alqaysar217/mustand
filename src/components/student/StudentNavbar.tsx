@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Bell, Menu, User, LogOut, LayoutDashboard, FileText, Search, Settings, ChevronLeft } from "lucide-react";
@@ -33,8 +32,8 @@ export function StudentNavbar() {
           <SheetContent side="right" className="p-0 bg-primary border-none w-72 text-right">
             <div className="flex flex-col h-full text-white">
               <SheetHeader className="p-8 flex items-center gap-3 border-b border-white/10 text-right space-y-0">
-                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 p-2 overflow-hidden">
-                  <Image src="/logo-sand.png" alt="Logo" width={32} height={32} className="object-contain" />
+                <div className="relative w-10 h-10 bg-white rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden">
+                  <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
                 </div>
                 <SheetTitle className="text-xl font-bold tracking-tight text-white">بوابة الطالب</SheetTitle>
               </SheetHeader>

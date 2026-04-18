@@ -31,8 +31,8 @@ export function Navbar() {
           <SheetContent side="right" className="p-0 bg-primary border-none w-72 text-right">
             <div className="flex flex-col h-full text-white">
               <SheetHeader className="p-8 flex items-center gap-4 border-b border-white/10 text-right space-y-0">
-                <div className="w-12 h-12 bg-white/10 rounded-[10px] flex items-center justify-center border border-white/20 p-2 overflow-hidden shadow-lg">
-                  <Image src="/logo-sand.png" alt="Logo" width={40} height={40} className="object-contain w-full h-full" />
+                <div className="relative w-12 h-12 bg-white/10 rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg">
+                  <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
                 </div>
                 <SheetTitle className="text-xl font-black tracking-tight text-white">مستند</SheetTitle>
               </SheetHeader>

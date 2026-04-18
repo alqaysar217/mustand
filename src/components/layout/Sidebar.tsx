@@ -34,8 +34,8 @@ export function Sidebar() {
   return (
     <aside className="w-64 h-screen bg-primary text-white hidden md:flex flex-col fixed right-0 top-0 z-40 border-l border-white/10 shadow-2xl">
       <div className="p-8 flex items-center gap-4">
-        <div className="w-12 h-12 bg-white/10 rounded-[10px] flex items-center justify-center border border-white/20 p-2 overflow-hidden shadow-lg">
-          <Image src="/logo-sand.png" alt="Logo" width={40} height={40} className="object-contain w-full h-full" />
+        <div className="relative w-12 h-12 bg-white/10 rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0">
+          <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
         </div>
         <div className="flex flex-col">
           <span className="text-xl font-black tracking-tight">مستند</span>
