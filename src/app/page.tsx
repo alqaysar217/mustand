@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { GraduationCap, Briefcase, Settings2, Loader2, Archive } from "lucide-react";
+import { GraduationCap, Briefcase, Settings2, Loader2, Archive, ArrowRight } from "lucide-react";
 
 export default function Home() {
   const [stage, setStage] = useState<'splash' | 'role' | 'login'>('splash');
@@ -87,7 +87,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-background animate-fade-in">
-      <Card className="w-full max-w-md p-8 shadow-2xl rounded-3xl bg-white border-none">
+      <Card className="w-full max-w-md p-8 shadow-2xl rounded-3xl bg-white border-none relative">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="absolute top-6 right-6 rounded-xl hover:bg-primary/5"
+          onClick={() => setStage('role')}
+          title="الرجوع"
+        >
+          <ArrowRight className="w-6 h-6 text-primary" />
+        </Button>
+
         <div className="text-center mb-10">
           <div className="inline-block p-5 bg-primary/5 rounded-2xl mb-4 border border-primary/10">
             <Archive className="w-10 h-10 text-primary" />
