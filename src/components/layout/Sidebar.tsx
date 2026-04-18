@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   GraduationCap,
   BookOpen,
-  Building2
+  Building2,
+  School
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,9 +25,10 @@ const menuItems = [
   { label: 'الرئيسية', icon: LayoutDashboard, href: '/dashboard' },
   { label: 'رفع اختبار', icon: UploadCloud, href: '/upload' },
   { label: 'الأرشيف', icon: Archive, href: '/archive' },
+  { label: 'إدارة الكليات', icon: School, href: '/colleges' },
+  { label: 'إدارة التخصصات', icon: Building2, href: '/departments' },
   { label: 'إدارة الطلاب', icon: GraduationCap, href: '/students' },
   { label: 'إدارة المواد', icon: BookOpen, href: '/subjects' },
-  { label: 'إدارة التخصصات', icon: Building2, href: '/departments' },
   { label: 'البحث', icon: Search, href: '/search' },
   { label: 'الإعدادات', icon: Settings, href: '/settings' },
 ];
@@ -77,7 +79,7 @@ export function Sidebar() {
       <div className="p-6 mt-auto">
         <div className="bg-white/5 rounded-3xl p-4 mb-4 shadow-inner">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm">م ع</div>
+            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm text-white">م ع</div>
             <div className="overflow-hidden">
               <p className="text-sm font-bold truncate">محمد علي</p>
               <p className="text-[10px] text-white/50 truncate font-bold">موظف أرشيف</p>

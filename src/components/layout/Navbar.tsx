@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bell, Menu, User, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, GraduationCap, BookOpen, LogOut, Building2, PanelRight } from "lucide-react";
+import { Bell, Menu, User, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, GraduationCap, BookOpen, LogOut, Building2, PanelRight, School } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Link from "next/link";
@@ -14,9 +14,10 @@ const menuItems = [
   { label: 'الرئيسية', icon: LayoutDashboard, href: '/dashboard' },
   { label: 'رفع اختبار', icon: UploadCloud, href: '/upload' },
   { label: 'الأرشيف', icon: Archive, href: '/archive' },
+  { label: 'إدارة الكليات', icon: School, href: '/colleges' },
+  { label: 'إدارة التخصصات', icon: Building2, href: '/departments' },
   { label: 'إدارة الطلاب', icon: GraduationCap, href: '/students' },
   { label: 'إدارة المواد', icon: BookOpen, href: '/subjects' },
-  { label: 'إدارة التخصصات', icon: Building2, href: '/departments' },
   { label: 'البحث', icon: Search, href: '/search' },
   { label: 'الإعدادات', icon: Settings, href: '/settings' },
 ];
@@ -92,7 +93,6 @@ export function Navbar() {
             </SheetContent>
           </Sheet>
 
-          {/* Desktop Toggle Button */}
           <Button 
             variant="ghost" 
             size="icon" 

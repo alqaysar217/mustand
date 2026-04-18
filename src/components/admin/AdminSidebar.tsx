@@ -16,7 +16,8 @@ import {
   LogOut,
   Trash2,
   ChevronLeft,
-  Building2
+  Building2,
+  School
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,9 +26,10 @@ import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 const adminMenuItems = [
   { label: 'لوحة التحكم', icon: LayoutDashboard, href: '/admin/dashboard' },
   { label: 'إدارة المستخدمين', icon: Users, href: '/admin/users' },
+  { label: 'إدارة الكليات', icon: School, href: '/admin/colleges' },
+  { label: 'إدارة التخصصات', icon: Building2, href: '/admin/departments' },
   { label: 'إدارة الطلاب', icon: GraduationCap, href: '/admin/students' },
   { label: 'إدارة المواد', icon: BookOpen, href: '/admin/subjects' },
-  { label: 'إدارة التخصصات', icon: Building2, href: '/admin/departments' },
   { label: 'إدارة الأرشيف', icon: Archive, href: '/admin/archive' },
   { label: 'سلة المحذوفات', icon: Trash2, href: '/admin/recycle-bin' },
   { label: 'التقارير', icon: BarChart3, href: '/admin/reports' },
@@ -81,7 +83,7 @@ export function AdminSidebar() {
       <div className="p-6 mt-auto">
         <div className="bg-white/5 rounded-3xl p-4 shadow-inner">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm">أد</div>
+            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm text-white">أد</div>
             <div className="overflow-hidden">
               <p className="text-sm font-bold truncate">المدير العام</p>
               <p className="text-[10px] text-white/50 truncate font-bold">صلاحيات كاملة</p>
