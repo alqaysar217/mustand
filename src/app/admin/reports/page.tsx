@@ -152,7 +152,7 @@ export default function ReportsPage() {
             className="rounded-xl h-11 border-2 gap-2 font-bold hover:bg-green-50 hover:text-green-600 hover:border-green-200"
           >
             {exporting === 'excel' ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : <FileSpreadsheet className="w-4 h-4" />}
-            تصدير Excel
+            تصدير CSV
           </Button>
           <Button 
             variant="outline" 
