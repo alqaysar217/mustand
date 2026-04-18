@@ -19,7 +19,8 @@ import {
   User as UserIcon,
   BookOpen,
   Building,
-  Loader2
+  Loader2,
+  Trash2
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -176,6 +177,17 @@ export default function ArchivePage() {
     }
   };
 
+  /**
+   * Simulates the deletion of an exam record from the archive.
+   */
+  const handleDelete = (item: any) => {
+    toast({
+      variant: "destructive",
+      title: "تم الحذف",
+      description: `تم حذف ملف الطالب ${item.name} من الأرشيف بنجاح.`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -325,6 +337,14 @@ export default function ArchivePage() {
                         )}
                         {getDownloadLabel(item.fileUrl)}
                       </Button>
+                      <Button 
+                        variant="destructive"
+                        onClick={() => handleDelete(item)}
+                        className="w-full rounded-xl font-bold"
+                      >
+                        <Trash2 className="w-4 h-4 ml-2" />
+                        حذف الملف
+                      </Button>
                     </div>
                     <div className="absolute top-4 right-4">
                       <Badge className="bg-primary/80 backdrop-blur-md border-none">{item.term}</Badge>
@@ -397,6 +417,14 @@ export default function ArchivePage() {
                                   <Download className="w-4 h-4" />
                                 )}
                              </Button>
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => handleDelete(item)}
+                                className="rounded-xl text-destructive hover:bg-destructive/5"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                              <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:bg-muted"><MoreVertical className="w-4 h-4" /></Button>
                           </div>
                         </td>
