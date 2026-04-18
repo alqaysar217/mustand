@@ -71,7 +71,7 @@ export default function ReportsPage() {
     setAcademicYears(years);
   }, []);
 
-  const handleExport = (format: 'pdf' | 'excel' | 'zip') => {
+  const handleExport = (format: 'excel' | 'zip') => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
@@ -91,14 +91,6 @@ export default function ReportsPage() {
         </div>
         
         <div className="flex flex-wrap gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => handleExport('pdf')}
-            className="rounded-xl h-11 border-2 gap-2 font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-          >
-            <FileDown className="w-4 h-4" />
-            تصدير PDF
-          </Button>
           <Button 
             variant="outline" 
             onClick={() => handleExport('excel')}
