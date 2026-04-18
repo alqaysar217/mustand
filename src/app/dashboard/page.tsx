@@ -14,6 +14,8 @@ import {
   Clock,
   TrendingUp
 } from "lucide-react";
+import { useSidebarToggle } from "@/components/providers/SidebarProvider";
+import { cn } from "@/lib/utils";
 
 const stats = [
   { label: 'اختبارات رفعت اليوم', value: '24', icon: FileText, color: 'bg-blue-500', trend: '+12%' },
@@ -31,9 +33,9 @@ const recentActivity = [
 
 export default function Dashboard() {
   const [formattedDate, setFormattedDate] = useState<string | null>(null);
+  const { isOpen } = useSidebarToggle();
 
   useEffect(() => {
-    // Set the date only on the client side to avoid hydration mismatch
     setFormattedDate(new Date().toLocaleDateString('ar-EG', { 
       weekday: 'long', 
       year: 'numeric', 
@@ -47,7 +49,10 @@ export default function Dashboard() {
       <Sidebar />
       <Navbar />
       
-      <main className="mr-0 md:mr-64 p-6 md:p-10 animate-fade-in">
+      <main className={cn(
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in",
+        isOpen ? "mr-0 md:mr-64" : "mr-0"
+      )}>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-primary mb-1">الرئيسية</h1>

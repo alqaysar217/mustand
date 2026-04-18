@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 
 const menuItems = [
   { label: 'الرئيسية', icon: LayoutDashboard, href: '/dashboard' },
@@ -33,13 +34,13 @@ const menuItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-
-  const handleLogout = () => {
-    router.push('/');
-  };
+  const { isOpen } = useSidebarToggle();
 
   return (
-    <aside className="w-64 h-screen bg-primary text-white hidden md:flex flex-col fixed right-0 top-0 z-40 border-l border-white/10 shadow-2xl">
+    <aside className={cn(
+      "w-64 h-screen bg-primary text-white hidden md:flex flex-col fixed right-0 top-0 z-40 border-l border-white/10 shadow-2xl transition-all duration-300 transform",
+      isOpen ? "translate-x-0" : "translate-x-full"
+    )}>
       <div className="p-8 flex items-center gap-4">
         <div className="relative w-12 h-12 bg-white rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0 p-0">
           <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
@@ -84,7 +85,7 @@ export function Sidebar() {
           </div>
           <Button 
             variant="ghost" 
-            onClick={handleLogout}
+            onClick={() => router.push('/')}
             className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 rounded-xl px-2 h-9 font-bold transition-colors"
           >
             <LogOut className="w-4 h-4 ml-2" />

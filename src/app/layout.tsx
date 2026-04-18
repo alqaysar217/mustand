@@ -1,6 +1,8 @@
 
 import type {Metadata} from 'next';
 import './globals.css';
+import { SidebarProvider } from '@/components/providers/SidebarProvider';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'ArchivaSmart | نظام الأرشفة الذكي',
@@ -23,7 +25,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-screen">
-        {children}
+        <SidebarProvider>
+          {children}
+          <Toaster />
+        </SidebarProvider>
       </body>
     </html>
   );
