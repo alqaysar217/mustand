@@ -4,10 +4,9 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { GraduationCap, Briefcase, Settings2, Loader2, Archive, ArrowRight } from "lucide-react";
+import { GraduationCap, Briefcase, Settings2, Loader2, ArrowRight } from "lucide-react";
 
 export default function Home() {
   const [stage, setStage] = useState<'splash' | 'role' | 'login'>('splash');
@@ -47,8 +46,8 @@ export default function Home() {
       <div className="fixed inset-0 gradient-blue flex flex-col items-center justify-center text-white z-50">
         <div className="relative w-32 h-32 mb-6 flex items-center justify-center">
            <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl animate-pulse" />
-           <div className="w-24 h-24 bg-white/10 rounded-3xl flex items-center justify-center border-2 border-white/20 relative z-10 shadow-2xl animate-fade-in">
-              <Archive className="w-12 h-12 text-white" />
+           <div className="w-24 h-24 bg-white/10 rounded-3xl flex items-center justify-center border-2 border-white/20 relative z-10 shadow-2xl animate-fade-in overflow-hidden p-4">
+              <Image src="/logo-sand.png" alt="Logo" width={80} height={80} className="object-contain" />
            </div>
         </div>
         <h1 className="text-4xl font-bold mb-2 tracking-tight">مستند</h1>
@@ -61,7 +60,13 @@ export default function Home() {
   if (stage === 'role') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background animate-fade-in">
-        <h2 className="text-3xl font-bold text-primary mb-12 text-center">اختر نوع المستخدم</h2>
+        <div className="mb-10 text-center">
+          <div className="relative w-20 h-20 mx-auto mb-4 bg-white rounded-2xl shadow-xl flex items-center justify-center p-3 border-2 border-primary/10">
+            <Image src="/logo-sand.png" alt="Logo" width={60} height={60} className="object-contain" />
+          </div>
+          <h1 className="text-2xl font-black text-primary">نظام مستند</h1>
+        </div>
+        <h2 className="text-xl font-bold text-muted-foreground mb-8 text-center">اختر نوع المستخدم للبدء</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
           {[
             { id: 'student', label: 'طالب', icon: GraduationCap, desc: 'الوصول لملفاتك الأكاديمية' },
@@ -99,8 +104,8 @@ export default function Home() {
         </Button>
 
         <div className="text-center mb-10">
-          <div className="inline-block p-5 bg-primary/5 rounded-2xl mb-4 border border-primary/10">
-            <Archive className="w-10 h-10 text-primary" />
+          <div className="inline-block p-4 bg-primary/5 rounded-2xl mb-4 border border-primary/10 overflow-hidden">
+            <Image src="/logo-sand.png" alt="Logo" width={60} height={60} className="object-contain" />
           </div>
           <h2 className="text-2xl font-bold text-primary">تسجيل الدخول - {selectedRole === 'manager' ? 'الإدارة' : selectedRole === 'employee' ? 'الموظفين' : 'الطلاب'}</h2>
           <p className="text-muted-foreground mt-1">أهلاً بك مرة أخرى في نظام الأرشفة</p>

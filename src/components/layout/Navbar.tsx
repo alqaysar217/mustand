@@ -5,6 +5,7 @@ import { Bell, Menu, User, LayoutDashboard, UploadCloud, Archive, Search, Settin
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -31,8 +32,8 @@ export function Navbar() {
           <SheetContent side="right" className="p-0 bg-primary border-none w-72">
             <div className="flex flex-col h-full text-white">
               <SheetHeader className="p-8 flex items-center gap-3 border-b border-white/10 text-right space-y-0">
-                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-                  <Archive className="w-6 h-6" />
+                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 p-2 overflow-hidden">
+                  <Image src="/logo-sand.png" alt="Logo" width={32} height={32} className="object-contain" />
                 </div>
                 <SheetTitle className="text-xl font-bold tracking-tight text-white">مستند</SheetTitle>
               </SheetHeader>

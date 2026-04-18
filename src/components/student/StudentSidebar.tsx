@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { 
   LayoutDashboard, 
@@ -10,7 +11,6 @@ import {
   User, 
   Settings, 
   LogOut,
-  Archive,
   ChevronLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,8 +31,8 @@ export function StudentSidebar() {
   return (
     <aside className="w-64 h-screen bg-primary text-white hidden md:flex flex-col fixed right-0 top-0 z-40 border-l border-white/10 shadow-2xl">
       <div className="p-8 flex items-center gap-3">
-        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-          <Archive className="w-6 h-6" />
+        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 p-2 overflow-hidden">
+          <Image src="/logo-sand.png" alt="Logo" width={32} height={32} className="object-contain" />
         </div>
         <div className="flex flex-col">
           <span className="text-xl font-bold tracking-tight">مستند</span>
