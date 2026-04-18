@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -9,10 +10,11 @@ import {
   Search, 
   MoreVertical, 
   Edit2, 
-  Trash2,
+  Trash2, 
   Filter,
   GraduationCap,
-  Building2
+  Building2,
+  X
 } from "lucide-react";
 import {
   Table,
@@ -56,11 +58,19 @@ export default function SubjectsPage() {
   const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedDept, setSelectedDept] = useState("all");
+  const [selectedLevel, setSelectedLevel] = useState("all");
   const { toast } = useToast();
 
-  const filteredSubjects = subjects.filter(subject => 
-    subject.name.includes(searchTerm) || subject.department.includes(searchTerm)
-  );
+  const filteredSubjects = useMemo(() => {
+    return subjects.filter(subject => {
+      const matchesSearch = subject.name.includes(searchTerm) || subject.department.includes(searchTerm);
+      const matchesDept = selectedDept === "all" || subject.department === selectedDept;
+      const matchesLevel = selectedLevel === "all" || subject.level === selectedLevel;
+      return matchesSearch && matchesDept && matchesLevel;
+    });
+  }, [subjects, searchTerm, selectedDept, selectedLevel]);
 
   const handleDelete = (id: string) => {
     setSubjects(prev => prev.filter(s => s.id !== id));
@@ -69,6 +79,12 @@ export default function SubjectsPage() {
       title: "تم الحذف",
       description: "تم حذف المادة بنجاح من النظام.",
     });
+  };
+
+  const resetFilters = () => {
+    setSelectedDept("all");
+    setSelectedLevel("all");
+    setSearchTerm("");
   };
 
   return (
@@ -144,11 +160,58 @@ export default function SubjectsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" className="h-12 rounded-2xl border-2 px-6 gap-2 font-bold">
-            <Filter className="w-5 h-5" />
+          <Button 
+            variant={showFilters ? "default" : "outline"} 
+            onClick={() => setShowFilters(!showFilters)}
+            className="h-12 rounded-2xl border-2 px-6 gap-2 font-bold transition-all"
+          >
+            {showFilters ? <X className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
             تصفية
           </Button>
         </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-6 bg-muted/20 rounded-2xl animate-slide-up">
+            <div className="space-y-2">
+              <Label className="text-primary font-bold mr-1 text-xs">التخصص الدراسي</Label>
+              <Select value={selectedDept} onValueChange={setSelectedDept}>
+                <SelectTrigger className="rounded-xl h-11 border-muted bg-white">
+                  <SelectValue placeholder="تصفية حسب التخصص" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all">جميع التخصصات</SelectItem>
+                  <SelectItem value="تقنية المعلومات">تقنية المعلومات</SelectItem>
+                  <SelectItem value="علوم الحاسوب">علوم الحاسوب</SelectItem>
+                  <SelectItem value="هندسة البرمجيات">هندسة البرمجيات</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-primary font-bold mr-1 text-xs">المستوى الدراسي</Label>
+              <Select value={selectedLevel} onValueChange={setSelectedLevel}>
+                <SelectTrigger className="rounded-xl h-11 border-muted bg-white">
+                  <SelectValue placeholder="تصفية حسب المستوى" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all">جميع المستويات</SelectItem>
+                  <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                  <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                  <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                  <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button 
+                variant="ghost" 
+                onClick={resetFilters}
+                className="w-full h-11 rounded-xl font-bold text-muted-foreground hover:text-primary"
+              >
+                إعادة ضبط المرشحات
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="rounded-2xl border overflow-hidden">
           <Table>
