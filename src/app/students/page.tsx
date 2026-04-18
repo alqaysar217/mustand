@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -20,7 +19,11 @@ import {
   XCircle,
   Clock,
   X,
-  Plus
+  Plus,
+  User,
+  Fingerprint,
+  Building2,
+  Banknote
 } from "lucide-react";
 import {
   Table,
@@ -57,7 +60,7 @@ const INITIAL_STUDENTS = [
   { id: '1', regId: '20210045', name: 'أحمد محمود علي', department: 'تقنية المعلومات', level: 'المستوى الثالث', admissionType: 'عام', status: 'active', joinDate: '2021-09-12' },
   { id: '2', regId: '20220112', name: 'سارة خالد يوسف', department: 'علوم الحاسوب', level: 'المستوى الثاني', admissionType: 'موازي', status: 'active', joinDate: '2022-09-15' },
   { id: '3', regId: '20210567', name: 'وليد جاسم مرزوق', department: 'هندسة البرمجيات', level: 'المستوى الرابع', admissionType: 'عام', status: 'suspended', joinDate: '2021-09-10' },
-  { id: '4', regId: '20230001', name: 'مريم سعيد سالم', department: 'تقنية المعلومات', level: 'المستوى الأول', admissionType: 'منحة', status: 'active', joinDate: '2023-09-20' },
+  { id: '4', regId: '20230001', name: 'مريم سعيد سالم', department: 'تقنية المعلومات', level: 'المستوى الأول', admissionType: 'نفقة خاصة', status: 'active', joinDate: '2023-09-20' },
 ];
 
 export default function StudentsManagementPage() {
@@ -119,65 +122,89 @@ export default function StudentsManagementPage() {
                   إضافة طالب جديد
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] rounded-3xl border-none text-right shadow-2xl" dir="rtl">
-                <DialogHeader className="text-right">
-                  <DialogTitle className="text-2xl font-black text-primary">إضافة طالب</DialogTitle>
-                  <DialogDescription className="font-bold">أدخل البيانات الأكاديمية والشخصية للطالب لمطابقتها لاحقاً.</DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-2 gap-6 py-4">
-                  <div className="space-y-2 col-span-2 text-right">
-                    <Label className="text-primary font-bold">الاسم الكامل</Label>
-                    <Input placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11 border-muted text-right font-bold" />
+              <DialogContent className="sm:max-w-[500px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+                <div className="p-8">
+                  <DialogHeader className="text-right items-start space-y-2 mb-8">
+                    <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                      <UserPlus className="w-6 h-6 text-secondary" />
+                      إضافة طالب جديد
+                    </DialogTitle>
+                    <DialogDescription className="font-bold text-muted-foreground text-sm">
+                      أدخل البيانات الأكاديمية والشخصية للطالب لمطابقتها لاحقاً مع ملفات الأرشفة.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="grid grid-cols-2 gap-6 py-4">
+                    <div className="space-y-2 col-span-2 text-right">
+                      <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                        <User className="w-4 h-4 text-secondary" />
+                        الاسم الكامل
+                      </Label>
+                      <Input placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" />
+                    </div>
+                    <div className="space-y-2 text-right">
+                      <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                        <Fingerprint className="w-4 h-4 text-secondary" />
+                        رقم القيد
+                      </Label>
+                      <Input placeholder="20240000" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" />
+                    </div>
+                    <div className="space-y-2 text-right">
+                      <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                        <Building2 className="w-4 h-4 text-secondary" />
+                        التخصص
+                      </Label>
+                      <Select>
+                        <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                          <SelectValue placeholder="اختر التخصص" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl font-bold">
+                          <SelectItem value="it">تقنية المعلومات</SelectItem>
+                          <SelectItem value="cs">علوم الحاسوب</SelectItem>
+                          <SelectItem value="se">هندسة البرمجيات</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2 text-right">
+                      <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                        <GraduationCap className="w-4 h-4 text-secondary" />
+                        المستوى
+                      </Label>
+                      <Select>
+                        <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                          <SelectValue placeholder="اختر المستوى" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl font-bold">
+                          <SelectItem value="1">المستوى الأول</SelectItem>
+                          <SelectItem value="2">المستوى الثاني</SelectItem>
+                          <SelectItem value="3">المستوى الثالث</SelectItem>
+                          <SelectItem value="4">المستوى الرابع</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2 text-right">
+                      <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                        <Banknote className="w-4 h-4 text-secondary" />
+                        نوع القبول
+                      </Label>
+                      <Select>
+                        <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                          <SelectValue placeholder="نوع القبول" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl font-bold">
+                          <SelectItem value="general">عام</SelectItem>
+                          <SelectItem value="parallel">موازي</SelectItem>
+                          <SelectItem value="private">نفقة خاصة</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">رقم القيد</Label>
-                    <Input placeholder="20240000" className="rounded-xl h-11 border-muted text-right font-bold" />
-                  </div>
-                  <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">التخصص</Label>
-                    <Select>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
-                        <SelectValue placeholder="اختر التخصص" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl font-bold">
-                        <SelectItem value="it">تقنية المعلومات</SelectItem>
-                        <SelectItem value="cs">علوم الحاسوب</SelectItem>
-                        <SelectItem value="se">هندسة البرمجيات</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">المستوى</Label>
-                    <Select>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
-                        <SelectValue placeholder="اختر المستوى" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl font-bold">
-                        <SelectItem value="1">المستوى الأول</SelectItem>
-                        <SelectItem value="2">المستوى الثاني</SelectItem>
-                        <SelectItem value="3">المستوى الثالث</SelectItem>
-                        <SelectItem value="4">المستوى الرابع</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">نوع القبول</Label>
-                    <Select>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
-                        <SelectValue placeholder="نوع القبول" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl font-bold">
-                        <SelectItem value="general">عام</SelectItem>
-                        <SelectItem value="parallel">موازي</SelectItem>
-                        <SelectItem value="scholarship">منحة</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  
+                  <DialogFooter className="flex-row gap-3 pt-8">
+                    <Button type="submit" onClick={() => { setIsAddDialogOpen(false); toast({ title: "تم الحفظ", description: "تمت إضافة الطالب بنجاح." }); }} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">حفظ البيانات</Button>
+                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+                  </DialogFooter>
                 </div>
-                <DialogFooter className="flex-row gap-3 pt-4">
-                  <Button type="submit" onClick={() => { setIsAddDialogOpen(false); toast({ title: "تم الحفظ", description: "تمت إضافة الطالب بنجاح." }); }} className="flex-1 rounded-xl h-11 font-bold gradient-blue">حفظ البيانات</Button>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
-                </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
@@ -246,7 +273,7 @@ export default function StudentsManagementPage() {
                     <SelectItem value="all">جميع الأنواع</SelectItem>
                     <SelectItem value="عام">عام</SelectItem>
                     <SelectItem value="موازي">موازي</SelectItem>
-                    <SelectItem value="منحة">منحة</SelectItem>
+                    <SelectItem value="نفقة خاصة">نفقة خاصة</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
