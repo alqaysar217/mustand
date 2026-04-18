@@ -1,0 +1,231 @@
+"use client";
+
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  BookOpen, 
+  Plus, 
+  Search, 
+  MoreVertical, 
+  Edit2, 
+  Trash2,
+  Filter,
+  GraduationCap,
+  Building2
+} from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+
+const INITIAL_SUBJECTS = [
+  { id: '1', name: 'برمجة 1', department: 'تقنية المعلومات', level: 'المستوى الأول', studentsCount: 145 },
+  { id: '2', name: 'رياضيات متقدمة', department: 'علوم الحاسوب', level: 'المستوى الثاني', studentsCount: 98 },
+  { id: '3', name: 'هندسة برمجيات', department: 'هندسة البرمجيات', level: 'المستوى الثالث', studentsCount: 72 },
+  { id: '4', name: 'قواعد بيانات', department: 'تقنية المعلومات', level: 'المستوى الثاني', studentsCount: 110 },
+  { id: '5', name: 'ذكاء اصطناعي', department: 'علوم الحاسوب', level: 'المستوى الرابع', studentsCount: 45 },
+];
+
+export default function SubjectsPage() {
+  const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const filteredSubjects = subjects.filter(subject => 
+    subject.name.includes(searchTerm) || subject.department.includes(searchTerm)
+  );
+
+  const handleDelete = (id: string) => {
+    setSubjects(prev => prev.filter(s => s.id !== id));
+    toast({
+      variant: "destructive",
+      title: "تم الحذف",
+      description: "تم حذف المادة بنجاح من النظام.",
+    });
+  };
+
+  return (
+    <div className="space-y-8 text-right" dir="rtl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-black text-primary mb-1">إدارة المواد الدراسية</h1>
+          <p className="text-muted-foreground font-bold">إضافة وتعديل المواد، وتوزيعها على التخصصات والمستويات</p>
+        </div>
+        
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2">
+              <Plus className="w-5 h-5" />
+              إضافة مادة جديدة
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right" dir="rtl">
+            <DialogHeader className="text-right">
+              <DialogTitle className="text-2xl font-black text-primary">إضافة مادة</DialogTitle>
+              <DialogDescription className="font-bold">أدخل تفاصيل المادة الدراسية الجديدة.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-6 py-4">
+              <div className="space-y-2">
+                <Label className="text-primary font-bold">اسم المادة</Label>
+                <Input placeholder="مثال: هياكل بيانات" className="rounded-xl h-11 border-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-primary font-bold">التخصص</Label>
+                <Select>
+                  <SelectTrigger className="rounded-xl h-11 border-muted">
+                    <SelectValue placeholder="اختر التخصص" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="it">تقنية المعلومات</SelectItem>
+                    <SelectItem value="cs">علوم الحاسوب</SelectItem>
+                    <SelectItem value="se">هندسة البرمجيات</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-primary font-bold">المستوى</Label>
+                <Select>
+                  <SelectTrigger className="rounded-xl h-11 border-muted">
+                    <SelectValue placeholder="اختر المستوى" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="1">المستوى الأول</SelectItem>
+                    <SelectItem value="2">المستوى الثاني</SelectItem>
+                    <SelectItem value="3">المستوى الثالث</SelectItem>
+                    <SelectItem value="4">المستوى الرابع</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter className="flex-row gap-3">
+              <Button type="submit" className="flex-1 rounded-xl h-11 font-bold gradient-blue">حفظ المادة</Button>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card className="p-6 border-none shadow-xl rounded-3xl bg-white">
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+          <div className="flex-1 relative">
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input 
+              type="text"
+              placeholder="البحث باسم المادة أو التخصص..."
+              className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" className="h-12 rounded-2xl border-2 px-6 gap-2 font-bold">
+            <Filter className="w-5 h-5" />
+            تصفية
+          </Button>
+        </div>
+
+        <div className="rounded-2xl border overflow-hidden">
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow className="hover:bg-transparent border-b">
+                <TableHead className="text-right font-bold text-primary">المادة</TableHead>
+                <TableHead className="text-right font-bold text-primary">التخصص</TableHead>
+                <TableHead className="text-right font-bold text-primary">المستوى</TableHead>
+                <TableHead className="text-right font-bold text-primary">عدد الطلاب المسجلين</TableHead>
+                <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSubjects.length > 0 ? filteredSubjects.map((subject) => (
+                <TableRow key={subject.id} className="hover:bg-muted/20 border-b group">
+                  <TableCell className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10">
+                        <BookOpen className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="font-bold text-primary">{subject.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-bold text-muted-foreground">{subject.department}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-bold text-muted-foreground">{subject.level}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center justify-center bg-secondary/10 text-secondary font-black px-3 py-1 rounded-lg text-xs">
+                      {subject.studentsCount} طالب
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-xl hover:bg-primary/5">
+                          <MoreVertical className="w-4 h-4 text-primary" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right" dir="rtl">
+                        <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات المادة</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
+                          تعديل المادة
+                          <Edit2 className="w-4 h-4 text-secondary" />
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => handleDelete(subject.id)}
+                          className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive"
+                        >
+                          حذف المادة
+                          <Trash2 className="w-4 h-4" />
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">
+                    لا توجد مواد دراسية مطابقة للبحث
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+    </div>
+  );
+}
