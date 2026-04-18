@@ -56,7 +56,7 @@ export default function Home() {
             data-ai-hint="archive logo"
           />
         </div>
-        <h1 className="text-4xl font-bold mb-2 tracking-tight">نظام الأرشفة الذكي</h1>
+        <h1 className="text-4xl font-bold mb-2 tracking-tight">مستند</h1>
         <p className="text-white/70 mb-8 font-light">مستقبلك الرقمي يبدأ هنا</p>
         <Loader2 className="w-8 h-8 animate-spin text-white/50" />
       </div>
