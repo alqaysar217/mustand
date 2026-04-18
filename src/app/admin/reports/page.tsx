@@ -6,18 +6,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   BarChart3, 
-  FileDown, 
   FileSpreadsheet, 
   FileArchive, 
   Filter, 
-  Calendar,
   BookOpen,
   Users,
-  Search,
-  ChevronLeft,
   Loader2,
-  TrendingUp,
-  Download
+  TrendingUp
 } from "lucide-react";
 import {
   Table,
@@ -82,6 +77,17 @@ export default function ReportsPage() {
     }, 1500);
   };
 
+  const handleRefreshData = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      toast({
+        title: "تم تحديث البيانات",
+        description: "تمت مزامنة آخر الإحصائيات مع قاعدة البيانات بنجاح.",
+      });
+    }, 1200);
+  };
+
   return (
     <div className="space-y-8 text-right" dir="rtl">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -144,7 +150,14 @@ export default function ReportsPage() {
             </select>
           </div>
           <div className="flex items-end">
-            <Button className="w-full h-11 rounded-xl font-bold gradient-blue shadow-lg">تحديث البيانات</Button>
+            <Button 
+              onClick={handleRefreshData}
+              disabled={loading}
+              className="w-full h-11 rounded-xl font-bold gradient-blue shadow-lg"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+              تحديث البيانات
+            </Button>
           </div>
         </div>
       </Card>
@@ -277,3 +290,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
