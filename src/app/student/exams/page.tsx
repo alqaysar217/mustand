@@ -13,13 +13,15 @@ import {
   Calendar, 
   FileText,
   X,
-  ChevronLeft
+  ChevronLeft,
+  Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const ALL_EXAMS = [
   { id: '1', subject: 'برمجة 2', year: '2023 / 2024', term: 'الفصل الأول', pages: 5, date: '2024-05-15', fileUrl: PlaceHolderImages[1].imageUrl },
@@ -32,10 +34,12 @@ const ALL_EXAMS = [
 
 export default function ExamsListPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterYear, setFilterYear] = useState("all");
   const [filterTerm, setFilterTerm] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const filteredExams = useMemo(() => {
     return ALL_EXAMS.filter(exam => {
@@ -45,6 +49,59 @@ export default function ExamsListPage() {
       return matchesSearch && matchesYear && matchesTerm;
     });
   }, [searchTerm, filterYear, filterTerm]);
+
+  const handleDownload = async (exam: any) => {
+    if (!exam?.fileUrl) return;
+    
+    setDownloadingId(exam.id);
+    try {
+      toast({
+        title: "جاري التحميل",
+        description: `يتم الآن معالجة ملف: ${exam.subject}`,
+      });
+
+      const response = await fetch(exam.fileUrl);
+      if (!response.ok) throw new Error('تعذر الوصول إلى مصدر الملف');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      
+      // Determine extension based on mime type
+      let extension = 'jpg';
+      if (blob.type.includes('pdf')) {
+        extension = 'pdf';
+      } else if (blob.type.includes('image')) {
+        extension = blob.type.split('/')[1] || 'jpg';
+      }
+
+      const cleanSubject = exam.subject.trim().replace(/\s+/g, '_');
+      const cleanYear = exam.year.trim().replace(/\s+/g, '_').replace(/\//g, '-');
+      a.download = `${cleanSubject}_${cleanYear}.${extension}`;
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "تم التحميل بنجاح",
+        description: "تم حفظ الاختبار على جهازك بنجاح.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "فشل التحميل",
+        description: "عذراً، حدث خطأ أثناء محاولة تحميل الملف.",
+      });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   return (
     <div className="space-y-8 text-right">
@@ -117,9 +174,18 @@ export default function ExamsListPage() {
                   <Eye className="w-4 h-4 ml-2" />
                   عرض الاختبار
                 </Button>
-                <Button variant="outline" className="rounded-xl bg-white/10 text-white border-white/20 hover:bg-white/20 font-bold backdrop-blur-md h-11">
-                  <Download className="w-4 h-4 ml-2" />
-                  تحميل PDF
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl bg-white/10 text-white border-white/20 hover:bg-white/20 font-bold backdrop-blur-md h-11"
+                  onClick={() => handleDownload(exam)}
+                  disabled={downloadingId === exam.id}
+                >
+                  {downloadingId === exam.id ? (
+                    <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 ml-2" />
+                  )}
+                  {downloadingId === exam.id ? "جاري المعالجة..." : "تحميل الملف"}
                 </Button>
               </div>
               <div className="absolute top-4 right-4">
