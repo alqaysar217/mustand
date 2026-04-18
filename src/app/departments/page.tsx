@@ -17,7 +17,8 @@ import {
   X,
   PlusCircle,
   FileText,
-  Users
+  Users,
+  BookOpen
 } from "lucide-react";
 import {
   Table,
