@@ -244,7 +244,7 @@ export default function StudentsPage() {
             onClick={() => setShowFilters(!showFilters)}
             className="h-12 rounded-2xl border-2 px-6 gap-2 font-bold transition-all"
           >
-            {showFilters ? <X className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
+            <Filter className="w-5 h-5" />
             تصفية متقدمة
           </Button>
         </div>

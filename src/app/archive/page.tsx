@@ -14,7 +14,6 @@ import {
   Filter, 
   Search,
   Calendar,
-  X,
   User as UserIcon,
   BookOpen,
   Building,
@@ -176,7 +175,7 @@ export default function ArchivePage() {
             />
           </div>
           <Button variant={showFilters ? "default" : "outline"} onClick={() => setShowFilters(!showFilters)} className="h-12 rounded-xl gap-2 font-bold px-6 border-2">
-            {showFilters ? <X className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
+            <Filter className="w-4 h-4" />
             تصفية النتائج
           </Button>
         </div>
