@@ -16,7 +16,8 @@ import {
   Database,
   Sparkles,
   Save,
-  UserCog
+  UserCog,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -78,7 +79,7 @@ export default function AdminSettingsPage() {
                 disabled={loading}
                 className="rounded-xl px-8 h-12 font-bold gradient-blue shadow-lg gap-2"
               >
-                <Save className="w-4 h-4" />
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 حفظ التغييرات
               </Button>
             </div>
@@ -111,8 +112,10 @@ export default function AdminSettingsPage() {
             <div className="flex justify-end mt-8">
               <Button 
                 onClick={() => handleSave('الأمان')}
-                className="rounded-xl px-8 h-12 font-bold border-2 border-primary text-primary hover:bg-primary/5"
+                disabled={loading}
+                className="rounded-xl px-8 h-12 font-bold gradient-blue shadow-lg gap-2"
               >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
                 تحديث كلمة المرور
               </Button>
             </div>
