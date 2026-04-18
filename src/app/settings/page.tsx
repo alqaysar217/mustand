@@ -15,13 +15,17 @@ import {
   Database,
   ChevronLeft,
   Save,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 type SettingsTab = 'profile' | 'security' | 'notifications' | 'language';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
 
   const tabs = [
     { id: 'profile' as SettingsTab, label: 'الملف الشخصي', icon: User },
@@ -29,6 +33,26 @@ export default function SettingsPage() {
     { id: 'notifications' as SettingsTab, label: 'التنبيهات', icon: Bell },
     { id: 'language' as SettingsTab, label: 'اللغة والمنطقة', icon: Globe },
   ];
+
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    // محاكاة عملية حفظ البيانات
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast({
+        title: "تم الحفظ بنجاح",
+        description: "تم تحديث إعدادات حسابك بنجاح في النظام.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "خطأ في الحفظ",
+        description: "عذراً، حدث خطأ أثناء محاولة حفظ الإعدادات. يرجى المحاولة مرة أخرى.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background text-right" dir="rtl">
@@ -98,9 +122,17 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex justify-end">
-                    <Button className="rounded-xl px-10 h-12 font-bold gradient-blue shadow-lg gap-2">
-                      <Save className="w-4 h-4" />
-                      حفظ التعديلات
+                    <Button
+                      onClick={handleSaveSettings}
+                      disabled={isSaving}
+                      className="rounded-xl px-10 h-12 font-bold gradient-blue shadow-lg gap-2"
+                    >
+                      {isSaving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      {isSaving ? "جاري الحفظ..." : "حفظ التعديلات"}
                     </Button>
                   </div>
                 </Card>
@@ -150,7 +182,14 @@ export default function SettingsPage() {
                     <label className="text-sm font-bold text-primary">تأكيد كلمة المرور</label>
                     <input type="password" placeholder="••••••••" className="w-full h-12 px-4 rounded-xl bg-muted/30 border-2 border-transparent focus:border-primary focus:bg-white outline-none font-bold transition-all text-right" />
                   </div>
-                  <Button className="w-full h-12 rounded-xl font-bold bg-primary shadow-lg mt-4 text-white">تحديث كلمة المرور</Button>
+                  <Button
+                    onClick={handleSaveSettings}
+                    disabled={isSaving}
+                    className="w-full h-12 rounded-xl font-bold bg-primary shadow-lg mt-4 text-white"
+                  >
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+                    {isSaving ? "جاري التحديث..." : "تحديث كلمة المرور"}
+                  </Button>
                 </div>
               </Card>
             )}
@@ -202,7 +241,14 @@ export default function SettingsPage() {
                     </select>
                   </div>
                   <div className="pt-4">
-                    <Button className="w-full h-12 rounded-xl font-bold gradient-blue shadow-lg">حفظ إعدادات المنطقة</Button>
+                    <Button
+                      onClick={handleSaveSettings}
+                      disabled={isSaving}
+                      className="w-full h-12 rounded-xl font-bold gradient-blue shadow-lg"
+                    >
+                      {isSaving ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+                      {isSaving ? "جاري الحفظ..." : "حفظ إعدادات المنطقة"}
+                    </Button>
                   </div>
                 </div>
               </Card>
