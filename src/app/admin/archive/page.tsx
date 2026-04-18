@@ -12,7 +12,6 @@ import {
   Eye, 
   Edit2, 
   Trash2, 
-  MoveHorizontal,
   FileText,
   Calendar,
   GraduationCap
@@ -36,16 +35,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const INITIAL_ARCHIVES = [
   { id: '1', name: 'أحمد محمود علي', regId: '20210045', subject: 'رياضيات 1', year: '2023 / 2024', term: 'الفصل الأول', department: 'تقنية المعلومات', date: '2024-05-20', pages: 4 },
@@ -57,8 +46,6 @@ const INITIAL_ARCHIVES = [
 export default function AdminArchivePage() {
   const [archives, setArchives] = useState(INITIAL_ARCHIVES);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
   const { toast } = useToast();
 
   const filteredArchives = archives.filter(item => 
@@ -71,11 +58,6 @@ export default function AdminArchivePage() {
       title: "تم النقل إلى سلة المحذوفات",
       description: "يمكنك استرجاع الملف من قسم سلة المحذوفات لاحقاً.",
     });
-  };
-
-  const handleMove = (item: any) => {
-    setSelectedItem(item);
-    setIsMoveDialogOpen(true);
   };
 
   return (
@@ -167,13 +149,6 @@ export default function AdminArchivePage() {
                           تعديل البيانات
                           <Edit2 className="w-4 h-4 text-secondary" />
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleMove(item)}
-                          className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold"
-                        >
-                          نقل لمجلد آخر
-                          <MoveHorizontal className="w-4 h-4 text-orange-500" />
-                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           onClick={() => handleDelete(item.id)}
@@ -197,56 +172,6 @@ export default function AdminArchivePage() {
           </Table>
         </div>
       </Card>
-
-      {/* Move Dialog */}
-      <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right" dir="rtl">
-          <DialogHeader className="text-right">
-            <DialogTitle className="text-2xl font-black text-primary">نقل الملف</DialogTitle>
-            <DialogDescription className="font-bold">تغيير التخصص أو السنة الدراسية لملف الطالب.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-6 py-4">
-            <div className="space-y-2">
-              <Label className="text-primary font-bold">التخصص الجديد</Label>
-              <Select defaultValue={selectedItem?.department}>
-                <SelectTrigger className="rounded-xl h-11 border-muted">
-                  <SelectValue placeholder="اختر التخصص" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="تقنية المعلومات">تقنية المعلومات</SelectItem>
-                  <SelectItem value="علوم الحاسوب">علوم الحاسوب</SelectItem>
-                  <SelectItem value="هندسة البرمجيات">هندسة البرمجيات</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-primary font-bold">السنة الدراسية</Label>
-              <Select defaultValue={selectedItem?.year}>
-                <SelectTrigger className="rounded-xl h-11 border-muted">
-                  <SelectValue placeholder="اختر السنة" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="2023 / 2024">2023 / 2024</SelectItem>
-                  <SelectItem value="2022 / 2023">2022 / 2023</SelectItem>
-                  <SelectItem value="2021 / 2022">2021 / 2022</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter className="flex-row gap-3">
-            <Button 
-              onClick={() => {
-                toast({ title: "تم النقل بنجاح", description: "تم تحديث مسار الملف في النظام." });
-                setIsMoveDialogOpen(false);
-              }} 
-              className="flex-1 rounded-xl h-11 font-bold gradient-blue"
-            >
-              تأكيد النقل
-            </Button>
-            <Button variant="outline" onClick={() => setIsMoveDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
