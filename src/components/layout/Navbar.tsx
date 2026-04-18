@@ -41,11 +41,11 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="right" className="p-0 bg-primary border-none w-72 text-right">
               <div className="flex flex-col h-full text-white">
-                <SheetHeader className="p-8 flex items-center gap-4 border-b border-white/10 text-right space-y-0">
-                  <div className="relative w-12 h-12 bg-white rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg p-0">
+                <SheetHeader className="p-8 flex flex-row items-center gap-4 border-b border-white/10 text-right space-y-0">
+                  <div className="relative w-12 h-12 bg-white rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg p-0 shrink-0">
                     <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
                   </div>
-                  <SheetTitle className="text-xl font-black tracking-tight text-white">مستند</SheetTitle>
+                  <SheetTitle className="text-xl font-black tracking-tight text-white m-0">مستند</SheetTitle>
                 </SheetHeader>
                 
                 <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
