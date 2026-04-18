@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -24,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 const MOCK_LOGS = [
   { id: '1', user: 'أحمد محمود', role: 'مدير', action: 'رفع اختبار', target: 'برمجة 1 - طالب: محمد خالد', date: '2024-05-22', time: '10:30 ص', type: 'upload' },
@@ -36,10 +36,18 @@ const MOCK_LOGS = [
 export default function LogsPage() {
   const [logs] = useState(MOCK_LOGS);
   const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
 
   const filteredLogs = logs.filter(log => 
     log.user.includes(searchTerm) || log.action.includes(searchTerm) || log.target.includes(searchTerm)
   );
+
+  const handleFilterClick = () => {
+    toast({
+      title: "تصفية النتائج",
+      description: "جاري تجهيز خيارات التصفية المتقدمة حسب التاريخ ونوع العملية.",
+    });
+  };
 
   const getActionBadge = (type: string) => {
     switch(type) {
@@ -72,7 +80,11 @@ export default function LogsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" className="h-12 rounded-2xl border-2 px-6 gap-2 font-bold">
+          <Button 
+            variant="outline" 
+            onClick={handleFilterClick}
+            className="h-12 rounded-2xl border-2 px-6 gap-2 font-bold"
+          >
             <Filter className="w-5 h-5" />
             تصفية النتائج
           </Button>
