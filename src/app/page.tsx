@@ -34,6 +34,8 @@ export default function Home() {
     setTimeout(() => {
       if (selectedRole === 'manager') {
         router.push('/admin/dashboard');
+      } else if (selectedRole === 'student') {
+        router.push('/student/dashboard');
       } else {
         router.push('/dashboard');
       }
@@ -111,7 +113,7 @@ export default function Home() {
             <input 
               type="text" 
               className="w-full h-12 px-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-              placeholder="مثال: admin"
+              placeholder={selectedRole === 'student' ? "رقم القيد" : "اسم المستخدم"}
               required
             />
           </div>
