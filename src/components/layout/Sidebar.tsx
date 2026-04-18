@@ -41,7 +41,7 @@ export function Sidebar() {
         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
           <LogoIcon className="w-6 h-6" />
         </div>
-        <span className="text-xl font-bold tracking-tight">أرشيفا سمارت</span>
+        <span className="text-xl font-bold tracking-tight">مستند</span>
       </div>
 
       <nav className="flex-1 px-4 space-y-2 mt-4">
@@ -73,7 +73,7 @@ export function Sidebar() {
             <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm">م ع</div>
             <div className="overflow-hidden">
               <p className="text-sm font-bold truncate">محمد علي</p>
-              <p className="text-xs text-white/50 truncate">موظف أرشيف</p>
+              <p className="text-[10px] text-white/50 truncate">موظف أرشيف</p>
             </div>
           </div>
           <Button 

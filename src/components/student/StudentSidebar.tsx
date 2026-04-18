@@ -35,7 +35,7 @@ export function StudentSidebar() {
           <Archive className="w-6 h-6" />
         </div>
         <div className="flex flex-col">
-          <span className="text-xl font-bold tracking-tight">أرشيفا سمارت</span>
+          <span className="text-xl font-bold tracking-tight">مستند</span>
           <span className="text-[10px] text-white/50">بوابة الطالب</span>
         </div>
       </div>
