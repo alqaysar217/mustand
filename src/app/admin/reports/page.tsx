@@ -53,6 +53,7 @@ const COLORS = ['#0B3C5D', '#328CC1', '#D9E3F0', '#000000'];
 
 export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState<string | null>(null);
   const [academicYears, setAcademicYears] = useState<string[]>([]);
   const { toast } = useToast();
 
@@ -67,14 +68,14 @@ export default function ReportsPage() {
   }, []);
 
   const handleExport = (format: 'excel' | 'zip') => {
-    setLoading(true);
+    setExporting(format);
     setTimeout(() => {
-      setLoading(false);
+      setExporting(null);
       toast({
         title: "تم التصدير بنجاح",
-        description: `تم تجهيز وتحميل ملف التقرير بصيغة ${format.toUpperCase()}`,
+        description: `تم تجهيز وتحميل ملف التقرير بصيغة ${format.toUpperCase()} بنجاح.`,
       });
-    }, 1500);
+    }, 2000);
   };
 
   const handleRefreshData = () => {
@@ -100,17 +101,19 @@ export default function ReportsPage() {
           <Button 
             variant="outline" 
             onClick={() => handleExport('excel')}
+            disabled={exporting !== null}
             className="rounded-xl h-11 border-2 gap-2 font-bold hover:bg-green-50 hover:text-green-600 hover:border-green-200"
           >
-            <FileSpreadsheet className="w-4 h-4" />
+            {exporting === 'excel' ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : <FileSpreadsheet className="w-4 h-4" />}
             تصدير Excel
           </Button>
           <Button 
             variant="outline" 
             onClick={() => handleExport('zip')}
+            disabled={exporting !== null}
             className="rounded-xl h-11 border-2 gap-2 font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
           >
-            <FileArchive className="w-4 h-4" />
+            {exporting === 'zip' ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : <FileArchive className="w-4 h-4" />}
             تنزيل الصور (ZIP)
           </Button>
         </div>
@@ -290,4 +293,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
