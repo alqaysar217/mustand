@@ -34,7 +34,7 @@ export function Navbar() {
                 <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
                   <Archive className="w-6 h-6" />
                 </div>
-                <SheetTitle className="text-xl font-bold tracking-tight text-white">أرشيفا سمارت</SheetTitle>
+                <SheetTitle className="text-xl font-bold tracking-tight text-white">مستند</SheetTitle>
               </SheetHeader>
               
               <nav className="flex-1 px-4 py-6 space-y-2">
@@ -72,7 +72,7 @@ export function Navbar() {
             </div>
           </SheetContent>
         </Sheet>
-        <h2 className="text-xl font-bold text-primary">نظام الأرشفة الذكي</h2>
+        <h2 className="text-xl font-bold text-primary">مستند</h2>
       </div>
 
       <div className="flex items-center gap-3">
