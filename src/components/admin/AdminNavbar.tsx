@@ -114,8 +114,19 @@ export function AdminNavbar() {
           </Button>
         </div>
 
-        <h2 className="text-xl font-black text-primary hidden sm:block">لوحة التحكم المركزية</h2>
-        <h2 className="text-lg font-black text-primary sm:hidden">لوحة التحكم</h2>
+        {!isOpen ? (
+          <div className="flex items-center gap-3 animate-fade-in">
+            <div className="relative w-10 h-10 bg-white rounded-[10px] flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
+              <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
+            </div>
+            <h2 className="text-xl font-black text-primary">مستند</h2>
+          </div>
+        ) : (
+          <>
+            <h2 className="text-xl font-black text-primary hidden sm:block">لوحة التحكم المركزية</h2>
+            <h2 className="text-lg font-black text-primary sm:hidden">لوحة التحكم</h2>
+          </>
+        )}
       </div>
 
       <div className="flex items-center gap-4">
