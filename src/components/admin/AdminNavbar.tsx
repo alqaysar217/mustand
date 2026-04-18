@@ -1,6 +1,7 @@
+
 "use client";
 
-import { Bell, Menu, User, Settings, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft } from "lucide-react";
+import { Bell, Menu, User, Settings, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import {
@@ -21,6 +22,7 @@ const adminMenuItems = [
   { label: 'إدارة المستخدمين', icon: Users, href: '/admin/users' },
   { label: 'إدارة الطلاب', icon: GraduationCap, href: '/admin/students' },
   { label: 'إدارة المواد', icon: BookOpen, href: '/admin/subjects' },
+  { label: 'إدارة التخصصات', icon: Building2, href: '/admin/departments' },
   { label: 'إدارة الأرشيف', icon: Archive, href: '/admin/archive' },
   { label: 'سلة المحذوفات', icon: Trash2, href: '/admin/recycle-bin' },
   { label: 'التقارير', icon: BarChart3, href: '/admin/reports' },

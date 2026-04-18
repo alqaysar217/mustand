@@ -13,7 +13,8 @@ import {
   LogOut,
   ChevronLeft,
   GraduationCap,
-  BookOpen
+  BookOpen,
+  Building2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ const menuItems = [
   { label: 'الأرشيف', icon: Archive, href: '/archive' },
   { label: 'إدارة الطلاب', icon: GraduationCap, href: '/students' },
   { label: 'إدارة المواد', icon: BookOpen, href: '/subjects' },
+  { label: 'إدارة التخصصات', icon: Building2, href: '/departments' },
   { label: 'البحث', icon: Search, href: '/search' },
   { label: 'الإعدادات', icon: Settings, href: '/settings' },
 ];

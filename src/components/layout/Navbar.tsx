@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bell, Menu, User, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, GraduationCap, BookOpen, LogOut } from "lucide-react";
+import { Bell, Menu, User, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, GraduationCap, BookOpen, LogOut, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Link from "next/link";
@@ -15,6 +15,7 @@ const menuItems = [
   { label: 'الأرشيف', icon: Archive, href: '/archive' },
   { label: 'إدارة الطلاب', icon: GraduationCap, href: '/students' },
   { label: 'إدارة المواد', icon: BookOpen, href: '/subjects' },
+  { label: 'إدارة التخصصات', icon: Building2, href: '/departments' },
   { label: 'البحث', icon: Search, href: '/search' },
   { label: 'الإعدادات', icon: Settings, href: '/settings' },
 ];
