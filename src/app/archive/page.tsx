@@ -92,52 +92,84 @@ export default function ArchivePage() {
     setSearchTerm("");
   };
 
+  /**
+   * Determines the appropriate download label based on the file type in the URL.
+   */
   const getDownloadLabel = (url: string) => {
+    if (!url) return 'تحميل';
     const lowerUrl = url.toLowerCase();
+    
+    // Check for common image extensions or placeholder services
+    const isImage = 
+      lowerUrl.match(/\.(jpg|jpeg|png|webp|gif|svg|bmp)$/i) || 
+      lowerUrl.includes('picsum.photos') || 
+      lowerUrl.includes('placehold.co');
+    
     if (lowerUrl.includes('.pdf')) return 'تحميل PDF';
-    if (lowerUrl.match(/\.(jpg|jpeg|png|webp|gif|svg)/i) || lowerUrl.includes('picsum.photos') || lowerUrl.includes('placehold.co')) return 'تحميل IMG';
+    if (isImage) return 'تحميل IMG';
+    
     return 'تحميل';
   };
 
+  /**
+   * Handles the file download process using fetch and blob to ensure 
+   * the file is downloaded directly to the device.
+   */
   const handleDownload = async (item: any) => {
+    if (!item?.fileUrl) return;
+    
     setDownloadingId(item.id);
     try {
       toast({
-        title: "جاري التحميل",
+        title: "جاري التجهيز",
         description: `يتم الآن معالجة ملف: ${item.name}`,
       });
 
+      // Fetch the file as a blob
       const response = await fetch(item.fileUrl);
-      if (!response.ok) throw new Error('فشل في الوصول للملف');
+      if (!response.ok) throw new Error('تعذر الوصول إلى مصدر الملف');
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       
+      // Create a temporary hidden anchor element
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
       
-      const extension = blob.type.includes('pdf') ? 'pdf' : 'jpg';
-      const cleanName = item.name.replace(/\s+/g, '_');
-      const cleanSubject = item.subject.replace(/\s+/g, '_');
+      // Determine file extension from blob type or URL fallback
+      let extension = 'bin';
+      if (blob.type.includes('pdf')) {
+        extension = 'pdf';
+      } else if (blob.type.includes('image')) {
+        extension = blob.type.split('/')[1] || 'jpg';
+      } else {
+        const urlParts = item.fileUrl.split('.');
+        extension = urlParts.length > 1 ? urlParts.pop() : 'jpg';
+      }
+
+      // Format clean Arabic filename: [StudentName]_[Subject].[ext]
+      const cleanName = item.name.trim().replace(/\s+/g, '_');
+      const cleanSubject = item.subject.trim().replace(/\s+/g, '_');
       a.download = `${cleanName}_${cleanSubject}.${extension}`;
       
       document.body.appendChild(a);
       a.click();
       
+      // Cleanup
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
       toast({
         title: "تم التحميل بنجاح",
-        description: "تم حفظ الملف على جهازك.",
+        description: "تم حفظ الملف على جهازك بنجاح.",
       });
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error("Download Error:", error);
       toast({
         variant: "destructive",
-        title: "خطأ في التحميل",
-        description: "عذراً، تعذر تحميل الملف حالياً. يرجى المحاولة مرة أخرى.",
+        title: "فشل التحميل",
+        description: "عذراً، حدث خطأ أثناء محاولة تحميل الملف. يرجى المحاولة لاحقاً.",
       });
     } finally {
       setDownloadingId(null);
@@ -447,7 +479,7 @@ export default function ArchivePage() {
                     <Button 
                       onClick={() => handleDownload(viewingExam)} 
                       disabled={downloadingId === viewingExam.id}
-                      className="flex-1 rounded-xl gradient-blue font-bold shadow-lg"
+                      className="flex-1 rounded-xl bg-secondary text-white hover:bg-secondary/90 font-bold shadow-lg"
                     >
                       {downloadingId === viewingExam.id ? (
                         <Loader2 className="w-4 h-4 ml-2 animate-spin" />
