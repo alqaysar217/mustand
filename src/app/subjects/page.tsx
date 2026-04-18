@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -16,7 +15,8 @@ import {
   Filter,
   GraduationCap,
   Building2,
-  X
+  X,
+  PlusCircle
 } from "lucide-react";
 import {
   Table,
@@ -102,48 +102,65 @@ export default function SubjectsManagementPage() {
                 إضافة مادة جديدة
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl" dir="rtl">
-              <DialogHeader className="text-right">
-                <DialogTitle className="text-2xl font-black text-primary">إضافة مادة</DialogTitle>
-                <DialogDescription className="font-bold">أدخل تفاصيل المادة الدراسية الجديدة.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-6 py-4">
-                <div className="space-y-2 text-right">
-                  <Label className="text-primary font-bold">اسم المادة</Label>
-                  <Input placeholder="مثال: هياكل بيانات" className="rounded-xl h-11 border-muted text-right font-bold" />
+            <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+              <div className="p-8">
+                <DialogHeader className="text-right items-start space-y-2 mb-8">
+                  <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                    <PlusCircle className="w-6 h-6 text-secondary" />
+                    إضافة مادة جديدة
+                  </DialogTitle>
+                  <DialogDescription className="font-bold text-muted-foreground text-sm">
+                    أدخل تفاصيل المادة الدراسية الجديدة لضمها للسجلات الأكاديمية.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-6 py-4">
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                      <BookOpen className="w-4 h-4 text-secondary" />
+                      اسم المادة
+                    </Label>
+                    <Input placeholder="مثال: هياكل بيانات" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" />
+                  </div>
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                      <Building2 className="w-4 h-4 text-secondary" />
+                      التخصص (القسم)
+                    </Label>
+                    <Select>
+                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                        <SelectValue placeholder="اختر التخصص" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl font-bold">
+                        <SelectItem value="it">تقنية المعلومات</SelectItem>
+                        <SelectItem value="cs">علوم الحاسوب</SelectItem>
+                        <SelectItem value="se">هندسة البرمجيات</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                      <GraduationCap className="w-4 h-4 text-secondary" />
+                      المستوى
+                    </Label>
+                    <Select>
+                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                        <SelectValue placeholder="اختر المستوى" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl font-bold">
+                        <SelectItem value="1">المستوى الأول</SelectItem>
+                        <SelectItem value="2">المستوى الثاني</SelectItem>
+                        <SelectItem value="3">المستوى الثالث</SelectItem>
+                        <SelectItem value="4">المستوى الرابع</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2 text-right">
-                  <Label className="text-primary font-bold">التخصص (القسم)</Label>
-                  <Select>
-                    <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
-                      <SelectValue placeholder="اختر التخصص" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl font-bold">
-                      <SelectItem value="it">تقنية المعلومات</SelectItem>
-                      <SelectItem value="cs">علوم الحاسوب</SelectItem>
-                      <SelectItem value="se">هندسة البرمجيات</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 text-right">
-                  <Label className="text-primary font-bold">المستوى</Label>
-                  <Select>
-                    <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
-                      <SelectValue placeholder="اختر المستوى" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl font-bold">
-                      <SelectItem value="1">المستوى الأول</SelectItem>
-                      <SelectItem value="2">المستوى الثاني</SelectItem>
-                      <SelectItem value="3">المستوى الثالث</SelectItem>
-                      <SelectItem value="4">المستوى الرابع</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <DialogFooter className="flex-row gap-3 pt-8">
+                  <Button type="submit" onClick={() => { setIsAddDialogOpen(false); toast({ title: "تم الحفظ", description: "تمت إضافة المادة بنجاح." }); }} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">حفظ المادة</Button>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+                </DialogFooter>
               </div>
-              <DialogFooter className="flex-row gap-3 pt-4">
-                <Button type="submit" onClick={() => { setIsAddDialogOpen(false); toast({ title: "تم الحفظ", description: "تمت إضافة المادة بنجاح." }); }} className="flex-1 rounded-xl h-11 font-bold gradient-blue">حفظ المادة</Button>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
