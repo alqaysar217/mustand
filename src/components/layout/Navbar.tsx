@@ -1,23 +1,27 @@
+
 "use client";
 
-import { Bell, Menu, User, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft } from "lucide-react";
+import { Bell, Menu, User, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, GraduationCap, BookOpen, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
   { label: 'الرئيسية', icon: LayoutDashboard, href: '/dashboard' },
   { label: 'رفع اختبار', icon: UploadCloud, href: '/upload' },
   { label: 'الأرشيف', icon: Archive, href: '/archive' },
+  { label: 'إدارة الطلاب', icon: GraduationCap, href: '/students' },
+  { label: 'إدارة المواد', icon: BookOpen, href: '/subjects' },
   { label: 'البحث', icon: Search, href: '/search' },
   { label: 'الإعدادات', icon: Settings, href: '/settings' },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <header className="h-20 bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 flex items-center justify-between px-6 md:px-10 mr-0 md:mr-64 transition-all" dir="rtl">
@@ -31,13 +35,13 @@ export function Navbar() {
           <SheetContent side="right" className="p-0 bg-primary border-none w-72 text-right">
             <div className="flex flex-col h-full text-white">
               <SheetHeader className="p-8 flex items-center gap-4 border-b border-white/10 text-right space-y-0">
-                <div className="relative w-12 h-12 bg-white/10 rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg">
+                <div className="relative w-12 h-12 bg-white rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg p-0">
                   <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
                 </div>
                 <SheetTitle className="text-xl font-black tracking-tight text-white">مستند</SheetTitle>
               </SheetHeader>
               
-              <nav className="flex-1 px-4 py-6 space-y-2">
+              <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                 {menuItems.map((item) => {
                   const isActive = pathname === item.href;
                   const Icon = item.icon as any;
@@ -62,12 +66,20 @@ export function Navbar() {
 
               <div className="p-6 border-t border-white/10">
                  <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm">م ع</div>
+                  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm text-white">م ع</div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-white">محمد علي</p>
                     <p className="text-[10px] text-white/50 font-bold">موظف أرشيف</p>
                   </div>
                 </div>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => router.push('/')}
+                  className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 rounded-xl px-2 h-9 mt-4"
+                >
+                  <LogOut className="w-4 h-4 ml-2" />
+                  <span className="text-xs font-bold">تسجيل الخروج</span>
+                </Button>
               </div>
             </div>
           </SheetContent>

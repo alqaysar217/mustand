@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -10,7 +11,9 @@ import {
   Search, 
   Settings, 
   LogOut,
-  ChevronLeft
+  ChevronLeft,
+  GraduationCap,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,6 +22,8 @@ const menuItems = [
   { label: 'الرئيسية', icon: LayoutDashboard, href: '/dashboard' },
   { label: 'رفع اختبار', icon: UploadCloud, href: '/upload' },
   { label: 'الأرشيف', icon: Archive, href: '/archive' },
+  { label: 'إدارة الطلاب', icon: GraduationCap, href: '/students' },
+  { label: 'إدارة المواد', icon: BookOpen, href: '/subjects' },
   { label: 'البحث', icon: Search, href: '/search' },
   { label: 'الإعدادات', icon: Settings, href: '/settings' },
 ];
@@ -34,7 +39,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 h-screen bg-primary text-white hidden md:flex flex-col fixed right-0 top-0 z-40 border-l border-white/10 shadow-2xl">
       <div className="p-8 flex items-center gap-4">
-        <div className="relative w-12 h-12 bg-white/10 rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0">
+        <div className="relative w-12 h-12 bg-white rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0 p-0">
           <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
         </div>
         <div className="flex flex-col">
@@ -43,7 +48,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 px-4 space-y-2 mt-4">
+      <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon as any;
@@ -67,7 +72,7 @@ export function Sidebar() {
       </nav>
 
       <div className="p-6 mt-auto">
-        <div className="bg-white/5 rounded-3xl p-4 mb-4">
+        <div className="bg-white/5 rounded-3xl p-4 mb-4 shadow-inner">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm">م ع</div>
             <div className="overflow-hidden">
@@ -78,7 +83,7 @@ export function Sidebar() {
           <Button 
             variant="ghost" 
             onClick={handleLogout}
-            className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 rounded-xl px-2 h-9 font-bold"
+            className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 rounded-xl px-2 h-9 font-bold transition-colors"
           >
             <LogOut className="w-4 h-4 ml-2" />
             <span className="text-xs">تسجيل الخروج</span>
