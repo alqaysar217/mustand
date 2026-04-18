@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   LayoutDashboard, 
   UploadCloud, 
@@ -28,6 +28,12 @@ const LogoIcon = Archive;
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    // In a real app, you would clear session/cookies here
+    router.push('/');
+  };
 
   return (
     <aside className="w-64 h-screen bg-primary text-white hidden md:flex flex-col fixed right-0 top-0 z-40 border-l border-white/10 shadow-2xl">
@@ -70,7 +76,11 @@ export function Sidebar() {
               <p className="text-xs text-white/50 truncate">موظف أرشيف</p>
             </div>
           </div>
-          <Button variant="ghost" className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 rounded-xl px-2 h-9">
+          <Button 
+            variant="ghost" 
+            onClick={handleLogout}
+            className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 rounded-xl px-2 h-9"
+          >
             <LogOut className="w-4 h-4 ml-2" />
             <span className="text-xs">تسجيل الخروج</span>
           </Button>
