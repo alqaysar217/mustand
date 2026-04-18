@@ -135,7 +135,6 @@ export default function RecycleBinPage() {
               <TableRow className="hover:bg-transparent border-b">
                 <TableHead className="text-right font-bold text-primary">الملف / المادة</TableHead>
                 <TableHead className="text-right font-bold text-primary">تاريخ الحذف</TableHead>
-                <TableHead className="text-right font-bold text-primary">سبب الحذف</TableHead>
                 <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
@@ -158,11 +157,6 @@ export default function RecycleBinPage() {
                       <Clock className="w-4 h-4" />
                       {item.deletedAt}
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm font-medium text-orange-600 bg-orange-50 px-3 py-1 rounded-lg">
-                      {item.reason}
-                    </span>
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-2">
@@ -205,7 +199,7 @@ export default function RecycleBinPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-60 text-center">
+                  <TableCell colSpan={3} className="h-60 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center">
                         <Trash2 className="w-10 h-10 text-muted-foreground/50" />
