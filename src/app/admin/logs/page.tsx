@@ -13,8 +13,7 @@ import {
   FileText, 
   Settings, 
   Trash2,
-  AlertCircle,
-  Download
+  AlertCircle
 } from "lucide-react";
 import {
   Table,
@@ -25,7 +24,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 
 const MOCK_LOGS = [
   { id: '1', user: 'أحمد محمود', role: 'مدير', action: 'رفع اختبار', target: 'برمجة 1 - طالب: محمد خالد', date: '2024-05-22', time: '10:30 ص', type: 'upload' },
@@ -36,9 +34,8 @@ const MOCK_LOGS = [
 ];
 
 export default function LogsPage() {
-  const [logs, setLogs] = useState(MOCK_LOGS);
+  const [logs] = useState(MOCK_LOGS);
   const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast();
 
   const filteredLogs = logs.filter(log => 
     log.user.includes(searchTerm) || log.action.includes(searchTerm) || log.target.includes(searchTerm)
@@ -54,13 +51,6 @@ export default function LogsPage() {
     }
   };
 
-  const handleExportLogs = () => {
-    toast({
-      title: "جاري تصدير السجل",
-      description: "يتم الآن تجهيز ملف CSV لجميع العمليات المسجلة...",
-    });
-  };
-
   return (
     <div className="space-y-8 text-right" dir="rtl">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -68,15 +58,6 @@ export default function LogsPage() {
           <h1 className="text-3xl font-black text-primary mb-1">سجل العمليات</h1>
           <p className="text-muted-foreground font-bold">تتبع شامل لكافة النشاطات والعمليات المنفذة في النظام</p>
         </div>
-        
-        <Button 
-          variant="outline" 
-          onClick={handleExportLogs}
-          className="rounded-2xl h-12 px-6 font-bold border-2 gap-2"
-        >
-          <Download className="w-5 h-5" />
-          تصدير السجل
-        </Button>
       </div>
 
       <Card className="p-6 border-none shadow-xl rounded-3xl bg-white">
