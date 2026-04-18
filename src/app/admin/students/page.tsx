@@ -10,7 +10,6 @@ import {
   UserPlus, 
   MoreVertical, 
   FileDown, 
-  FileUp, 
   Eye, 
   Edit2, 
   Trash2,
@@ -89,13 +88,6 @@ export default function StudentsPage() {
     });
   };
 
-  const handleImport = () => {
-    toast({
-      title: "استيراد البيانات",
-      description: "يرجى اختيار ملف Excel المتوافق مع النظام.",
-    });
-  };
-
   const resetFilters = () => {
     setFilterDept("all");
     setFilterLevel("all");
@@ -118,10 +110,6 @@ export default function StudentsPage() {
         </div>
         
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={handleImport} className="rounded-2xl h-12 font-bold border-2 gap-2">
-            <FileUp className="w-5 h-5" />
-            استيراد Excel
-          </Button>
           <Button variant="outline" onClick={handleExport} className="rounded-2xl h-12 font-bold border-2 gap-2">
             <FileDown className="w-5 h-5" />
             تصدير
@@ -359,3 +347,4 @@ export default function StudentsPage() {
     </div>
   );
 }
+
