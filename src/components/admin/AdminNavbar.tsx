@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Bell, Menu, User, Settings, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft } from "lucide-react";
@@ -44,9 +45,9 @@ export function AdminNavbar() {
             <div className="flex flex-col h-full text-white">
               <SheetHeader className="p-8 flex items-center gap-3 border-b border-white/10 text-right space-y-0">
                 <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-                  <Settings className="w-6 h-6" />
+                  <Archive className="w-6 h-6" />
                 </div>
-                <SheetTitle className="text-xl font-bold tracking-tight text-white">إدارة النظام</SheetTitle>
+                <SheetTitle className="text-xl font-bold tracking-tight text-white">مستند</SheetTitle>
               </SheetHeader>
               
               <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">

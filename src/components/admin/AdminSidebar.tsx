@@ -43,10 +43,10 @@ export function AdminSidebar() {
     <aside className="w-64 h-screen bg-primary text-white hidden md:flex flex-col fixed right-0 top-0 z-40 border-l border-white/10 shadow-2xl">
       <div className="p-8 flex items-center gap-3">
         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-          <Settings className="w-6 h-6" />
+          <Archive className="w-6 h-6" />
         </div>
         <div className="flex flex-col">
-          <span className="text-xl font-bold tracking-tight">إدارة النظام</span>
+          <span className="text-xl font-bold tracking-tight">مستند</span>
           <span className="text-[10px] text-white/50">لوحة تحكم المدير</span>
         </div>
       </div>
