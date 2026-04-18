@@ -48,6 +48,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useSidebarToggle } from "@/components/providers/SidebarProvider";
+import { cn } from "@/lib/utils";
 
 const INITIAL_SUBJECTS = [
   { id: '1', name: 'برمجة 1', department: 'تقنية المعلومات', level: 'المستوى الأول', studentsCount: 145 },
@@ -62,6 +64,7 @@ export default function SubjectsManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const { isOpen } = useSidebarToggle();
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
   const { toast } = useToast();
@@ -89,7 +92,10 @@ export default function SubjectsManagementPage() {
       <Sidebar />
       <Navbar />
       
-      <main className="mr-0 md:mr-64 p-6 md:p-10 animate-fade-in text-right" dir="rtl">
+      <main className={cn(
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in text-right",
+        isOpen ? "mr-0 md:mr-64" : "mr-0"
+      )} dir="rtl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة المواد الدراسية</h1>

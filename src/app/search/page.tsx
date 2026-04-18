@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 
 const searchSuggestions = [
   'أحمد محمود علي', 'رياضيات 1', '20210045', 'فيزياء عامة', '2023 / 2024'
@@ -24,6 +25,7 @@ const searchSuggestions = [
 export default function SearchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [academicYears, setAcademicYears] = useState<string[]>([]);
+  const { isOpen } = useSidebarToggle();
 
   useEffect(() => {
     // Generates the last 5 years of study automatically based on today’s date
@@ -41,7 +43,10 @@ export default function SearchPage() {
       <Sidebar />
       <Navbar />
       
-      <main className="mr-0 md:mr-64 p-6 md:p-10 animate-fade-in max-w-6xl mx-auto">
+      <main className={cn(
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-6xl mx-auto",
+        isOpen ? "mr-0 md:mr-64" : "mr-0"
+      )}>
         <div className="mb-10 text-center max-w-2xl mx-auto">
           <h1 className="text-4xl font-black text-primary mb-4">البحث المتقدم</h1>
           <p className="text-muted-foreground">ابحث في آلاف الملفات المؤرشفة باستخدام محركنا الذكي</p>

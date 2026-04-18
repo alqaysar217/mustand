@@ -56,6 +56,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useSidebarToggle } from "@/components/providers/SidebarProvider";
+import { cn } from "@/lib/utils";
 
 const INITIAL_STUDENTS = [
   { id: '1', regId: '20210045', name: 'أحمد محمود علي', department: 'تقنية المعلومات', level: 'المستوى الثالث', admissionType: 'عام', status: 'active', joinDate: '2021-09-12' },
@@ -69,6 +71,7 @@ export default function StudentsManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const { isOpen } = useSidebarToggle();
   
   // Filter States
   const [filterDept, setFilterDept] = useState("all");
@@ -108,7 +111,10 @@ export default function StudentsManagementPage() {
       <Sidebar />
       <Navbar />
       
-      <main className="mr-0 md:mr-64 p-6 md:p-10 animate-fade-in text-right" dir="rtl">
+      <main className={cn(
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in text-right",
+        isOpen ? "mr-0 md:mr-64" : "mr-0"
+      )} dir="rtl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة الطلاب</h1>

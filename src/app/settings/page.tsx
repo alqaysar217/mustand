@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -19,12 +20,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 
 type SettingsTab = 'profile' | 'security' | 'notifications' | 'language';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [isSaving, setIsSaving] = useState(false);
+  const { isOpen } = useSidebarToggle();
   const { toast } = useToast();
 
   const tabs = [
@@ -59,7 +62,10 @@ export default function SettingsPage() {
       <Sidebar />
       <Navbar />
 
-      <main className="mr-0 md:mr-64 p-6 md:p-10 animate-fade-in max-w-6xl mx-auto">
+      <main className={cn(
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-6xl mx-auto",
+        isOpen ? "mr-0 md:mr-64" : "mr-0"
+      )}>
         <div className="mb-10 text-right">
           <h1 className="text-3xl font-bold text-primary mb-1">الإعدادات</h1>
           <p className="text-muted-foreground">تخصيص النظام وإدارة حسابك الشخصي</p>

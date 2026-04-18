@@ -23,6 +23,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 
 export default function UploadPage() {
   const [step, setStep] = useState(1);
@@ -32,6 +33,7 @@ export default function UploadPage() {
   const [formData, setFormData] = useState({ year: '', term: 'الفصل الأول', subject: 'مقدمة في البرمجة' });
   const [academicYears, setAcademicYears] = useState<string[]>([]);
   const { toast } = useToast();
+  const { isOpen } = useSidebarToggle();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -104,7 +106,10 @@ export default function UploadPage() {
       <Sidebar />
       <Navbar />
       
-      <main className="mr-0 md:mr-64 p-6 md:p-10 animate-fade-in max-w-4xl mx-auto">
+      <main className={cn(
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-4xl mx-auto",
+        isOpen ? "mr-0 md:mr-64" : "mr-0"
+      )}>
         <div className="mb-10 text-center">
           <h1 className="text-3xl font-bold text-primary mb-2">رفع اختبار جديد</h1>
           <p className="text-muted-foreground">أكمل الخطوات التالية لأرشفة الاختبار بنجاح</p>
@@ -344,4 +349,3 @@ export default function UploadPage() {
     </div>
   );
 }
-
