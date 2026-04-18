@@ -12,6 +12,7 @@ import { GraduationCap, Briefcase, Settings2, Loader2 } from "lucide-react";
 export default function Home() {
   const [stage, setStage] = useState<'splash' | 'role' | 'login'>('splash');
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -22,15 +23,20 @@ export default function Home() {
   }, []);
 
   const handleRoleSelect = (role: string) => {
+    setSelectedRole(role);
     setStage('login');
   };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate login
+    // Simulate login based on role
     setTimeout(() => {
-      router.push('/dashboard');
+      if (selectedRole === 'manager') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     }, 1500);
   };
 
@@ -95,7 +101,7 @@ export default function Home() {
               className="rounded-full"
             />
           </div>
-          <h2 className="text-2xl font-bold text-primary">تسجيل الدخول</h2>
+          <h2 className="text-2xl font-bold text-primary">تسجيل الدخول - {selectedRole === 'manager' ? 'الإدارة' : selectedRole === 'employee' ? 'الموظفين' : 'الطلاب'}</h2>
           <p className="text-muted-foreground mt-1">أهلاً بك مرة أخرى في نظام الأرشفة</p>
         </div>
 
@@ -105,7 +111,7 @@ export default function Home() {
             <input 
               type="text" 
               className="w-full h-12 px-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-              placeholder="مثال: 20210045"
+              placeholder="مثال: admin"
               required
             />
           </div>
