@@ -13,7 +13,6 @@ import {
   Download, 
   Filter, 
   Search,
-  MoreVertical,
   Calendar,
   X,
   User as UserIcon,
@@ -247,7 +246,7 @@ export default function ArchivePage() {
                 <label className="text-xs font-bold text-muted-foreground">السنة الدراسية</label>
                 <select 
                   value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
+                  onChange={(e) => setSelectedYear(target.value)}
                   className="w-full h-11 px-3 rounded-xl border border-border bg-muted/10 outline-none text-sm font-bold text-primary"
                 >
                   <option value="all">الكل</option>
@@ -423,7 +422,6 @@ export default function ArchivePage() {
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
-                             <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:bg-muted"><MoreVertical className="w-4 h-4" /></Button>
                           </div>
                         </td>
                       </tr>
