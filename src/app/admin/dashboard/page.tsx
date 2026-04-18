@@ -2,15 +2,15 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { 
   Users, 
   FileText, 
   Archive, 
-  UserPlus, 
-  TrendingUp,
-  Clock,
-  ArrowUpRight,
-  ArrowDownRight
+  Clock, 
+  ArrowUpRight, 
+  ArrowDownRight,
+  GraduationCap
 } from "lucide-react";
 import { 
   Bar, 
@@ -25,7 +25,7 @@ import {
   Pie,
   Cell
 } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { cn } from "@/lib/utils";
 
 const stats = [
   { label: 'إجمالي الطلاب', value: '4,520', icon: GraduationCap, color: 'text-blue-600', bg: 'bg-blue-100', trend: '+12%', isUp: true },
@@ -58,8 +58,6 @@ const deptData = [
 ];
 
 const COLORS = ['#0B3C5D', '#328CC1', '#D9E3F0'];
-
-import { GraduationCap } from "lucide-react";
 
 export default function AdminDashboard() {
   return (
