@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -6,6 +5,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   User,
   Lock,
@@ -147,9 +147,7 @@ export default function SettingsPage() {
                         <p className="font-bold text-primary">{item.title}</p>
                         <p className="text-xs text-muted-foreground">{item.desc}</p>
                       </div>
-                      <div className="w-12 h-6 bg-primary rounded-full relative cursor-pointer">
-                        <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-md"></div>
-                      </div>
+                      <Switch defaultChecked />
                     </div>
                   ))}
                 </div>
@@ -171,9 +169,7 @@ export default function SettingsPage() {
                         <p className="text-xs text-muted-foreground">استخدام الذكاء الاصطناعي لاستخراج بيانات الطلاب تلقائياً</p>
                       </div>
                     </div>
-                    <div className="w-12 h-6 bg-secondary rounded-full relative cursor-pointer">
-                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md"></div>
-                    </div>
+                    <Switch defaultChecked />
                   </div>
 
                   <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/20 hover:bg-muted/30 transition-colors group">
@@ -184,9 +180,7 @@ export default function SettingsPage() {
                         <p className="text-xs text-muted-foreground">مزامنة الملفات مع التخزين السحابي الآمن</p>
                       </div>
                     </div>
-                    <div className="w-12 h-6 bg-muted rounded-full relative cursor-pointer">
-                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-md"></div>
-                    </div>
+                    <Switch />
                   </div>
                 </div>
               </Card>
