@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Bell, Menu, User, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft } from "lucide-react";
@@ -21,21 +20,21 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <header className="h-20 bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 flex items-center justify-between px-6 md:px-10 mr-0 md:mr-64 transition-all">
+    <header className="h-20 bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 flex items-center justify-between px-6 md:px-10 mr-0 md:mr-64 transition-all" dir="rtl">
       <div className="flex items-center gap-4">
         <Sheet>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden rounded-xl">
-              <Menu className="w-6 h-6" />
+              <Menu className="w-6 h-6 text-primary" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="p-0 bg-primary border-none w-72">
+          <SheetContent side="right" className="p-0 bg-primary border-none w-72 text-right">
             <div className="flex flex-col h-full text-white">
-              <SheetHeader className="p-8 flex items-center gap-3 border-b border-white/10 text-right space-y-0">
-                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 p-2 overflow-hidden">
-                  <Image src="/logo-sand.png" alt="Logo" width={32} height={32} className="object-contain" />
+              <SheetHeader className="p-8 flex items-center gap-4 border-b border-white/10 text-right space-y-0">
+                <div className="w-12 h-12 bg-white/10 rounded-[10px] flex items-center justify-center border border-white/20 p-2 overflow-hidden shadow-lg">
+                  <Image src="/logo-sand.png" alt="Logo" width={40} height={40} className="object-contain w-full h-full" />
                 </div>
-                <SheetTitle className="text-xl font-bold tracking-tight text-white">مستند</SheetTitle>
+                <SheetTitle className="text-xl font-black tracking-tight text-white">مستند</SheetTitle>
               </SheetHeader>
               
               <nav className="flex-1 px-4 py-6 space-y-2">
@@ -54,7 +53,7 @@ export function Navbar() {
                       )}
                     >
                       <Icon className={cn("w-5 h-5 transition-transform", !isActive && "group-hover:scale-110")} />
-                      <span>{item.label}</span>
+                      <span className="font-bold">{item.label}</span>
                       {isActive && <ChevronLeft className="w-4 h-4 mr-auto" />}
                     </Link>
                   );
@@ -64,16 +63,16 @@ export function Navbar() {
               <div className="p-6 border-t border-white/10">
                  <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm">م ع</div>
-                  <div>
-                    <p className="text-sm font-bold">محمد علي</p>
-                    <p className="text-xs text-white/50">موظف أرشيف</p>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-white">محمد علي</p>
+                    <p className="text-[10px] text-white/50 font-bold">موظف أرشيف</p>
                   </div>
                 </div>
               </div>
             </div>
           </SheetContent>
         </Sheet>
-        <h2 className="text-xl font-bold text-primary">مستند</h2>
+        <h2 className="text-xl font-black text-primary">مستند</h2>
       </div>
 
       <div className="flex items-center gap-3">
@@ -84,12 +83,12 @@ export function Navbar() {
         
         <div className="h-10 w-px bg-border mx-2"></div>
         
-        <div className="flex items-center gap-3">
-          <div className="text-left hidden sm:block">
+        <div className="flex items-center gap-3 cursor-pointer group">
+          <div className="text-right hidden sm:block">
             <p className="text-sm font-bold text-primary">أ. محمد علي</p>
-            <p className="text-[10px] text-muted-foreground">موظف (قسم الاختبارات)</p>
+            <p className="text-[10px] text-muted-foreground font-bold">موظف (قسم الاختبارات)</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border-2 border-primary/20 hover:border-primary transition-colors cursor-pointer group">
+          <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border-2 border-primary/20 hover:border-primary transition-colors group">
             <User className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
           </div>
         </div>

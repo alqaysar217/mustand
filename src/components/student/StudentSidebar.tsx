@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -30,13 +29,13 @@ export function StudentSidebar() {
 
   return (
     <aside className="w-64 h-screen bg-primary text-white hidden md:flex flex-col fixed right-0 top-0 z-40 border-l border-white/10 shadow-2xl">
-      <div className="p-8 flex items-center gap-3">
-        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 p-2 overflow-hidden">
-          <Image src="/logo-sand.png" alt="Logo" width={32} height={32} className="object-contain" />
+      <div className="p-8 flex items-center gap-4">
+        <div className="w-12 h-12 bg-white/10 rounded-[10px] flex items-center justify-center border border-white/20 p-2 overflow-hidden shadow-lg">
+          <Image src="/logo-sand.png" alt="Logo" width={40} height={40} className="object-contain w-full h-full" />
         </div>
         <div className="flex flex-col">
-          <span className="text-xl font-bold tracking-tight">مستند</span>
-          <span className="text-[10px] text-white/50">بوابة الطالب</span>
+          <span className="text-xl font-black tracking-tight">مستند</span>
+          <span className="text-[10px] text-white/50 font-bold">بوابة الطالب</span>
         </div>
       </div>
 
@@ -56,7 +55,7 @@ export function StudentSidebar() {
               )}
             >
               <Icon className={cn("w-5 h-5 transition-transform", !isActive && "group-hover:scale-110")} />
-              <span className="text-sm">{item.label}</span>
+              <span className="text-sm font-bold">{item.label}</span>
               {isActive && <ChevronLeft className="w-4 h-4 mr-auto" />}
             </Link>
           );
@@ -64,21 +63,21 @@ export function StudentSidebar() {
       </nav>
 
       <div className="p-6 mt-auto">
-        <div className="bg-white/5 rounded-3xl p-4">
+        <div className="bg-white/5 rounded-3xl p-4 shadow-inner">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm">أ م</div>
             <div className="overflow-hidden">
               <p className="text-sm font-bold truncate">أحمد محمد علي</p>
-              <p className="text-[10px] text-white/50 truncate">20210045</p>
+              <p className="text-[10px] text-white/50 truncate font-bold">20210045</p>
             </div>
           </div>
           <Button 
             variant="ghost" 
             onClick={() => router.push('/')}
-            className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 rounded-xl px-2 h-9"
+            className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 rounded-xl px-2 h-9 font-bold transition-colors"
           >
             <LogOut className="w-4 h-4 ml-2" />
-            <span className="text-xs font-bold">تسجيل الخروج</span>
+            <span className="text-xs">تسجيل الخروج</span>
           </Button>
         </div>
       </div>

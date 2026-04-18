@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -44,14 +43,14 @@ export default function Home() {
   if (stage === 'splash') {
     return (
       <div className="fixed inset-0 gradient-blue flex flex-col items-center justify-center text-white z-50">
-        <div className="relative w-32 h-32 mb-6 flex items-center justify-center">
-           <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl animate-pulse" />
-           <div className="w-24 h-24 bg-white/10 rounded-3xl flex items-center justify-center border-2 border-white/20 relative z-10 shadow-2xl animate-fade-in overflow-hidden p-4">
-              <Image src="/logo-sand.png" alt="Logo" width={80} height={80} className="object-contain" />
+        <div className="relative w-40 h-40 mb-6 flex items-center justify-center">
+           <div className="absolute inset-0 bg-white/20 rounded-full blur-3xl animate-pulse" />
+           <div className="w-32 h-32 bg-white/10 rounded-[10px] flex items-center justify-center border-2 border-white/20 relative z-10 shadow-2xl animate-fade-in overflow-hidden p-4">
+              <Image src="/logo-sand.png" alt="Logo" width={100} height={100} className="object-contain" priority />
            </div>
         </div>
-        <h1 className="text-4xl font-bold mb-2 tracking-tight">مستند</h1>
-        <p className="text-white/70 mb-8 font-light">مستقبلك الرقمي يبدأ هنا</p>
+        <h1 className="text-4xl font-black mb-2 tracking-tight">مستند</h1>
+        <p className="text-white/70 mb-8 font-bold">مستقبلك الرقمي يبدأ هنا</p>
         <Loader2 className="w-8 h-8 animate-spin text-white/50" />
       </div>
     );
@@ -59,12 +58,12 @@ export default function Home() {
 
   if (stage === 'role') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background animate-fade-in">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background animate-fade-in text-right" dir="rtl">
         <div className="mb-10 text-center">
-          <div className="relative w-20 h-20 mx-auto mb-4 bg-white rounded-2xl shadow-xl flex items-center justify-center p-3 border-2 border-primary/10">
-            <Image src="/logo-sand.png" alt="Logo" width={60} height={60} className="object-contain" />
+          <div className="relative w-24 h-24 mx-auto mb-4 bg-white rounded-[10px] shadow-xl flex items-center justify-center p-3 border-2 border-primary/10 overflow-hidden">
+            <Image src="/logo-sand.png" alt="Logo" width={80} height={80} className="object-contain" />
           </div>
-          <h1 className="text-2xl font-black text-primary">نظام مستند</h1>
+          <h1 className="text-3xl font-black text-primary">نظام مستند</h1>
         </div>
         <h2 className="text-xl font-bold text-muted-foreground mb-8 text-center">اختر نوع المستخدم للبدء</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
@@ -82,7 +81,7 @@ export default function Home() {
                 <role.icon className="w-10 h-10 text-primary group-hover:text-white" />
               </div>
               <h3 className="text-2xl font-bold text-primary mb-2">{role.label}</h3>
-              <p className="text-muted-foreground text-center text-sm">{role.desc}</p>
+              <p className="text-muted-foreground text-center text-sm font-bold">{role.desc}</p>
             </Card>
           ))}
         </div>
@@ -91,7 +90,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background animate-fade-in">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background animate-fade-in text-right" dir="rtl">
       <Card className="w-full max-w-md p-8 shadow-2xl rounded-3xl bg-white border-none relative">
         <Button 
           variant="ghost" 
@@ -104,25 +103,25 @@ export default function Home() {
         </Button>
 
         <div className="text-center mb-10">
-          <div className="inline-block p-4 bg-primary/5 rounded-2xl mb-4 border border-primary/10 overflow-hidden">
-            <Image src="/logo-sand.png" alt="Logo" width={60} height={60} className="object-contain" />
+          <div className="inline-block p-3 bg-primary/5 rounded-[10px] mb-4 border border-primary/10 overflow-hidden w-20 h-20">
+            <Image src="/logo-sand.png" alt="Logo" width={64} height={64} className="object-contain w-full h-full" />
           </div>
-          <h2 className="text-2xl font-bold text-primary">تسجيل الدخول - {selectedRole === 'manager' ? 'الإدارة' : selectedRole === 'employee' ? 'الموظفين' : 'الطلاب'}</h2>
-          <p className="text-muted-foreground mt-1">أهلاً بك مرة أخرى في نظام الأرشفة</p>
+          <h2 className="text-2xl font-black text-primary">تسجيل الدخول - {selectedRole === 'manager' ? 'الإدارة' : selectedRole === 'employee' ? 'الموظفين' : 'الطلاب'}</h2>
+          <p className="text-muted-foreground mt-1 font-bold">أهلاً بك مرة أخرى في نظام الأرشفة</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium pr-1 text-primary">اسم المستخدم أو رقم القيد</label>
+            <label className="text-sm font-bold pr-1 text-primary">اسم المستخدم أو رقم القيد</label>
             <input 
               type="text" 
-              className="w-full h-12 px-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              className="w-full h-12 px-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all font-bold"
               placeholder={selectedRole === 'student' ? "رقم القيد" : "اسم المستخدم"}
               required
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium pr-1 text-primary">كلمة المرور</label>
+            <label className="text-sm font-bold pr-1 text-primary">كلمة المرور</label>
             <input 
               type="password" 
               className="w-full h-12 px-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
@@ -132,16 +131,16 @@ export default function Home() {
           </div>
           
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground font-bold">
               <input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
               <span>تذكرني</span>
             </label>
-            <button type="button" className="text-sm text-secondary hover:underline">نسيت كلمة المرور؟</button>
+            <button type="button" className="text-sm text-secondary font-bold hover:underline">نسيت كلمة المرور؟</button>
           </div>
 
           <Button 
             disabled={loading}
-            className="w-full h-12 rounded-xl text-lg font-bold gradient-blue"
+            className="w-full h-12 rounded-xl text-lg font-black gradient-blue shadow-lg"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : null}
             تسجيل الدخول
