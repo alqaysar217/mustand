@@ -82,10 +82,52 @@ export default function StudentsPage() {
   }, [students, searchTerm, filterDept, filterLevel, filterType]);
 
   const handleExport = () => {
-    toast({
-      title: "جاري التصدير",
-      description: "يتم الآن تجهيز ملف Excel لبيانات الطلاب...",
-    });
+    try {
+      // Define CSV headers
+      const headers = ["رقم القيد", "الاسم الكامل", "التخصص", "المستوى", "نوع القبول", "الحالة", "تاريخ الالتحاق"];
+      
+      // Convert student data to CSV rows
+      const rows = filteredStudents.map(student => [
+        student.regId,
+        student.name,
+        student.department,
+        student.level,
+        student.admissionType,
+        student.status === 'active' ? 'نشط' : 'موقوف',
+        student.joinDate
+      ]);
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(","),
+        ...rows.map(row => row.join(","))
+      ].join("\n");
+
+      // Add BOM for Excel Arabic support
+      const universalBOM = "\uFEFF";
+      const blob = new Blob([universalBOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `students_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "تم التصدير بنجاح",
+        description: "تم تحميل ملف بيانات الطلاب بصيغة CSV بنجاح.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "خطأ في التصدير",
+        description: "عذراً، حدث خطأ أثناء محاولة تصدير البيانات.",
+      });
+    }
   };
 
   const resetFilters = () => {
@@ -347,4 +389,3 @@ export default function StudentsPage() {
     </div>
   );
 }
-
