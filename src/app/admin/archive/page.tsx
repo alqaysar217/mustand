@@ -17,7 +17,8 @@ import {
   GraduationCap,
   BookOpen,
   Building,
-  X
+  X,
+  Plus
 } from "lucide-react";
 import {
   Table,
@@ -45,6 +46,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { useRouter } from "next/navigation";
 
 const INITIAL_ARCHIVES = [
   { id: '1', name: 'أحمد محمود علي', regId: '20210045', subject: 'رياضيات 1', year: '2023 / 2024', term: 'الفصل الأول', department: 'تقنية المعلومات', date: '2024-05-20', pages: 4, fileUrl: PlaceHolderImages[1].imageUrl },
@@ -58,6 +60,7 @@ export default function AdminArchivePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewingArchive, setViewingArchive] = useState<any>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   const filteredArchives = archives.filter(item => 
     item.name.includes(searchTerm) || item.regId.includes(searchTerm) || item.subject.includes(searchTerm)
@@ -71,11 +74,30 @@ export default function AdminArchivePage() {
     });
   };
 
+  const handleAddNewArchive = () => {
+    toast({
+      title: "بدء عملية أرشفة",
+      description: "يتم تحويلك الآن إلى واجهة الرفع الذكي...",
+    });
+    setTimeout(() => {
+      router.push('/upload');
+    }, 1000);
+  };
+
   return (
     <div className="space-y-8 text-right" dir="rtl">
-      <div>
-        <h1 className="text-3xl font-black text-primary mb-1">إدارة الأرشيف الرقمي</h1>
-        <p className="text-muted-foreground font-bold">التحكم الكامل في الملفات المؤرشفة، تعديل البيانات، وإدارة المحذوفات</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-black text-primary mb-1">إدارة الأرشيف الرقمي</h1>
+          <p className="text-muted-foreground font-bold">التحكم الكامل في الملفات المؤرشفة، تعديل البيانات، وإدارة المحذوفات</p>
+        </div>
+        <Button 
+          onClick={handleAddNewArchive}
+          className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2"
+        >
+          <Plus className="w-5 h-5" />
+          أرشفة ملفات جديدة
+        </Button>
       </div>
 
       <Card className="p-6 border-none shadow-xl rounded-3xl bg-white">
