@@ -47,13 +47,18 @@ export async function extractExamDetails(
 
 /**
  * Defines the Genkit prompt for extracting student details from an exam image.
+ * Uses the stable gemini-1.5-flash model.
  */
 const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
   input: {schema: ExtractExamDetailsInputSchema},
   output: {schema: ExtractExamDetailsOutputSchema},
   model: 'googleai/gemini-1.5-flash',
-  prompt: `Analyze the provided exam image and extract the student's registration ID (رقم القيد) and the student's full name (اسم الطالب). Output the extracted information strictly in JSON format as defined by the output schema. If a field cannot be found, provide an empty string for that field.
+  prompt: `أنت مساعد ذكي متخصص في قراءة أوراق الامتحانات.
+قم بتحليل الصورة المرفقة واستخرج منها:
+1. رقم القيد (Registration ID)
+2. اسم الطالب الكامل (Student Name)
+إذا لم تجد المعلومة، اترك الحقل فارغاً.
 Image: {{media url=examImageDataUri}}`,
 });
 
@@ -68,7 +73,7 @@ const extractExamDetailsFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      // التحقق من وجود مفتاح API قبل البدء
+      // التحقق من وجود مفتاح API
       if (!process.env.GOOGLE_GENAI_API_KEY) {
         throw new Error('API_KEY_MISSING');
       }
@@ -76,25 +81,15 @@ const extractExamDetailsFlow = ai.defineFlow(
       const {output} = await extractExamDetailsPrompt(input);
       
       if (!output) {
-        throw new Error('فشل استخراج البيانات من الصورة.');
+        throw new Error('FAILED_TO_EXTRACT');
       }
       
       return output;
     } catch (error: any) {
-      console.error('OCR Error Details:', error);
+      console.error('OCR Flow Error:', error);
       
-      // التعامل مع أخطاء المصادقة أو فقدان المفتاح
-      if (
-        error.message === 'API_KEY_MISSING' || 
-        error.message?.includes('API key') || 
-        error.status === 400 || 
-        error.status === 401 ||
-        error.code === 'INVALID_ARGUMENT'
-      ) {
-        throw new Error('عذراً، مفتاح API الخاص بالذكاء الاصطناعي غير صالح أو غير مهيأ بشكل صحيح. يمكنك إدخال البيانات يدوياً الآن.');
-      }
-      
-      throw new Error(error.message || 'حدث خطأ غير متوقع أثناء تحليل الصورة.');
+      // إرسال رسالة خطأ مفهومة للواجهة لتفعيل الإدخال اليدوي
+      throw new Error('عذراً، تعذر التحليل التلقائي حالياً. يرجى إدخال البيانات يدوياً.');
     }
   }
 );
