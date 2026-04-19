@@ -89,20 +89,32 @@ export default function UploadPage() {
     if (files.length === 0) return;
     setLoading(true);
     try {
+      // محاولة استخراج البيانات باستخدام الذكاء الاصطناعي
       const result = await extractExamDetails({ examImageDataUri: files[0] });
+      
+      // تحديث البيانات المستخرجة في حالة النجاح
       setExtractedData({
         id: result.studentRegistrationId || '',
         name: result.studentName || ''
       });
+      
+      // الانتقال للخطوة التالية (التأكيد)
       nextStep();
     } catch (err: any) {
+      // في حالة الفشل، نظهر رسالة الخطأ ونسمح للمستخدم بالإكمال يدوياً
       toast({
         variant: "destructive",
         title: "خطأ في التحليل",
-        description: err.message || "فشل التحليل الذكي. يمكنك إدخل البيانات يدوياً.",
+        description: err.message || "فشل التحليل الذكي. يمكنك إدخال البيانات يدوياً الآن.",
       });
-      nextStep();
+      
+      // ضمان تصفير البيانات لتمكين الإدخال اليدوي النظيف
+      setExtractedData({ id: '', name: '' });
+      
+      // ننتقل للخطوة الأخيرة (خطوة 5) للسماح بالإدخال اليدوي فوراً
+      setStep(5);
     } finally {
+      // إيقاف مؤشر التحميل في كل الأحوال لضمان عدم تجمد الواجهة
       setLoading(false);
     }
   };
@@ -297,8 +309,8 @@ export default function UploadPage() {
                <div className="flex items-center gap-4 bg-green-50 p-6 rounded-3xl border border-green-100 flex-row-reverse">
                   <CheckCircle className="w-12 h-12 text-green-500" />
                   <div className="text-right">
-                    <h2 className="text-xl font-bold text-green-700">تم استخراج البيانات</h2>
-                    <p className="text-green-600 text-sm font-bold">يرجى التأكد من صحة البيانات قبل الحفظ النهائي.</p>
+                    <h2 className="text-xl font-bold text-green-700">تأكيد البيانات</h2>
+                    <p className="text-green-600 text-sm font-bold">يرجى مراجعة البيانات المستخرجة أو إدخالها يدوياً.</p>
                   </div>
                </div>
 

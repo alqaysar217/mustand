@@ -68,16 +68,29 @@ const extractExamDetailsFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+      // التحقق من وجود مفتاح API قبل البدء
+      if (!process.env.GOOGLE_GENAI_API_KEY) {
+        throw new Error('API_KEY_MISSING');
+      }
+
       const {output} = await extractExamDetailsPrompt(input);
+      
       if (!output) {
         throw new Error('فشل استخراج البيانات من الصورة.');
       }
+      
       return output;
     } catch (error: any) {
       console.error('OCR Error Details:', error);
       
-      // توفير رسالة خطأ واضحة باللغة العربية عند وجود مشكلة في مفتاح API
-      if (error.message?.includes('API key') || error.status === 400 || error.code === 'INVALID_ARGUMENT') {
+      // التعامل مع أخطاء المصادقة أو فقدان المفتاح
+      if (
+        error.message === 'API_KEY_MISSING' || 
+        error.message?.includes('API key') || 
+        error.status === 400 || 
+        error.status === 401 ||
+        error.code === 'INVALID_ARGUMENT'
+      ) {
         throw new Error('عذراً، مفتاح API الخاص بالذكاء الاصطناعي غير صالح أو غير مهيأ بشكل صحيح. يمكنك إدخال البيانات يدوياً الآن.');
       }
       
