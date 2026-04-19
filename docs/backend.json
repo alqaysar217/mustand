@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "College": {
@@ -10,6 +11,17 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "code"]
+    },
+    "AcademicYear": {
+      "title": "العام الدراسي",
+      "description": "يمثل السنة الدراسية الجامعية.",
+      "type": "object",
+      "properties": {
+        "label": { "type": "string", "description": "تسمية العام (مثلاً: 2023 / 2024)" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["label"]
     },
     "Department": {
       "title": "التخصص/القسم",
@@ -46,13 +58,15 @@
       "description": "المادة العلمية المرفق اختباراتها في الأرشيف.",
       "type": "object",
       "properties": {
-        "name": { "type": "string", "description": "اسم المادة" },
+        "nameAr": { "type": "string", "description": "اسم المادة بالعربية" },
+        "nameEn": { "type": "string", "description": "اسم المادة بالإنجليزية" },
         "departmentId": { "type": "string", "description": "معرف القسم التابع له" },
         "departmentName": { "type": "string" },
         "level": { "type": "string", "description": "المستوى المخصصة له المادة" },
+        "term": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "departmentId", "level"]
+      "required": ["nameAr", "departmentId", "level"]
     },
     "Archive": {
       "title": "الملف المؤرشف",
@@ -80,6 +94,10 @@
     "/colleges/{collegeId}": {
       "schema": "#/entities/College",
       "description": "مجموعة الكليات الجامعية"
+    },
+    "/academicYears/{yearId}": {
+      "schema": "#/entities/AcademicYear",
+      "description": "قائمة الأعوام الدراسية"
     },
     "/departments/{departmentId}": {
       "schema": "#/entities/Department",
