@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -10,10 +9,9 @@ import {
   GraduationCap, 
   Search, 
   UserPlus, 
-  MoreVertical, 
+  Edit2, 
   CheckCircle2,
   XCircle,
-  Clock,
   User,
   Fingerprint,
   Building2,
@@ -30,20 +28,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -57,7 +46,7 @@ import { cn } from "@/lib/utils";
 
 // Firebase Imports
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
@@ -73,7 +62,7 @@ export default function StudentsManagementPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const { isOpen } = useSidebarToggle();
   
@@ -130,6 +119,38 @@ export default function StudentsManagementPage() {
         const permissionError = new FirestorePermissionError({
           path: studentsRef.path,
           operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
+  const handleUpdateStudent = () => {
+    if (!firestore || !editingStudent?.name || !editingStudent?.regId || !editingStudent?.departmentId) return;
+
+    setSubmitting(true);
+    const selectedDept = (departments as any[]).find(d => d.id === editingStudent.departmentId);
+    const docRef = doc(firestore, "students", editingStudent.id);
+    const data = {
+      name: editingStudent.name,
+      regId: editingStudent.regId,
+      departmentId: editingStudent.departmentId,
+      departmentName: selectedDept?.name || "",
+      level: editingStudent.level,
+      admissionType: editingStudent.admissionType,
+      updatedAt: serverTimestamp()
+    };
+
+    updateDoc(docRef, data)
+      .then(() => {
+        setEditingStudent(null);
+        toast({ title: "تم التحديث", description: "تم تحديث بيانات الطالب بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'update',
           requestResourceData: data,
         });
         errorEmitter.emit('permission-error', permissionError);
@@ -311,7 +332,7 @@ export default function StudentsManagementPage() {
                   <TableHead className="text-right font-bold text-primary">رقم القيد</TableHead>
                   <TableHead className="text-right font-bold text-primary">التخصص / المستوى</TableHead>
                   <TableHead className="text-right font-bold text-primary">الحالة</TableHead>
-                  <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
+                  <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -340,22 +361,26 @@ export default function StudentsManagementPage() {
                     </TableCell>
                     <TableCell>{getStatusBadge(student.status)}</TableCell>
                     <TableCell className="text-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-primary/5">
-                            <MoreVertical className="w-4 h-4 text-primary" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right shadow-xl" dir="rtl">
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(student.id)}
-                            className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive"
-                          >
-                            حذف السجل
-                            <Trash2 className="w-4 h-4" />
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setEditingStudent(student)}
+                          className="rounded-xl hover:bg-primary/5 text-secondary"
+                          title="تعديل"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDelete(student.id)}
+                          className="rounded-xl hover:bg-destructive/10 text-destructive"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )) : (
@@ -370,6 +395,104 @@ export default function StudentsManagementPage() {
           </div>
         </Card>
       </main>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingStudent} onOpenChange={(open) => !open && setEditingStudent(null)}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-8">
+            <DialogHeader className="text-right items-start space-y-2 mb-8">
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                <Edit2 className="w-6 h-6 text-secondary" />
+                تعديل بيانات الطالب
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="grid grid-cols-2 gap-6 py-4">
+              <div className="space-y-2 col-span-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <User className="w-4 h-4 text-secondary" />
+                  الاسم الكامل
+                </Label>
+                <Input 
+                  value={editingStudent?.name || ""}
+                  onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold" 
+                />
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <Fingerprint className="w-4 h-4 text-secondary" />
+                  رقم القيد
+                </Label>
+                <Input 
+                  value={editingStudent?.regId || ""}
+                  onChange={(e) => setEditingStudent({...editingStudent, regId: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold" 
+                />
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <Building2 className="w-4 h-4 text-secondary" />
+                  التخصص
+                </Label>
+                <Select value={editingStudent?.departmentId || ""} onValueChange={(v) => setEditingStudent({...editingStudent, departmentId: v})}>
+                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                    <SelectValue placeholder="اختر التخصص" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    {departments.map((d: any) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <GraduationCap className="w-4 h-4 text-secondary" />
+                  المستوى
+                </Label>
+                <Select value={editingStudent?.level || ""} onValueChange={(v) => setEditingStudent({...editingStudent, level: v})}>
+                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                    <SelectValue placeholder="اختر المستوى" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                    <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                    <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                    <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <Banknote className="w-4 h-4 text-secondary" />
+                  نوع القبول
+                </Label>
+                <Select value={editingStudent?.admissionType || ""} onValueChange={(v) => setEditingStudent({...editingStudent, admissionType: v})}>
+                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                    <SelectValue placeholder="نوع القبول" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="عام">عام</SelectItem>
+                    <SelectItem value="موازي">موازي</SelectItem>
+                    <SelectItem value="نفقة خاصة">نفقة خاصة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter className="flex-row gap-3 pt-8">
+              <Button 
+                disabled={submitting} 
+                onClick={handleUpdateStudent}
+                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : "حفظ التعديلات"}
+              </Button>
+              <Button variant="outline" onClick={() => setEditingStudent(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

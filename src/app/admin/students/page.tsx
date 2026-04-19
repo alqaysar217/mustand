@@ -11,7 +11,11 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
-  Loader2
+  Loader2,
+  Fingerprint,
+  User,
+  Building2,
+  Banknote
 } from "lucide-react";
 import {
   Table,
@@ -37,7 +41,9 @@ import { useToast } from "@/hooks/use-toast";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function StudentsPage() {
   const firestore = useFirestore();
@@ -49,6 +55,7 @@ export default function StudentsPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   
   // Form State
@@ -95,6 +102,38 @@ export default function StudentsPage() {
     }
   };
 
+  const handleUpdateStudent = () => {
+    if (!firestore || !editingStudent?.name || !editingStudent?.regId || !editingStudent?.departmentId) return;
+
+    setSubmitting(true);
+    const selectedDept = (departments as any[]).find(d => d.id === editingStudent.departmentId);
+    const docRef = doc(firestore, "students", editingStudent.id);
+    const data = {
+      name: editingStudent.name,
+      regId: editingStudent.regId,
+      departmentId: editingStudent.departmentId,
+      departmentName: selectedDept?.name || "",
+      level: editingStudent.level,
+      admissionType: editingStudent.admissionType,
+      updatedAt: serverTimestamp()
+    };
+
+    updateDoc(docRef, data)
+      .then(() => {
+        setEditingStudent(null);
+        toast({ title: "تم التحديث", description: "تم تحديث بيانات الطالب بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'update',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
   const handleDelete = async (id: string) => {
     if (!firestore) return;
     try {
@@ -127,35 +166,38 @@ export default function StudentsPage() {
                 إضافة طالب جديد
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] rounded-3xl border-none text-right" dir="rtl">
-              <DialogHeader className="text-right">
-                <DialogTitle className="text-2xl font-black text-primary">إضافة طالب</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-6 py-4">
-                <div className="space-y-2 col-span-2">
-                  <Label className="text-primary font-bold">الاسم الكامل</Label>
-                  <Input value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11" />
+            <DialogContent className="sm:max-w-[500px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+              <div className="p-8">
+                <DialogHeader className="text-right items-start space-y-2 mb-8">
+                  <DialogTitle className="text-2xl font-black text-primary">إضافة طالب</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-6 py-4">
+                  <div className="space-y-2 col-span-2 text-right">
+                    <Label className="text-primary font-bold">الاسم الكامل</Label>
+                    <Input value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11" />
+                  </div>
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-bold">رقم القيد</Label>
+                    <Input value={newStudent.regId} onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})} placeholder="20240000" className="rounded-xl h-11" />
+                  </div>
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-bold">التخصص</Label>
+                    <Select onValueChange={(v) => setNewStudent({...newStudent, departmentId: v})}>
+                      <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-primary font-bold">رقم القيد</Label>
-                  <Input value={newStudent.regId} onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})} placeholder="20240000" className="rounded-xl h-11" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-primary font-bold">التخصص</Label>
-                  <Select onValueChange={(v) => setNewStudent({...newStudent, departmentId: v})}>
-                    <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <DialogFooter className="flex-row gap-3 pt-8">
+                  <Button disabled={submitting} onClick={handleAddStudent} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+                    حفظ البيانات
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+                </DialogFooter>
               </div>
-              <DialogFooter className="flex-row gap-3 pt-4">
-                <Button disabled={submitting} onClick={handleAddStudent} className="flex-1 rounded-xl h-11 font-bold gradient-blue">
-                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ البيانات"}
-                </Button>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -168,7 +210,7 @@ export default function StudentsPage() {
             <input 
               type="text"
               placeholder="البحث بالاسم أو رقم القيد..."
-              className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all"
+              className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all text-right"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -176,7 +218,7 @@ export default function StudentsPage() {
         </div>
 
         <div className="rounded-2xl border overflow-hidden">
-          <Table>
+          <Table className="text-right">
             <TableHeader className="bg-muted/50">
               <TableRow className="hover:bg-transparent border-b">
                 <TableHead className="text-right font-bold text-primary">الطالب</TableHead>
@@ -215,6 +257,7 @@ export default function StudentsPage() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
+                        onClick={() => setEditingStudent(student)}
                         className="rounded-xl hover:bg-primary/5 text-secondary"
                         title="تعديل"
                       >
@@ -239,6 +282,104 @@ export default function StudentsPage() {
           </Table>
         </div>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingStudent} onOpenChange={(open) => !open && setEditingStudent(null)}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-8">
+            <DialogHeader className="text-right items-start space-y-2 mb-8">
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                <Edit2 className="w-6 h-6 text-secondary" />
+                تعديل بيانات الطالب
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="grid grid-cols-2 gap-6 py-4">
+              <div className="space-y-2 col-span-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <User className="w-4 h-4 text-secondary" />
+                  الاسم الكامل
+                </Label>
+                <Input 
+                  value={editingStudent?.name || ""}
+                  onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold" 
+                />
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <Fingerprint className="w-4 h-4 text-secondary" />
+                  رقم القيد
+                </Label>
+                <Input 
+                  value={editingStudent?.regId || ""}
+                  onChange={(e) => setEditingStudent({...editingStudent, regId: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold" 
+                />
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <Building2 className="w-4 h-4 text-secondary" />
+                  التخصص
+                </Label>
+                <Select value={editingStudent?.departmentId || ""} onValueChange={(v) => setEditingStudent({...editingStudent, departmentId: v})}>
+                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                    <SelectValue placeholder="اختر التخصص" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    {departments.map((d: any) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <GraduationCap className="w-4 h-4 text-secondary" />
+                  المستوى
+                </Label>
+                <Select value={editingStudent?.level || ""} onValueChange={(v) => setEditingStudent({...editingStudent, level: v})}>
+                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                    <SelectValue placeholder="اختر المستوى" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                    <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                    <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                    <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <Banknote className="w-4 h-4 text-secondary" />
+                  نوع القبول
+                </Label>
+                <Select value={editingStudent?.admissionType || ""} onValueChange={(v) => setEditingStudent({...editingStudent, admissionType: v})}>
+                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                    <SelectValue placeholder="نوع القبول" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="عام">عام</SelectItem>
+                    <SelectItem value="موازي">موازي</SelectItem>
+                    <SelectItem value="نفقة خاصة">نفقة خاصة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter className="flex-row gap-3 pt-8">
+              <Button 
+                disabled={submitting} 
+                onClick={handleUpdateStudent}
+                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : "حفظ التعديلات"}
+              </Button>
+              <Button variant="outline" onClick={() => setEditingStudent(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
