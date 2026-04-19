@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -10,7 +9,6 @@ import {
   School, 
   Plus, 
   Search, 
-  MoreVertical, 
   Edit2, 
   Trash2, 
   PlusCircle,
@@ -25,14 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -50,14 +40,13 @@ import { cn } from "@/lib/utils";
 
 // Firebase Imports
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function CollegesManagementPage() {
   const firestore = useFirestore();
   
-  // Memoize the collection reference to prevent infinite render loops
   const collegesQuery = useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, "colleges");
@@ -67,6 +56,7 @@ export default function CollegesManagementPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingCollege, setEditingCollege] = useState<any>(null);
   const [newCollege, setNewCollege] = useState({ name: "", code: "" });
   const [submitting, setSubmitting] = useState(false);
 
@@ -100,6 +90,33 @@ export default function CollegesManagementPage() {
         const permissionError = new FirestorePermissionError({
           path: collegesRef.path,
           operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
+  const handleUpdateCollege = () => {
+    if (!firestore || !editingCollege?.name || !editingCollege?.code) return;
+
+    setSubmitting(true);
+    const docRef = doc(firestore, "colleges", editingCollege.id);
+    const data = {
+      name: editingCollege.name,
+      code: editingCollege.code,
+      updatedAt: serverTimestamp()
+    };
+
+    updateDoc(docRef, data)
+      .then(() => {
+        setEditingCollege(null);
+        toast({ title: "تم التحديث", description: "تم تحديث بيانات الكلية بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'update',
           requestResourceData: data,
         });
         errorEmitter.emit('permission-error', permissionError);
@@ -157,34 +174,25 @@ export default function CollegesManagementPage() {
                     <PlusCircle className="w-6 h-6 text-secondary" />
                     كلية جديدة
                   </DialogTitle>
-                  <DialogDescription className="font-bold text-muted-foreground text-sm">
-                    أدخل بيانات الكلية الجديدة لإدراجها في السجلات.
-                  </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-6 py-4">
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                      <School className="w-4 h-4 text-secondary" />
-                      اسم الكلية
-                    </Label>
+                    <Label className="text-primary font-bold">اسم الكلية</Label>
                     <Input 
                       value={newCollege.name}
                       onChange={(e) => setNewCollege({...newCollege, name: e.target.value})}
                       placeholder="مثال: كلية العلوم التطبيقية" 
-                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
+                      className="rounded-xl h-11 border-muted text-right font-bold" 
                     />
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                      <FileText className="w-4 h-4 text-secondary" />
-                      رمز الكلية (Code)
-                    </Label>
+                    <Label className="text-primary font-bold">رمز الكلية</Label>
                     <Input 
                       value={newCollege.code}
                       onChange={(e) => setNewCollege({...newCollege, code: e.target.value})}
                       placeholder="CAS" 
-                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" 
+                      className="rounded-xl h-11 border-muted text-right font-bold uppercase" 
                     />
                   </div>
                 </div>
@@ -194,8 +202,7 @@ export default function CollegesManagementPage() {
                     onClick={handleAddCollege}
                     className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
                   >
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
-                    حفظ الكلية
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : "حفظ الكلية"}
                   </Button>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
                 </DialogFooter>
@@ -224,16 +231,12 @@ export default function CollegesManagementPage() {
                 <TableRow className="hover:bg-transparent border-b">
                   <TableHead className="text-right font-bold text-primary">الكلية</TableHead>
                   <TableHead className="text-right font-bold text-primary">الرمز</TableHead>
-                  <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
+                  <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="h-40 text-center">
-                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary opacity-20" />
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={3} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary opacity-20" /></TableCell></TableRow>
                 ) : filteredColleges.length > 0 ? filteredColleges.map((college) => (
                   <TableRow key={college.id} className="hover:bg-muted/20 border-b group">
                     <TableCell className="p-4">
@@ -248,38 +251,79 @@ export default function CollegesManagementPage() {
                       <span className="text-sm font-black text-secondary">{college.code}</span>
                     </TableCell>
                     <TableCell className="text-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-primary/5">
-                            <MoreVertical className="w-4 h-4 text-primary" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right shadow-xl" dir="rtl">
-                          <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات الكلية</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(college.id)}
-                            className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive"
-                          >
-                            حذف الكلية
-                            <Trash2 className="w-4 h-4" />
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setEditingCollege(college)}
+                          className="rounded-xl hover:bg-primary/5 text-secondary"
+                          title="تعديل"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDelete(college.id)}
+                          className="rounded-xl hover:bg-destructive/10 text-destructive"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )) : (
-                  <TableRow>
-                    <TableCell colSpan={3} className="h-40 text-center text-muted-foreground font-bold">
-                      لا توجد كليات مسجلة حالياً
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={3} className="h-40 text-center text-muted-foreground font-bold">لا توجد كليات مسجلة حالياً</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
         </Card>
       </main>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingCollege} onOpenChange={(open) => !open && setEditingCollege(null)}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-8">
+            <DialogHeader className="text-right items-start space-y-2 mb-8">
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                <Edit2 className="w-6 h-6 text-secondary" />
+                تعديل بيانات الكلية
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="grid gap-6 py-4">
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold">اسم الكلية</Label>
+                <Input 
+                  value={editingCollege?.name || ""}
+                  onChange={(e) => setEditingCollege({...editingCollege, name: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold" 
+                />
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold">رمز الكلية</Label>
+                <Input 
+                  value={editingCollege?.code || ""}
+                  onChange={(e) => setEditingCollege({...editingCollege, code: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold uppercase" 
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex-row gap-3 pt-8">
+              <Button 
+                disabled={submitting} 
+                onClick={handleUpdateCollege}
+                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ التعديلات"}
+              </Button>
+              <Button variant="outline" onClick={() => setEditingCollege(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

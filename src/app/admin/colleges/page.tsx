@@ -13,7 +13,8 @@ import {
   Users,
   FileText,
   ShieldCheck,
-  Loader2
+  Loader2,
+  CheckCircle2
 } from "lucide-react";
 import {
   Table,
@@ -38,7 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
@@ -49,9 +50,10 @@ export default function AdminCollegesPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingCollege, setEditingCollege] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [newCollege, setNewCollege] = useState({ name: '', code: '' });
   
+  const [newCollege, setNewCollege] = useState({ name: '', code: '' });
   const { toast } = useToast();
 
   const filteredColleges = useMemo(() => {
@@ -84,6 +86,33 @@ export default function AdminCollegesPage() {
         const permissionError = new FirestorePermissionError({
           path: collegesRef.path,
           operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
+  const handleUpdateCollege = () => {
+    if (!firestore || !editingCollege?.name || !editingCollege?.code) return;
+
+    setSubmitting(true);
+    const docRef = doc(firestore, "colleges", editingCollege.id);
+    const data = {
+      name: editingCollege.name,
+      code: editingCollege.code,
+      updatedAt: serverTimestamp()
+    };
+
+    updateDoc(docRef, data)
+      .then(() => {
+        setEditingCollege(null);
+        toast({ title: "تم التحديث", description: "تم تحديث بيانات الكلية بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'update',
           requestResourceData: data,
         });
         errorEmitter.emit('permission-error', permissionError);
@@ -254,6 +283,7 @@ export default function AdminCollegesPage() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
+                        onClick={() => setEditingCollege(college)}
                         className="rounded-xl hover:bg-primary/5 text-secondary"
                         title="تعديل"
                       >
@@ -282,6 +312,49 @@ export default function AdminCollegesPage() {
           </Table>
         </div>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingCollege} onOpenChange={(open) => !open && setEditingCollege(null)}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-8">
+            <DialogHeader className="text-right items-start space-y-2 mb-8">
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                <Edit2 className="w-6 h-6 text-secondary" />
+                تعديل بيانات الكلية
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="grid gap-6 py-4">
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold">اسم الكلية</Label>
+                <Input 
+                  value={editingCollege?.name || ""}
+                  onChange={(e) => setEditingCollege({...editingCollege, name: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold" 
+                />
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold">رمز الكلية</Label>
+                <Input 
+                  value={editingCollege?.code || ""}
+                  onChange={(e) => setEditingCollege({...editingCollege, code: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold uppercase" 
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex-row gap-3 pt-8">
+              <Button 
+                disabled={submitting} 
+                onClick={handleUpdateCollege}
+                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ التعديلات"}
+              </Button>
+              <Button variant="outline" onClick={() => setEditingCollege(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
