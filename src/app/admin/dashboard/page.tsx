@@ -1,6 +1,6 @@
-
 "use client";
 
+import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -10,7 +10,8 @@ import {
   Clock, 
   ArrowUpRight, 
   ArrowDownRight,
-  GraduationCap
+  GraduationCap,
+  Loader2
 } from "lucide-react";
 import { 
   Bar, 
@@ -27,39 +28,54 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 
-const stats = [
-  { label: 'إجمالي الطلاب', value: '4,520', icon: GraduationCap, color: 'text-blue-600', bg: 'bg-blue-100', trend: '+12%', isUp: true },
-  { label: 'إجمالي الاختبارات', value: '12,840', icon: FileText, color: 'text-green-600', bg: 'bg-green-100', trend: '+8%', isUp: true },
-  { label: 'ملفات اليوم', value: '156', icon: Archive, color: 'text-purple-600', bg: 'bg-purple-100', trend: '+24%', isUp: true },
-  { label: 'عدد الموظفين', value: '32', icon: Users, color: 'text-orange-600', bg: 'bg-orange-100', trend: '-2%', isUp: false },
-];
-
-const examData = [
-  { name: 'يناير', value: 400 },
-  { name: 'فبراير', value: 600 },
-  { name: 'مارس', value: 800 },
-  { name: 'أبريل', value: 700 },
-  { name: 'مايو', value: 1200 },
-  { name: 'يونيو', value: 1500 },
-];
-
-const subjectData = [
-  { name: 'برمجة 1', value: 120 },
-  { name: 'رياضيات', value: 98 },
-  { name: 'فيزياء', value: 86 },
-  { name: 'كيمياء', value: 72 },
-  { name: 'قواعد بيانات', value: 110 },
-];
-
-const deptData = [
-  { name: 'تقنية معلومات', value: 45 },
-  { name: 'علوم حاسوب', value: 30 },
-  { name: 'هندسة برمجيات', value: 25 },
-];
+// Firebase
+import { useFirestore, useCollection } from "@/firebase";
+import { collection, query, orderBy, limit } from "firebase/firestore";
 
 const COLORS = ['#0B3C5D', '#328CC1', '#D9E3F0'];
 
 export default function AdminDashboard() {
+  const firestore = useFirestore();
+
+  // Live queries for real-time stats
+  const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
+  const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
+  const recentQuery = useMemo(() => firestore ? query(collection(firestore, "archives"), orderBy("uploadedAt", "desc"), limit(4)) : null, [firestore]);
+
+  const { data: students = [], loading: loadingStudents } = useCollection(studentsQuery);
+  const { data: archives = [], loading: loadingArchives } = useCollection(archivesQuery);
+  const { data: recentActivity = [] } = useCollection(recentQuery);
+
+  const stats = [
+    { label: 'إجمالي الطلاب', value: students.length.toLocaleString('ar-EG'), icon: GraduationCap, color: 'text-blue-600', bg: 'bg-blue-100', trend: '+12%', isUp: true },
+    { label: 'إجمالي الاختبارات', value: archives.length.toLocaleString('ar-EG'), icon: FileText, color: 'text-green-600', bg: 'bg-green-100', trend: '+8%', isUp: true },
+    { label: 'ملفات اليوم', value: '١٥٦', icon: Archive, color: 'text-purple-600', bg: 'bg-purple-100', trend: '+24%', isUp: true },
+    { label: 'عدد الموظفين', value: '٣٢', icon: Users, color: 'text-orange-600', bg: 'bg-orange-100', trend: '-2%', isUp: false },
+  ];
+
+  const examData = [
+    { name: 'يناير', value: 400 },
+    { name: 'فبراير', value: 600 },
+    { name: 'مارس', value: 800 },
+    { name: 'أبريل', value: 700 },
+    { name: 'مايو', value: archives.length },
+    { name: 'يونيو', value: 1500 },
+  ];
+
+  const subjectData = [
+    { name: 'برمجة 1', value: 120 },
+    { name: 'رياضيات', value: 98 },
+    { name: 'فيزياء', value: 86 },
+    { name: 'كيمياء', value: 72 },
+    { name: 'قواعد بيانات', value: 110 },
+  ];
+
+  const deptData = [
+    { name: 'تقنية معلومات', value: 45 },
+    { name: 'علوم حاسوب', value: 30 },
+    { name: 'هندسة برمجيات', value: 25 },
+  ];
+
   return (
     <div className="space-y-8 text-right" dir="rtl">
       <div>
@@ -160,26 +176,30 @@ export default function AdminDashboard() {
         <Card className="lg:col-span-2 p-8 border-none shadow-xl rounded-3xl bg-white">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-lg font-bold text-primary">آخر العمليات على النظام</h2>
-            <Button variant="ghost" className="text-secondary font-bold rounded-xl">عرض الكل</Button>
+            <Button variant="ghost" className="text-secondary font-bold rounded-xl" onClick={() => window.location.href='/admin/logs'}>عرض الكل</Button>
           </div>
           <div className="space-y-6">
-            {[
-              { user: 'محمد علي', action: 'رفع اختبار', target: 'برمجة 1', time: 'منذ دقيقتين', color: 'bg-green-500' },
-              { user: 'سارة خالد', action: 'تعديل طالب', target: 'أحمد محمود', time: 'منذ 15 دقيقة', color: 'bg-blue-500' },
-              { user: 'أحمد وليد', action: 'حذف ملف', target: 'فيزياء عامة', time: 'منذ ساعة', color: 'bg-red-500' },
-              { user: 'ليلى مراد', action: 'إضافة مادة', target: 'الذكاء الاصطناعي', time: 'منذ ساعتين', color: 'bg-purple-500' },
-            ].map((item, i) => (
+            {loadingArchives ? (
+              <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin opacity-20" /></div>
+            ) : recentActivity.length > 0 ? recentActivity.map((item: any, i: number) => (
               <div key={i} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-muted/30 transition-colors border border-transparent hover:border-border">
-                <div className={`w-2 h-10 rounded-full ${item.color}`}></div>
+                <div className={cn(
+                  "w-2 h-10 rounded-full",
+                  i % 2 === 0 ? "bg-green-500" : "bg-blue-500"
+                )}></div>
                 <div className="flex-1 text-right">
-                  <p className="text-primary font-bold">{item.user} <span className="text-muted-foreground font-medium">{item.action}:</span> {item.target}</p>
+                  <p className="text-primary font-bold">
+                    {item.studentName} <span className="text-muted-foreground font-medium">أرشفة:</span> {item.subjectName}
+                  </p>
                   <p className="text-[10px] text-muted-foreground font-bold flex items-center justify-end gap-1 mt-1">
                     <Clock className="w-3 h-3" />
-                    {item.time}
+                    {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG') : 'منذ قليل'}
                   </p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="text-center text-muted-foreground font-bold py-10">لا توجد عمليات حديثة مسجلة</p>
+            )}
           </div>
         </Card>
       </div>

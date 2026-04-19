@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -17,7 +16,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  X
+  Loader2
 } from "lucide-react";
 import {
   Table,
@@ -50,91 +49,75 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-const INITIAL_STUDENTS = [
-  { id: '1', regId: '20210045', name: 'أحمد محمود علي', department: 'تقنية المعلومات', level: 'المستوى الثالث', admissionType: 'عام', status: 'active', joinDate: '2021-09-12' },
-  { id: '2', regId: '20220112', name: 'سارة خالد يوسف', department: 'علوم الحاسوب', level: 'المستوى الثاني', admissionType: 'موازي', status: 'active', joinDate: '2022-09-15' },
-  { id: '3', regId: '20210567', name: 'وليد جاسم مرزوق', department: 'هندسة البرمجيات', level: 'المستوى الرابع', admissionType: 'عام', status: 'suspended', joinDate: '2021-09-10' },
-  { id: '4', regId: '20230001', name: 'مريم سعيد سالم', department: 'تقنية المعلومات', level: 'المستوى الأول', admissionType: 'منحة', status: 'active', joinDate: '2023-09-20' },
-];
+// Firebase
+import { useFirestore, useCollection } from "@/firebase";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState(INITIAL_STUDENTS);
+  const firestore = useFirestore();
+  const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
+  const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
+
+  const { data: students = [], loading } = useCollection(studentsQuery);
+  const { data: departments = [] } = useCollection(deptsQuery);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   
-  // Filter States
-  const [filterDept, setFilterDept] = useState("all");
-  const [filterLevel, setFilterLevel] = useState("all");
-  const [filterType, setFilterType] = useState("all");
+  // Form State
+  const [newStudent, setNewStudent] = useState({
+    name: "",
+    regId: "",
+    departmentId: "",
+    level: "المستوى الأول",
+    admissionType: "عام"
+  });
 
   const { toast } = useToast();
 
   const filteredStudents = useMemo(() => {
-    return students.filter(student => {
-      const matchesSearch = student.name.includes(searchTerm) || student.regId.includes(searchTerm);
-      const matchesDept = filterDept === "all" || student.department === filterDept;
-      const matchesLevel = filterLevel === "all" || student.level === filterLevel;
-      const matchesType = filterType === "all" || student.admissionType === filterType;
-      
-      return matchesSearch && matchesDept && matchesLevel && matchesType;
-    });
-  }, [students, searchTerm, filterDept, filterLevel, filterType]);
+    return (students as any[]).filter(student => 
+      student.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      student.regId?.includes(searchTerm)
+    );
+  }, [students, searchTerm]);
 
-  const handleExport = () => {
+  const handleAddStudent = async () => {
+    if (!firestore || !newStudent.name || !newStudent.regId || !newStudent.departmentId) {
+      toast({ variant: "destructive", title: "بيانات ناقصة" });
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      // Define CSV headers
-      const headers = ["رقم القيد", "الاسم الكامل", "التخصص", "المستوى", "نوع القبول", "الحالة", "تاريخ الالتحاق"];
-      
-      // Convert student data to CSV rows
-      const rows = filteredStudents.map(student => [
-        student.regId,
-        student.name,
-        student.department,
-        student.level,
-        student.admissionType,
-        student.status === 'active' ? 'نشط' : 'موقوف',
-        student.joinDate
-      ]);
-
-      // Combine headers and rows
-      const csvContent = [
-        headers.join(","),
-        ...rows.map(row => row.join(","))
-      ].join("\n");
-
-      // Add BOM for Excel Arabic support
-      const universalBOM = "\uFEFF";
-      const blob = new Blob([universalBOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-      
-      // Create download link
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `students_export_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast({
-        title: "تم التصدير بنجاح",
-        description: "تم تحميل ملف بيانات الطلاب بصيغة CSV بنجاح.",
+      const selectedDept = (departments as any[]).find(d => d.id === newStudent.departmentId);
+      await addDoc(collection(firestore, "students"), {
+        ...newStudent,
+        departmentName: selectedDept?.name || "",
+        status: "active",
+        joinDate: new Date().toISOString().split('T')[0],
+        createdAt: serverTimestamp()
       });
+      setIsAddDialogOpen(false);
+      setNewStudent({ name: "", regId: "", departmentId: "", level: "المستوى الأول", admissionType: "عام" });
+      toast({ title: "تم تسجيل الطالب بنجاح" });
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "خطأ في التصدير",
-        description: "عذراً، حدث خطأ أثناء محاولة تصدير البيانات.",
-      });
+      toast({ variant: "destructive", title: "فشل الحفظ" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const resetFilters = () => {
-    setFilterDept("all");
-    setFilterLevel("all");
-    setFilterType("all");
-    setSearchTerm("");
+  const handleDelete = async (id: string) => {
+    if (!firestore) return;
+    try {
+      await deleteDoc(doc(firestore, "students", id));
+      toast({ title: "تم حذف سجل الطالب" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "فشل الحذف" });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -148,14 +131,10 @@ export default function StudentsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-primary mb-1">إدارة الطلاب</h1>
-          <p className="text-muted-foreground font-bold">قاعدة بيانات الطلاب، تتبع المستويات الأكاديمية والقبول</p>
+          <p className="text-muted-foreground font-bold">قاعدة بيانات الطلاب المسجلين سحابياً</p>
         </div>
         
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={handleExport} className="rounded-2xl h-12 font-bold border-2 gap-2">
-            <FileDown className="w-5 h-5" />
-            تصدير
-          </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2">
@@ -166,60 +145,30 @@ export default function StudentsPage() {
             <DialogContent className="sm:max-w-[500px] rounded-3xl border-none text-right" dir="rtl">
               <DialogHeader className="text-right">
                 <DialogTitle className="text-2xl font-black text-primary">إضافة طالب</DialogTitle>
-                <DialogDescription className="font-bold">أدخل البيانات الأكاديمية والشخصية للطالب الجديد.</DialogDescription>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-6 py-4">
                 <div className="space-y-2 col-span-2">
                   <Label className="text-primary font-bold">الاسم الكامل</Label>
-                  <Input placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11 border-muted" />
+                  <Input value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-primary font-bold">رقم القيد</Label>
-                  <Input placeholder="20240000" className="rounded-xl h-11 border-muted" />
+                  <Input value={newStudent.regId} onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})} placeholder="20240000" className="rounded-xl h-11" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-primary font-bold">التخصص</Label>
-                  <Select>
-                    <SelectTrigger className="rounded-xl h-11 border-muted">
-                      <SelectValue placeholder="اختر التخصص" />
-                    </SelectTrigger>
+                  <Select onValueChange={(v) => setNewStudent({...newStudent, departmentId: v})}>
+                    <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
                     <SelectContent className="rounded-xl">
-                      <SelectItem value="it">تقنية المعلومات</SelectItem>
-                      <SelectItem value="cs">علوم الحاسوب</SelectItem>
-                      <SelectItem value="se">هندسة البرمجيات</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-primary font-bold">المستوى</Label>
-                  <Select>
-                    <SelectTrigger className="rounded-xl h-11 border-muted">
-                      <SelectValue placeholder="اختر المستوى" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="1">المستوى الأول</SelectItem>
-                      <SelectItem value="2">المستوى الثاني</SelectItem>
-                      <SelectItem value="3">المستوى الثالث</SelectItem>
-                      <SelectItem value="4">المستوى الرابع</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-primary font-bold">نوع القبول</Label>
-                  <Select>
-                    <SelectTrigger className="rounded-xl h-11 border-muted">
-                      <SelectValue placeholder="نوع القبول" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="general">عام</SelectItem>
-                      <SelectItem value="parallel">موازي</SelectItem>
-                      <SelectItem value="scholarship">منحة</SelectItem>
+                      {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <DialogFooter className="flex-row gap-3">
-                <Button type="submit" className="flex-1 rounded-xl h-11 font-bold gradient-blue">حفظ البيانات</Button>
+              <DialogFooter className="flex-row gap-3 pt-4">
+                <Button disabled={submitting} onClick={handleAddStudent} className="flex-1 rounded-xl h-11 font-bold gradient-blue">
+                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ البيانات"}
+                </Button>
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
               </DialogFooter>
             </DialogContent>
@@ -239,72 +188,7 @@ export default function StudentsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button 
-            variant={showFilters ? "default" : "outline"} 
-            onClick={() => setShowFilters(!showFilters)}
-            className="h-12 rounded-2xl border-2 px-6 gap-2 font-bold transition-all"
-          >
-            <Filter className="w-5 h-5" />
-            تصفية متقدمة
-          </Button>
         </div>
-
-        {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 p-6 bg-muted/20 rounded-2xl animate-slide-up">
-            <div className="space-y-2">
-              <Label className="text-primary font-bold mr-1 text-xs">التخصص</Label>
-              <Select value={filterDept} onValueChange={setFilterDept}>
-                <SelectTrigger className="rounded-xl h-11 border-muted bg-white">
-                  <SelectValue placeholder="الكل" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="all">جميع التخصصات</SelectItem>
-                  <SelectItem value="تقنية المعلومات">تقنية المعلومات</SelectItem>
-                  <SelectItem value="علوم الحاسوب">علوم الحاسوب</SelectItem>
-                  <SelectItem value="هندسة البرمجيات">هندسة البرمجيات</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-primary font-bold mr-1 text-xs">المستوى</Label>
-              <Select value={filterLevel} onValueChange={setFilterLevel}>
-                <SelectTrigger className="rounded-xl h-11 border-muted bg-white">
-                  <SelectValue placeholder="الكل" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="all">جميع المستويات</SelectItem>
-                  <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
-                  <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
-                  <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
-                  <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-primary font-bold mr-1 text-xs">نوع القبول</Label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="rounded-xl h-11 border-muted bg-white">
-                  <SelectValue placeholder="الكل" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="all">جميع الأنواع</SelectItem>
-                  <SelectItem value="عام">عام</SelectItem>
-                  <SelectItem value="موازي">موازي</SelectItem>
-                  <SelectItem value="منحة">منحة</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end">
-              <Button 
-                variant="ghost" 
-                onClick={resetFilters}
-                className="w-full h-11 rounded-xl font-bold text-muted-foreground hover:text-primary"
-              >
-                إعادة ضبط
-              </Button>
-            </div>
-          </div>
-        )}
 
         <div className="rounded-2xl border overflow-hidden">
           <Table>
@@ -313,13 +197,14 @@ export default function StudentsPage() {
                 <TableHead className="text-right font-bold text-primary">الطالب</TableHead>
                 <TableHead className="text-right font-bold text-primary">رقم القيد</TableHead>
                 <TableHead className="text-right font-bold text-primary">التخصص / المستوى</TableHead>
-                <TableHead className="text-right font-bold text-primary">نوع القبول</TableHead>
                 <TableHead className="text-right font-bold text-primary">الحالة</TableHead>
                 <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredStudents.length > 0 ? filteredStudents.map((student) => (
+              {loading ? (
+                <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+              ) : filteredStudents.length > 0 ? filteredStudents.map((student) => (
                 <TableRow key={student.id} className="hover:bg-muted/20 border-b group">
                   <TableCell className="p-4">
                     <div className="flex items-center gap-3">
@@ -328,24 +213,16 @@ export default function StudentsPage() {
                       </div>
                       <div className="flex flex-col">
                         <span className="font-bold text-primary">{student.name}</span>
-                        <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          تاريخ الالتحاق: {student.joinDate}
-                        </span>
+                        <span className="text-[10px] text-muted-foreground font-bold">انضم: {student.joinDate}</span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="font-mono text-xs font-bold text-muted-foreground">{student.regId}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-primary">{student.department}</span>
+                      <span className="text-sm font-bold text-primary">{student.departmentName}</span>
                       <span className="text-[10px] text-muted-foreground font-bold">{student.level}</span>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="border-secondary text-secondary rounded-lg font-bold">
-                      {student.admissionType}
-                    </Badge>
                   </TableCell>
                   <TableCell>{getStatusBadge(student.status)}</TableCell>
                   <TableCell className="text-center">
@@ -356,31 +233,15 @@ export default function StudentsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right" dir="rtl">
-                        <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات الطالب</DropdownMenuLabel>
+                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">تعديل البيانات<Edit2 className="w-4 h-4 text-secondary" /></DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                          الملف الأكاديمي
-                          <Eye className="w-4 h-4 text-primary" />
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                          تعديل البيانات
-                          <Edit2 className="w-4 h-4 text-secondary" />
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive">
-                          حذف السجل
-                          <Trash2 className="w-4 h-4" />
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDelete(student.id)} className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive">حذف السجل<Trash2 className="w-4 h-4" /></DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
               )) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-40 text-center text-muted-foreground font-bold">
-                    لا يوجد طلاب مطابقين للبحث
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">لا يوجد طلاب مطابقين للبحث</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

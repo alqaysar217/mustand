@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * إعدادات Firebase الخاصة بمشروعك.
- * يرجى ملء هذه القيم من Firebase Console ليعمل النظام بشكل حقيقي.
+ * إعدادات Firebase الخاصة بمشروعك الحقيقي.
+ * تم التحديث باستخدام البيانات المقدمة لربط المنصة بالسحابة.
  */
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAZQcotZ-uTLSwumPTV2-sWPQe1UGB98Fw",
+  authDomain: "studio-4772676541-75c95.firebaseapp.com",
+  projectId: "studio-4772676541-75c95",
+  storageBucket: "studio-4772676541-75c95.firebasestorage.app",
+  messagingSenderId: "242985731141",
+  appId: "1:242985731141:web:25ea72fcab2cbde454cf2c"
 };
