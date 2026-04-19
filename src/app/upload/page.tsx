@@ -104,8 +104,8 @@ export default function UploadPage() {
       
       nextStep(); // Go to step 5 (Confirmation)
     } catch (err: any) {
-      // Robust Fallback: Silence technical red error and show friendly Arabic message
-      console.error("AI Error Silenced:", err.message);
+      // Use warn instead of error to prevent Next.js full-screen error overlay during development
+      console.warn("AI Analysis Fallback triggered:", err.message);
       
       toast({
         variant: "destructive",

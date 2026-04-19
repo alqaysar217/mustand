@@ -12,7 +12,7 @@ const ExtractExamDetailsInputSchema = z.object({
   examImageDataUri: z
     .string()
     .describe(
-      "A data URI of the exam image that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A photo of a plant, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
 export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSchema>;
@@ -67,8 +67,8 @@ const extractExamDetailsFlow = ai.defineFlow(
       
       return output || { studentRegistrationId: '', studentName: '' };
     } catch (error: any) {
-      console.error('OCR Extraction Failed:', error.message);
-      // We throw a controlled error string to be handled by the UI
+      console.warn('OCR Extraction Internal Diagnostic:', error.message);
+      // We throw a controlled error string to be handled by the UI gracefully
       throw new Error('AI_ANALYSIS_FAILED');
     }
   }
