@@ -41,8 +41,6 @@ import { useToast } from "@/hooks/use-toast";
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function AdminCollegesPage() {
   const firestore = useFirestore();
@@ -155,9 +153,19 @@ export default function AdminCollegesPage() {
       </div>
 
       <Tabs defaultValue="colleges" onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl h-14 shadow-sm border mb-8 flex items-stretch">
-          <TabsTrigger value="colleges" className="flex-1 rounded-xl font-bold data-[state=active]:gradient-blue data-[state=active]:text-white">إدارة الكليات</TabsTrigger>
-          <TabsTrigger value="years" className="flex-1 rounded-xl font-bold data-[state=active]:gradient-blue data-[state=active]:text-white">الأعوام الدراسية</TabsTrigger>
+        <TabsList className="bg-white p-1 rounded-2xl h-14 shadow-sm border mb-8 flex items-stretch overflow-hidden">
+          <TabsTrigger 
+            value="colleges" 
+            className="flex-1 rounded-xl font-black transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+          >
+            إدارة الكليات
+          </TabsTrigger>
+          <TabsTrigger 
+            value="years" 
+            className="flex-1 rounded-xl font-black transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+          >
+            الأعوام الدراسية
+          </TabsTrigger>
         </TabsList>
 
         <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -185,26 +193,28 @@ export default function AdminCollegesPage() {
             <Table className="text-right">
               <TableHeader className="bg-muted/30">
                 <TableRow>
-                  <TableHead className="text-right font-bold">الكلية</TableHead>
-                  <TableHead className="text-right font-bold">الرمز</TableHead>
-                  <TableHead className="text-center font-bold w-32">إجراءات</TableHead>
+                  <TableHead className="text-right font-bold text-primary">الكلية</TableHead>
+                  <TableHead className="text-right font-bold text-primary">الرمز</TableHead>
+                  <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingColleges ? (
-                  <TableRow><TableCell colSpan={3} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
-                ) : filteredColleges.map((college) => (
-                  <TableRow key={college.id}>
-                    <TableCell className="p-4 font-bold">{college.name}</TableCell>
+                  <TableRow><TableCell colSpan={3} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20 text-primary" /></TableCell></TableRow>
+                ) : filteredColleges.length > 0 ? filteredColleges.map((college) => (
+                  <TableRow key={college.id} className="hover:bg-muted/10 group">
+                    <TableCell className="p-4 font-bold text-primary">{college.name}</TableCell>
                     <TableCell className="font-black text-secondary">{college.code}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setEditingCollege(college)} className="text-secondary hover:bg-secondary/10"><Edit2 className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete('colleges', college.id)} className="text-destructive hover:bg-destructive/10"><Trash2 className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setEditingCollege(college)} className="text-secondary hover:bg-secondary/10 rounded-xl"><Edit2 className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete('colleges', college.id)} className="text-destructive hover:bg-destructive/10 rounded-xl"><Trash2 className="w-4 h-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                   <TableRow><TableCell colSpan={3} className="h-40 text-center text-muted-foreground font-bold">لا توجد كليات مسجلة</TableCell></TableRow>
+                )}
               </TableBody>
             </Table>
           </Card>
@@ -215,26 +225,28 @@ export default function AdminCollegesPage() {
             <Table className="text-right">
               <TableHeader className="bg-muted/30">
                 <TableRow>
-                  <TableHead className="text-right font-bold">العام الجامعي</TableHead>
-                  <TableHead className="text-right font-bold">تاريخ الإضافة</TableHead>
-                  <TableHead className="text-center font-bold w-32">إجراءات</TableHead>
+                  <TableHead className="text-right font-bold text-primary">العام الجامعي</TableHead>
+                  <TableHead className="text-right font-bold text-primary">تاريخ الإضافة</TableHead>
+                  <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingYears ? (
-                  <TableRow><TableCell colSpan={3} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
-                ) : filteredYears.map((year) => (
-                  <TableRow key={year.id}>
+                  <TableRow><TableCell colSpan={3} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20 text-primary" /></TableCell></TableRow>
+                ) : filteredYears.length > 0 ? filteredYears.map((year) => (
+                  <TableRow key={year.id} className="hover:bg-muted/10">
                     <TableCell className="p-4 font-black text-primary text-lg">{year.label}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{year.createdAt?.toDate ? year.createdAt.toDate().toLocaleDateString('en-GB') : '---'}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground font-bold">{year.createdAt?.toDate ? year.createdAt.toDate().toLocaleDateString('en-GB') : '---'}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setEditingYear(year)} className="text-secondary hover:bg-secondary/10"><Edit2 className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete('academicYears', year.id)} className="text-destructive hover:bg-destructive/10"><Trash2 className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setEditingYear(year)} className="text-secondary hover:bg-secondary/10 rounded-xl"><Edit2 className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete('academicYears', year.id)} className="text-destructive hover:bg-destructive/10 rounded-xl"><Trash2 className="w-4 h-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                  <TableRow><TableCell colSpan={3} className="h-40 text-center text-muted-foreground font-bold">لا توجد أعوام دراسية مسجلة</TableCell></TableRow>
+                )}
               </TableBody>
             </Table>
           </Card>
@@ -243,52 +255,73 @@ export default function AdminCollegesPage() {
 
       {/* College Add Dialog */}
       <Dialog open={isAddCollegeOpen} onOpenChange={setIsAddCollegeOpen}>
-        <DialogContent className="rounded-3xl border-none text-right" dir="rtl">
-          <DialogHeader className="text-right"><DialogTitle className="text-2xl font-black">كلية جديدة</DialogTitle></DialogHeader>
+        <DialogContent className="rounded-3xl border-none text-right shadow-2xl" dir="rtl">
+          <DialogHeader className="text-right">
+            <DialogTitle className="text-2xl font-black text-primary">كلية جديدة</DialogTitle>
+            <DialogDescription className="font-bold text-muted-foreground">أدخل بيانات الكلية الرسمية لتفعيلها في النظام.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2"><Label>الاسم الرسمي</Label><Input value={newCollege.name} onChange={(e) => setNewCollege({...newCollege, name: e.target.value})} className="rounded-xl" /></div>
-            <div className="space-y-2"><Label>الرمز المختصر</Label><Input value={newCollege.code} onChange={(e) => setNewCollege({...newCollege, code: e.target.value})} className="rounded-xl uppercase" /></div>
+            <div className="space-y-2">
+              <Label className="font-bold text-primary">الاسم الرسمي</Label>
+              <Input value={newCollege.name} onChange={(e) => setNewCollege({...newCollege, name: e.target.value})} className="rounded-xl h-11" />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-bold text-primary">الرمز المختصر</Label>
+              <Input value={newCollege.code} onChange={(e) => setNewCollege({...newCollege, code: e.target.value})} className="rounded-xl h-11 uppercase" />
+            </div>
           </div>
           <DialogFooter className="flex-row gap-2">
-            <Button onClick={handleAddCollege} disabled={submitting} className="flex-1 rounded-xl gradient-blue">{submitting ? <Loader2 className="animate-spin" /> : 'تفعيل'}</Button>
-            <Button variant="outline" onClick={() => setIsAddCollegeOpen(false)} className="flex-1 rounded-xl">إلغاء</Button>
+            <Button onClick={handleAddCollege} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">{submitting ? <Loader2 className="animate-spin" /> : 'تفعيل'}</Button>
+            <Button variant="outline" onClick={() => setIsAddCollegeOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Year Add Dialog */}
       <Dialog open={isAddYearOpen} onOpenChange={setIsAddYearOpen}>
-        <DialogContent className="rounded-3xl border-none text-right" dir="rtl">
-          <DialogHeader className="text-right"><DialogTitle className="text-2xl font-black">عام دراسي جديد</DialogTitle></DialogHeader>
+        <DialogContent className="rounded-3xl border-none text-right shadow-2xl" dir="rtl">
+          <DialogHeader className="text-right">
+            <DialogTitle className="text-2xl font-black text-primary">عام دراسي جديد</DialogTitle>
+            <DialogDescription className="font-bold text-muted-foreground">تحديد مسمى العام الجامعي (مثلاً: 2024 / 2025).</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2"><Label>تسمية العام</Label><Input placeholder="2023 / 2024" value={newYear.label} onChange={(e) => setNewYear({...newYear, label: e.target.value})} className="rounded-xl" /></div>
+            <div className="space-y-2">
+              <Label className="font-bold text-primary">تسمية العام</Label>
+              <Input placeholder="2024 / 2025" value={newYear.label} onChange={(e) => setNewYear({...newYear, label: e.target.value})} className="rounded-xl h-11" />
+            </div>
           </div>
           <DialogFooter className="flex-row gap-2">
-            <Button onClick={handleAddYear} disabled={submitting} className="flex-1 rounded-xl gradient-blue">{submitting ? <Loader2 className="animate-spin" /> : 'إضافة'}</Button>
-            <Button variant="outline" onClick={() => setIsAddYearOpen(false)} className="flex-1 rounded-xl">إلغاء</Button>
+            <Button onClick={handleAddYear} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">{submitting ? <Loader2 className="animate-spin" /> : 'إضافة'}</Button>
+            <Button variant="outline" onClick={() => setIsAddYearOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialogs (Simplified) */}
+      {/* Edit Dialogs */}
       <Dialog open={!!editingCollege} onOpenChange={(o) => !o && setEditingCollege(null)}>
-        <DialogContent className="rounded-3xl text-right" dir="rtl">
-           <DialogHeader className="text-right"><DialogTitle className="font-black">تعديل كلية</DialogTitle></DialogHeader>
+        <DialogContent className="rounded-3xl text-right shadow-2xl border-none" dir="rtl">
+           <DialogHeader className="text-right">
+              <DialogTitle className="font-black text-primary text-2xl">تعديل كلية</DialogTitle>
+              <DialogDescription className="font-bold text-muted-foreground">تحديث بيانات الكلية المختارة.</DialogDescription>
+           </DialogHeader>
            <div className="space-y-4 py-4">
-              <Input value={editingCollege?.name} onChange={(e) => setEditingCollege({...editingCollege, name: e.target.value})} className="rounded-xl" />
-              <Input value={editingCollege?.code} onChange={(e) => setEditingCollege({...editingCollege, code: e.target.value})} className="rounded-xl uppercase" />
+              <div className="space-y-2"><Label className="font-bold text-primary">الاسم الرسمي</Label><Input value={editingCollege?.name} onChange={(e) => setEditingCollege({...editingCollege, name: e.target.value})} className="rounded-xl h-11" /></div>
+              <div className="space-y-2"><Label className="font-bold text-primary">الرمز المختصر</Label><Input value={editingCollege?.code} onChange={(e) => setEditingCollege({...editingCollege, code: e.target.value})} className="rounded-xl h-11 uppercase" /></div>
            </div>
-           <Button onClick={handleUpdateCollege} className="w-full rounded-xl gradient-blue">حفظ التغييرات</Button>
+           <Button onClick={handleUpdateCollege} className="w-full h-12 font-bold rounded-xl gradient-blue shadow-lg">حفظ التغييرات</Button>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!editingYear} onOpenChange={(o) => !o && setEditingYear(null)}>
-        <DialogContent className="rounded-3xl text-right" dir="rtl">
-           <DialogHeader className="text-right"><DialogTitle className="font-black">تعديل العام الدراسي</DialogTitle></DialogHeader>
+        <DialogContent className="rounded-3xl text-right shadow-2xl border-none" dir="rtl">
+           <DialogHeader className="text-right">
+              <DialogTitle className="font-black text-primary text-2xl">تعديل العام الدراسي</DialogTitle>
+              <DialogDescription className="font-bold text-muted-foreground">تحديث تسمية العام الدراسي المختار.</DialogDescription>
+           </DialogHeader>
            <div className="space-y-4 py-4">
-              <Input value={editingYear?.label} onChange={(e) => setEditingYear({...editingYear, label: e.target.value})} className="rounded-xl" />
+              <div className="space-y-2"><Label className="font-bold text-primary">تسمية العام</Label><Input value={editingYear?.label} onChange={(e) => setEditingYear({...editingYear, label: e.target.value})} className="rounded-xl h-11" /></div>
            </div>
-           <Button onClick={handleUpdateYear} className="w-full rounded-xl gradient-blue">تحديث</Button>
+           <Button onClick={handleUpdateYear} className="w-full h-12 font-bold rounded-xl gradient-blue shadow-lg">تحديث</Button>
         </DialogContent>
       </Dialog>
     </div>
