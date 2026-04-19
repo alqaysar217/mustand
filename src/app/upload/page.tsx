@@ -65,7 +65,6 @@ export default function UploadPage() {
   const firestore = useFirestore();
   const storage = useStorage();
 
-  // جلب البيانات الأساسية من السحابة
   const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
   const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
   const yearsQuery = useMemo(() => firestore ? collection(firestore, "academicYears") : null, [firestore]);
@@ -74,7 +73,6 @@ export default function UploadPage() {
   const { data: subjects = [] } = useCollection(subjectsQuery);
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
-  // فلترة المواد بناءً على التخصص والمستوى
   const filteredSubjects = useMemo(() => {
     if (!formData.deptId || !formData.level) return [];
     return (subjects as any[]).filter(s => 
@@ -129,17 +127,9 @@ export default function UploadPage() {
       try {
         const student = await findStudentByRegId(cleanId);
         if (student) {
-          setExtractedData(prev => ({ 
-            ...prev, 
-            name: student.name, 
-            found: true 
-          }));
+          setExtractedData(prev => ({ ...prev, name: student.name, found: true }));
         } else {
-          setExtractedData(prev => ({ 
-            ...prev, 
-            name: '',
-            found: false 
-          }));
+          setExtractedData(prev => ({ ...prev, name: '', found: false }));
         }
       } catch (err) {
         console.error("Match error:", err);
@@ -158,7 +148,6 @@ export default function UploadPage() {
     try {
       const result = await extractExamDetails({ examImageDataUri: files[0] });
       const cleanRegId = result.studentRegistrationId?.replace(/\D/g, '') || '';
-      
       const student = await findStudentByRegId(cleanRegId);
       
       if (student) {
@@ -176,17 +165,12 @@ export default function UploadPage() {
           found: false,
           originalName: result.studentName || ''
         });
-        toast({ 
-          variant: "destructive", 
-          title: "فشل في المطابقة", 
-          description: "تم استخراج رقم القيد لكنه غير مسجل في النظام." 
-        });
       }
       setStep(5);
     } catch (err: any) {
       toast({ 
         variant: "destructive", 
-        title: "خطأ في التحليل الذكي", 
+        title: "خطأ في التحليل", 
         description: "تعذر قراءة البيانات آلياً، يرجى إدخالها يدوياً." 
       });
       setStep(5);
@@ -195,42 +179,48 @@ export default function UploadPage() {
     }
   };
 
+  // وظيفة الحفظ الفوري والسريع
   const handleSaveToArchive = async () => {
-    if (!firestore || !storage || !extractedData.id || !formData.subjectName) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "تأكد من وجود رقم القيد والمادة." });
+    if (!firestore || !storage || !extractedData.id || !formData.subjectName || files.length === 0) {
+      toast({ variant: "destructive", title: "بيانات ناقصة" });
       return;
     }
 
     setLoadingText("جاري أرشفة الملف سحابياً...");
     setLoading(true);
     
+    // حفظ نسخة من البيانات والملفات الحالية قبل التصفير
+    const currentFiles = [...files];
+    const currentData = { ...extractedData };
+    const currentForm = { ...formData };
+
     try {
-      // 1. رفع الصورة أولاً للحصول على الرابط (ضروري للحفظ)
-      const folderName = formData.year.replace(/\s/g, '').replace(/\//g, '-');
-      const fileName = `archives/${folderName}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
+      // 1. رفع الصورة فوراً (هذا الجزء هو الأهم والوحيد الذي سننتظره)
+      const folderName = currentForm.year.replace(/\s/g, '').replace(/\//g, '-');
+      const fileName = `archives/${folderName}/${currentForm.subjectName}/${currentData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       
-      await uploadString(storageRef, files[0], 'data_url');
+      await uploadString(storageRef, currentFiles[0], 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
 
       const archiveData = {
-        studentRegId: extractedData.id,
-        studentName: extractedData.name || "طالب غير معروف",
-        subjectId: formData.subjectId,
-        subjectName: formData.subjectName,
-        year: formData.year,
-        term: formData.term,
-        departmentId: formData.deptId,
+        studentRegId: currentData.id,
+        studentName: currentData.name || "طالب غير معروف",
+        subjectId: currentForm.subjectId,
+        subjectName: currentForm.subjectName,
+        year: currentForm.year,
+        term: currentForm.term,
+        departmentId: currentForm.deptId,
         fileUrl: downloadUrl,
-        pages: files.length,
+        pages: currentFiles.length,
         uploadedAt: serverTimestamp()
       };
 
-      // 2. الحفظ في Firestore بشكل غير معطل (Non-blocking)
+      // 2. الحفظ في Firestore (غير معطل - Non-blocking)
       const archivesCollection = collection(firestore, "archives");
       addDoc(archivesCollection, archiveData)
         .then(() => {
-          toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ ملف الطالب ${extractedData.name}` });
+          toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ ملف الطالب ${currentData.name}` });
         })
         .catch(async (err) => {
           const permissionError = new FirestorePermissionError({
@@ -241,19 +231,15 @@ export default function UploadPage() {
           errorEmitter.emit('permission-error', permissionError);
         });
 
-      // 3. العودة الفورية لخطوة الرفع لمواصلة العمل
+      // 3. التصفير الفوري والانتقال للخطوة التالية دون انتظار
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false, originalName: '' });
-      setStep(2); 
+      setStep(2);
       
     } catch (error: any) {
-      console.error("Storage error:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "خطأ في السحابة", 
-        description: "فشل رفع الملف. يرجى التأكد من اتصال الإنترنت وحجم الصورة." 
-      });
+      toast({ variant: "destructive", title: "فشل الرفع", description: "يرجى التحقق من اتصال الإنترنت وحجم الملف." });
     } finally {
+      // نغلق شاشة التحميل فوراً ليعود المستخدم للعمل
       setLoading(false);
     }
   };
@@ -272,7 +258,6 @@ export default function UploadPage() {
           <p className="text-muted-foreground font-bold text-lg">استخدم الذكاء الاصطناعي للمطابقة مع سجلات الطلاب الرسمية</p>
         </div>
 
-        {/* Steps Progress */}
         <div className="flex items-center justify-between mb-16 relative px-4 max-w-3xl mx-auto">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -translate-y-1/2 z-0"></div>
           {[1, 2, 3, 4, 5].map((s) => (
@@ -296,7 +281,7 @@ export default function UploadPage() {
 
         <Card className="p-8 md:p-12 border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[40px] bg-white min-h-[520px] flex flex-col relative overflow-hidden">
           {loading && (
-            <div className="absolute inset-0 bg-white/70 backdrop-blur-md z-50 flex flex-col items-center justify-center gap-6 text-center p-10 animate-fade-in">
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-50 flex flex-col items-center justify-center gap-6 text-center p-10 animate-fade-in">
               <div className="relative">
                 <Loader2 className="w-20 h-20 animate-spin text-primary" />
                 <Sparkles className="w-8 h-8 text-secondary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
@@ -324,10 +309,10 @@ export default function UploadPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                  <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-secondary" />
                     العام الجامعي
-                  </label>
+                  </Label>
                   <select 
                     value={formData.year}
                     onChange={(e) => setFormData({...formData, year: e.target.value})}
@@ -339,10 +324,10 @@ export default function UploadPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                  <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-secondary" />
                     التخصص (القسم)
-                  </label>
+                  </Label>
                   <select 
                     value={formData.deptId}
                     onChange={(e) => setFormData({...formData, deptId: e.target.value, subjectId: '', subjectName: ''})}
@@ -354,10 +339,10 @@ export default function UploadPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                  <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
                     <GraduationCap className="w-4 h-4 text-secondary" />
                     المستوى الدراسي
-                  </label>
+                  </Label>
                   <select 
                     value={formData.level}
                     onChange={(e) => setFormData({...formData, level: e.target.value, subjectId: '', subjectName: ''})}
@@ -372,10 +357,10 @@ export default function UploadPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                  <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
                     <BookOpen className="w-4 h-4 text-secondary" />
                     المادة الدراسية
-                  </label>
+                  </Label>
                   <select 
                     disabled={!formData.deptId || !formData.level}
                     value={formData.subjectId}
@@ -488,10 +473,10 @@ export default function UploadPage() {
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3 text-right">
-                    <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
                       <Fingerprint className="w-4 h-4 text-secondary" />
                       رقم القيد الجامعي
-                    </label>
+                    </Label>
                     <div className="relative group">
                       <input 
                         value={extractedData.id} 
@@ -509,10 +494,10 @@ export default function UploadPage() {
                   </div>
 
                   <div className="space-y-3 text-right">
-                    <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
                       <User className="w-4 h-4 text-secondary" />
                       اسم الطالب الكامل (آلي)
-                    </label>
+                    </Label>
                     <div className="relative">
                       <input 
                         value={extractedData.name} 
@@ -540,8 +525,9 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* Action Buttons */}
+          {/* أزرار التنقل مع تبديل الأماكن للاتجاه العربي */}
           <div className="mt-auto pt-10 flex items-center justify-between border-t-2 border-muted/50">
+            {/* زر السابق في اليمين */}
             <Button 
               variant="outline" 
               onClick={prevStep} 
@@ -552,6 +538,7 @@ export default function UploadPage() {
               <ChevronRight className="w-6 h-6" /> 
             </Button>
             
+            {/* زر التالي/الحفظ في اليسار */}
             {step < 5 ? (
               <Button 
                 onClick={nextStep} 
