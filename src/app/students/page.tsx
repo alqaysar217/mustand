@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -37,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -213,6 +215,7 @@ export default function StudentsManagementPage() {
                     <UserPlus className="w-6 h-6 text-secondary" />
                     طالب جديد
                   </DialogTitle>
+                  <DialogDescription className="sr-only">أدخل بيانات الطالب الجديد</DialogDescription>
                 </DialogHeader>
                 
                 <div className="grid grid-cols-2 gap-6 py-4">
@@ -430,6 +433,7 @@ export default function StudentsManagementPage() {
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات الطالب
               </DialogTitle>
+              <DialogDescription className="sr-only">تحديث معلومات الطالب المختار</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-2 gap-6 py-4">

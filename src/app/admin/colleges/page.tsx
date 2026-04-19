@@ -305,8 +305,8 @@ export default function AdminCollegesPage() {
               <DialogDescription className="font-bold text-muted-foreground">تحديث بيانات الكلية المختارة.</DialogDescription>
            </DialogHeader>
            <div className="space-y-4 py-4">
-              <div className="space-y-2"><Label className="font-bold text-primary">الاسم الرسمي</Label><Input value={editingCollege?.name} onChange={(e) => setEditingCollege({...editingCollege, name: e.target.value})} className="rounded-xl h-11" /></div>
-              <div className="space-y-2"><Label className="font-bold text-primary">الرمز المختصر</Label><Input value={editingCollege?.code} onChange={(e) => setEditingCollege({...editingCollege, code: e.target.value})} className="rounded-xl h-11 uppercase" /></div>
+              <div className="space-y-2"><Label className="font-bold text-primary">الاسم الرسمي</Label><Input value={editingCollege?.name || ""} onChange={(e) => setEditingCollege({...editingCollege, name: e.target.value})} className="rounded-xl h-11" /></div>
+              <div className="space-y-2"><Label className="font-bold text-primary">الرمز المختصر</Label><Input value={editingCollege?.code || ""} onChange={(e) => setEditingCollege({...editingCollege, code: e.target.value})} className="rounded-xl h-11 uppercase" /></div>
            </div>
            <Button onClick={handleUpdateCollege} className="w-full h-12 font-bold rounded-xl gradient-blue shadow-lg">حفظ التغييرات</Button>
         </DialogContent>
@@ -319,7 +319,7 @@ export default function AdminCollegesPage() {
               <DialogDescription className="font-bold text-muted-foreground">تحديث تسمية العام الدراسي المختار.</DialogDescription>
            </DialogHeader>
            <div className="space-y-4 py-4">
-              <div className="space-y-2"><Label className="font-bold text-primary">تسمية العام</Label><Input value={editingYear?.label} onChange={(e) => setEditingYear({...editingYear, label: e.target.value})} className="rounded-xl h-11" /></div>
+              <div className="space-y-2"><Label className="font-bold text-primary">تسمية العام</Label><Input value={editingYear?.label || ""} onChange={(e) => setEditingYear({...editingYear, label: e.target.value})} className="rounded-xl h-11" /></div>
            </div>
            <Button onClick={handleUpdateYear} className="w-full h-12 font-bold rounded-xl gradient-blue shadow-lg">تحديث</Button>
         </DialogContent>

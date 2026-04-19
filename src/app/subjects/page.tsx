@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -368,11 +369,12 @@ export default function SubjectsManagementPage() {
       <Dialog open={!!editingSubject} onOpenChange={(open) => !open && setEditingSubject(null)}>
         <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
           <div className="p-8">
-            <DialogHeader className="text-right items-start space-y-2 mb-8">
+            <DialogHeader className="text-right items-start space-y-2 mb-8 relative">
               <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات المادة
               </DialogTitle>
+              <DialogDescription className="sr-only">تحديث معلومات المادة المختارة</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
@@ -425,7 +427,7 @@ export default function SubjectsManagementPage() {
             </div>
             <DialogFooter className="flex-row gap-3 pt-8">
               <Button disabled={submitting} onClick={handleUpdateSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ التعديلات"}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : "حفظ التعديلات"}
               </Button>
               <Button variant="outline" onClick={() => setEditingSubject(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
             </DialogFooter>

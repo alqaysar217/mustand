@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -286,11 +287,12 @@ export default function CollegesManagementPage() {
       <Dialog open={!!editingCollege} onOpenChange={(open) => !open && setEditingCollege(null)}>
         <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
           <div className="p-8">
-            <DialogHeader className="text-right items-start space-y-2 mb-8">
+            <DialogHeader className="text-right items-start space-y-2 mb-8 relative">
               <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات الكلية
               </DialogTitle>
+              <DialogDescription className="sr-only">تحديث معلومات الكلية المختارة</DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-6 py-4">

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -359,6 +360,7 @@ export default function DepartmentsManagementPage() {
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات القسم
               </DialogTitle>
+              <DialogDescription className="sr-only">تحديث معلومات القسم المختار</DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-6 py-4">
