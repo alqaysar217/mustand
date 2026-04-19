@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -31,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -182,6 +184,7 @@ export default function SubjectsPage() {
                   <PlusCircle className="w-6 h-6 text-secondary" />
                   مادة دراسية جديدة
                 </DialogTitle>
+                <DialogDescription className="font-bold text-muted-foreground">أدخل تفاصيل المادة التعليمية الجديدة لدمجها في الخطة الدراسية.</DialogDescription>
               </DialogHeader>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
@@ -374,6 +377,7 @@ export default function SubjectsPage() {
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات المادة
               </DialogTitle>
+              <DialogDescription className="font-bold text-muted-foreground">تعديل المعلومات التفصيلية للمادة الدراسية المسجلة.</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">

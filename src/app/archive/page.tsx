@@ -24,6 +24,9 @@ import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
@@ -205,6 +208,10 @@ export default function ArchivePage() {
 
       <Dialog open={!!viewingExam} onOpenChange={(o) => !o && setViewingExam(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden bg-background">
+          <DialogHeader className="sr-only">
+            <DialogTitle>معاينة الاختبار</DialogTitle>
+            <DialogDescription>عرض تفاصيل ورقة الاختبار المؤرشفة</DialogDescription>
+          </DialogHeader>
           {viewingExam && (
             <div className="relative w-full h-[80vh]">
               <Image src={viewingExam.fileUrl || PlaceHolderImages[1].imageUrl} alt="Exam Full" fill className="object-contain" />

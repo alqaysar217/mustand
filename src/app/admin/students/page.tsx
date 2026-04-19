@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -35,6 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -178,6 +180,7 @@ export default function StudentsPage() {
               <div className="p-8">
                 <DialogHeader className="text-right items-start space-y-2 mb-8">
                   <DialogTitle className="text-2xl font-black text-primary">إضافة طالب</DialogTitle>
+                  <DialogDescription className="font-bold text-muted-foreground">تسجيل طالب جديد في النظام وربطه بالتخصص الدراسي.</DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-2 gap-6 py-4">
                   <div className="space-y-2 col-span-2 text-right">
@@ -326,6 +329,7 @@ export default function StudentsPage() {
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات الطالب
               </DialogTitle>
+              <DialogDescription className="font-bold text-muted-foreground">تحديث المعلومات الأكاديمية للطالب المختار.</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-2 gap-6 py-4">

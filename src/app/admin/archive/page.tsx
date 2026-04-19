@@ -34,6 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -305,6 +306,7 @@ export default function AdminArchivePage() {
                 أرشفة اختبار جديد
                 <Archive className="w-6 h-6 text-secondary" />
               </DialogTitle>
+              <DialogDescription className="font-bold text-muted-foreground">أدخل بيانات الطالب والمادة لرفع الاختبار إلى السحابة.</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -320,11 +322,11 @@ export default function AdminArchivePage() {
                 <Label className="text-primary font-bold">المادة الدراسية</Label>
                 <Select value={newArchive.subjectId} onValueChange={(v) => {
                   const s = (subjects as any[]).find(sub => sub.id === v);
-                  setNewArchive({...newArchive, subjectId: v, subjectName: s?.name || ""});
+                  setNewArchive({...newArchive, subjectId: v, subjectName: s?.nameAr || ""});
                 }}>
                   <SelectTrigger className="rounded-xl h-11 bg-muted/20"><SelectValue placeholder="اختر المادة" /></SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
-                    {subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    {subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nameAr}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -379,7 +381,9 @@ export default function AdminArchivePage() {
               <div className="p-8 flex-1 flex flex-col">
                 <DialogHeader className="text-right mb-6">
                   <DialogTitle className="text-2xl font-bold text-primary mb-2">{viewingArchive.studentName}</DialogTitle>
-                  <p className="text-secondary font-bold flex items-center justify-end gap-2">{viewingArchive.subjectName}<BookOpen className="w-4 h-4" /></p>
+                  <DialogDescription className="text-secondary font-bold flex items-center justify-end gap-2">
+                    {viewingArchive.subjectName}<BookOpen className="w-4 h-4" />
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 text-right flex-1">
                   <div className="grid grid-cols-2 gap-4">
