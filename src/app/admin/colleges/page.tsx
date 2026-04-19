@@ -16,7 +16,10 @@ import {
   Loader2,
   FileText,
   Hash,
-  Type
+  Type,
+  CheckCircle,
+  XCircle,
+  PlusCircle
 } from "lucide-react";
 import {
   Table,
@@ -264,109 +267,28 @@ export default function AdminCollegesPage() {
 
       {/* College Add Dialog */}
       <Dialog open={isAddCollegeOpen} onOpenChange={setIsAddCollegeOpen}>
-        <DialogContent className="rounded-3xl border-none text-right shadow-2xl p-8" dir="rtl">
-          <DialogHeader className="text-right items-start mb-6">
-            <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
-              <School className="w-6 h-6 text-secondary" />
-              كلية جديدة
-            </DialogTitle>
-            <DialogDescription className="font-bold text-muted-foreground">أدخل بيانات الكلية الرسمية لتفعيلها في النظام.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="space-y-2">
-              <Label className="font-bold text-primary flex items-center gap-2">
-                <Type className="w-4 h-4 text-secondary" />
-                الاسم الرسمي للكلية
-              </Label>
-              <div className="relative">
-                <Input 
-                  value={newCollege.name || ""} 
-                  onChange={(e) => setNewCollege({...newCollege, name: e.target.value})} 
-                  placeholder="مثال: كلية الهندسة"
-                  className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20 pr-10" 
-                />
-                <School className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="font-bold text-primary flex items-center gap-2">
-                <Hash className="w-4 h-4 text-secondary" />
-                الرمز المختصر
-              </Label>
-              <div className="relative">
-                <Input 
-                  value={newCollege.code || ""} 
-                  onChange={(e) => setNewCollege({...newCollege, code: e.target.value})} 
-                  className="rounded-xl h-12 bg-muted/20 border-muted uppercase pr-10" 
-                  placeholder="ENG"
-                />
-                <Hash className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              </div>
-            </div>
-          </div>
-          <DialogFooter className="flex-row gap-3 pt-6">
-            <Button onClick={handleAddCollege} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">
-              {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : 'تفعيل الكلية'}
-            </Button>
-            <Button variant="outline" onClick={() => setIsAddCollegeOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Year Add Dialog */}
-      <Dialog open={isAddYearOpen} onOpenChange={setIsAddYearOpen}>
-        <DialogContent className="rounded-3xl border-none text-right shadow-2xl p-8" dir="rtl">
-          <DialogHeader className="text-right items-start mb-6">
-            <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
-              <Calendar className="w-6 h-6 text-secondary" />
-              عام دراسي جديد
-            </DialogTitle>
-            <DialogDescription className="font-bold text-muted-foreground text-right">تحديد مسمى العام الجامعي (مثلاً: 2024 / 2025).</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="space-y-2">
-              <Label className="font-bold text-primary flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-secondary" />
-                تسمية العام
-              </Label>
-              <div className="relative">
-                <Input 
-                  placeholder="2024 / 2025" 
-                  value={newYear.label || ""} 
-                  onChange={(e) => setNewYear({...newYear, label: e.target.value})} 
-                  className="rounded-xl h-12 bg-muted/20 border-muted pr-10 font-bold text-right" 
-                />
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              </div>
-            </div>
-          </div>
-          <DialogFooter className="flex-row gap-3 pt-6">
-            <Button onClick={handleAddYear} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">
-              {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : 'إضافة العام'}
-            </Button>
-            <Button variant="outline" onClick={() => setIsAddYearOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Dialogs */}
-      <Dialog open={!!editingCollege} onOpenChange={(o) => !o && setEditingCollege(null)}>
-        <DialogContent className="rounded-3xl text-right shadow-2xl border-none p-8" dir="rtl">
-           <DialogHeader className="text-right items-start mb-6">
-              <DialogTitle className="font-black text-primary text-2xl flex items-center gap-2">
-                <Edit2 className="w-6 h-6 text-secondary" />
-                تعديل بيانات الكلية
+        <DialogContent className="rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-8">
+            <DialogHeader className="text-right items-start mb-6">
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                <School className="w-6 h-6 text-secondary" />
+                كلية جديدة
               </DialogTitle>
-              <DialogDescription className="font-bold text-muted-foreground">تحديث بيانات الكلية المختارة.</DialogDescription>
-           </DialogHeader>
-           <div className="space-y-6 py-4">
+              <DialogDescription className="font-bold text-muted-foreground">أدخل بيانات الكلية الرسمية لتفعيلها في النظام.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label className="font-bold text-primary flex items-center gap-2">
                   <Type className="w-4 h-4 text-secondary" />
-                  الاسم الرسمي
+                  الاسم الرسمي للكلية
                 </Label>
                 <div className="relative">
-                  <Input value={editingCollege?.name || ""} onChange={(e) => setEditingCollege({...editingCollege, name: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted pr-10" />
+                  <Input 
+                    value={newCollege.name || ""} 
+                    onChange={(e) => setNewCollege({...newCollege, name: e.target.value})} 
+                    placeholder="مثال: كلية الهندسة"
+                    className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20 pr-10" 
+                  />
                   <School className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 </div>
               </div>
@@ -376,43 +298,141 @@ export default function AdminCollegesPage() {
                   الرمز المختصر
                 </Label>
                 <div className="relative">
-                  <Input value={editingCollege?.code || ""} onChange={(e) => setEditingCollege({...editingCollege, code: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted uppercase pr-10" />
+                  <Input 
+                    value={newCollege.code || ""} 
+                    onChange={(e) => setNewCollege({...newCollege, code: e.target.value})} 
+                    className="rounded-xl h-12 bg-muted/20 border-muted uppercase pr-10" 
+                    placeholder="ENG"
+                  />
                   <Hash className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 </div>
               </div>
-           </div>
-           <DialogFooter className="flex-row gap-3 pt-6">
-              <Button onClick={handleUpdateCollege} className="flex-1 h-12 font-bold rounded-xl gradient-blue shadow-lg">حفظ التغييرات</Button>
-              <Button variant="outline" onClick={() => setEditingCollege(null)} className="flex-1 h-12 font-bold rounded-xl border-2">تراجع</Button>
-           </DialogFooter>
+            </div>
+            <DialogFooter className="flex-row gap-3 pt-6">
+              <Button onClick={handleAddCollege} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2">
+                {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
+                {submitting ? 'جاري الحفظ...' : 'تفعيل الكلية'}
+              </Button>
+              <Button variant="outline" onClick={() => setIsAddCollegeOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!editingYear} onOpenChange={(o) => !o && setEditingYear(null)}>
-        <DialogContent className="rounded-3xl text-right shadow-2xl border-none p-8" dir="rtl">
-           <DialogHeader className="text-right items-start mb-6">
-              <DialogTitle className="font-black text-primary text-2xl flex items-center gap-2">
-                <Edit2 className="w-6 h-6 text-secondary" />
-                تعديل العام الدراسي
+      {/* Year Add Dialog */}
+      <Dialog open={isAddYearOpen} onOpenChange={setIsAddYearOpen}>
+        <DialogContent className="rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-8">
+            <DialogHeader className="text-right items-start mb-6">
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                <Calendar className="w-6 h-6 text-secondary" />
+                عام دراسي جديد
               </DialogTitle>
-              <DialogDescription className="font-bold text-muted-foreground text-right">تحديث تسمية العام الدراسي المختار.</DialogDescription>
-           </DialogHeader>
-           <div className="space-y-6 py-4">
+              <DialogDescription className="font-bold text-muted-foreground text-right">تحديد مسمى العام الجامعي (مثلاً: 2024 / 2025).</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label className="font-bold text-primary flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-secondary" />
                   تسمية العام
                 </Label>
                 <div className="relative">
-                  <Input value={editingYear?.label || ""} onChange={(e) => setEditingYear({...editingYear, label: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted pr-10 font-bold text-right" />
+                  <Input 
+                    placeholder="2024 / 2025" 
+                    value={newYear.label || ""} 
+                    onChange={(e) => setNewYear({...newYear, label: e.target.value})} 
+                    className="rounded-xl h-12 bg-muted/20 border-muted pr-10 font-bold text-right" 
+                  />
                   <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 </div>
               </div>
+            </div>
+            <DialogFooter className="flex-row gap-3 pt-6">
+              <Button onClick={handleAddYear} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2">
+                {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
+                {submitting ? 'جاري الحفظ...' : 'إضافة العام'}
+              </Button>
+              <Button variant="outline" onClick={() => setIsAddYearOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* College Edit Dialog */}
+      <Dialog open={!!editingCollege} onOpenChange={(o) => !o && setEditingCollege(null)}>
+        <DialogContent className="rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+           <div className="p-8">
+             <DialogHeader className="text-right items-start mb-6">
+                <DialogTitle className="font-black text-primary text-2xl flex items-center gap-2">
+                  <Edit2 className="w-6 h-6 text-secondary" />
+                  تعديل بيانات الكلية
+                </DialogTitle>
+                <DialogDescription className="font-bold text-muted-foreground">تحديث بيانات الكلية المختارة.</DialogDescription>
+             </DialogHeader>
+             <div className="space-y-6 py-4">
+                <div className="space-y-2">
+                  <Label className="font-bold text-primary flex items-center gap-2">
+                    <Type className="w-4 h-4 text-secondary" />
+                    الاسم الرسمي
+                  </Label>
+                  <div className="relative">
+                    <Input value={editingCollege?.name || ""} onChange={(e) => setEditingCollege({...editingCollege, name: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted pr-10" />
+                    <School className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-bold text-primary flex items-center gap-2">
+                    <Hash className="w-4 h-4 text-secondary" />
+                    الرمز المختصر
+                  </Label>
+                  <div className="relative">
+                    <Input value={editingCollege?.code || ""} onChange={(e) => setEditingCollege({...editingCollege, code: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted uppercase pr-10" />
+                    <Hash className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  </div>
+                </div>
+             </div>
+             <DialogFooter className="flex-row gap-3 pt-6">
+                <Button onClick={handleUpdateCollege} disabled={submitting} className="flex-1 h-12 font-bold rounded-xl gradient-blue shadow-lg gap-2">
+                  {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
+                  {submitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+                </Button>
+                <Button variant="outline" onClick={() => setEditingCollege(null)} className="flex-1 h-12 font-bold rounded-xl border-2">تراجع</Button>
+             </DialogFooter>
            </div>
-           <DialogFooter className="flex-row gap-3 pt-6">
-              <Button onClick={handleUpdateYear} className="flex-1 h-12 font-bold rounded-xl gradient-blue shadow-lg">تحديث</Button>
-              <Button variant="outline" onClick={() => setEditingYear(null)} className="flex-1 h-12 font-bold rounded-xl border-2">إلغاء</Button>
-           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Year Edit Dialog */}
+      <Dialog open={!!editingYear} onOpenChange={(o) => !o && setEditingYear(null)}>
+        <DialogContent className="rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+           <div className="p-8">
+             <DialogHeader className="text-right items-start mb-6">
+                <DialogTitle className="font-black text-primary text-2xl flex items-center gap-2">
+                  <Edit2 className="w-6 h-6 text-secondary" />
+                  تعديل العام الدراسي
+                </DialogTitle>
+                <DialogDescription className="font-bold text-muted-foreground text-right">تحديث تسمية العام الدراسي المختار.</DialogDescription>
+             </DialogHeader>
+             <div className="space-y-6 py-4">
+                <div className="space-y-2">
+                  <Label className="font-bold text-primary flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-secondary" />
+                    تسمية العام
+                  </Label>
+                  <div className="relative">
+                    <Input value={editingYear?.label || ""} onChange={(e) => setEditingYear({...editingYear, label: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted pr-10 font-bold text-right" />
+                    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  </div>
+                </div>
+             </div>
+             <DialogFooter className="flex-row gap-3 pt-6">
+                <Button onClick={handleUpdateYear} disabled={submitting} className="flex-1 h-12 font-bold rounded-xl gradient-blue shadow-lg gap-2">
+                  {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
+                  {submitting ? 'جاري الحفظ...' : 'تحديث'}
+                </Button>
+                <Button variant="outline" onClick={() => setEditingYear(null)} className="flex-1 h-12 font-bold rounded-xl border-2">إلغاء</Button>
+             </DialogFooter>
+           </div>
         </DialogContent>
       </Dialog>
     </div>
