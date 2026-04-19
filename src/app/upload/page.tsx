@@ -455,7 +455,7 @@ export default function UploadPage() {
             )}
           </div>
         </Card>
-      </Card>
+      </main>
     </div>
   );
 }
