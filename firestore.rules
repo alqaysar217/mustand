@@ -1,8 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // قواعد حماية أولية: تسمح بالقراءة والكتابة للجميع (لأغراض التطوير MVP)
-    // يجب تشديد هذه القواعد قبل الإطلاق الفعلي
+    // قواعد تطوير مؤقتة: تسمح بالقراءة والكتابة للجميع
+    // يجب تشديد هذه القواعد قبل الإطلاق الفعلي للإنتاج
     match /{document=**} {
       allow read, write: if true;
     }

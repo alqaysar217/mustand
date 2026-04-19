@@ -16,7 +16,8 @@ import {
   Sparkles,
   AlertTriangle,
   ExternalLink,
-  Code
+  Code,
+  ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
@@ -32,7 +33,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [seeding, setSeeding] = useState(false);
 
-  // Memoize Queries
+  // Memoize Queries to prevent infinite loops
   const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
   const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
   const collegesQuery = useMemo(() => firestore ? collection(firestore, "colleges") : null, [firestore]);
@@ -57,12 +58,14 @@ export default function Dashboard() {
     if (!firestore) return;
     setSeeding(true);
     try {
+      // 1. Add College
       const collegeRef = await addDoc(collection(firestore, "colleges"), {
         name: "كلية تقنية المعلومات",
         code: "CIT",
         createdAt: serverTimestamp()
       });
 
+      // 2. Add Department
       const deptRef = await addDoc(collection(firestore, "departments"), {
         name: "هندسة البرمجيات",
         code: "SE",
@@ -71,6 +74,7 @@ export default function Dashboard() {
         createdAt: serverTimestamp()
       });
 
+      // 3. Add Student
       await addDoc(collection(firestore, "students"), {
         name: "أحمد محمد علي",
         regId: "20210045",
@@ -83,9 +87,9 @@ export default function Dashboard() {
         createdAt: serverTimestamp()
       });
 
-      toast({ title: "تمت التهيئة", description: "تم إضافة بيانات تجريبية بنجاح." });
+      toast({ title: "تمت التهيئة بنجاح", description: "قاعدة البيانات تحتوي الآن على بيانات تجريبية حقيقية." });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في التهيئة", description: "تأكد من إعدادات قاعدة البيانات." });
+      toast({ variant: "destructive", title: "خطأ في التهيئة", description: "تأكد من ضبط القواعد (Rules) في Firestore." });
     } finally {
       setSeeding(false);
     }
@@ -99,42 +103,44 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-right" dir="rtl">
       <Sidebar />
       <Navbar />
       
       <main className={cn(
-        "transition-all duration-300 p-6 md:p-10 animate-fade-in text-right",
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in",
         isOpen ? "mr-0 md:mr-64" : "mr-0"
-      )} dir="rtl">
+      )}>
+        
+        {/* دليل الربط - يظهر فقط إذا لم يتم الربط بعد */}
         {!firestore && (
           <Card className="mb-10 p-8 border-primary/30 border-2 rounded-[2rem] bg-white shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16"></div>
             <div className="flex flex-col md:flex-row items-start gap-6 relative z-10">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Code className="w-8 h-8 text-primary" />
+                <AlertTriangle className="w-8 h-8 text-primary" />
               </div>
               <div className="flex-1 space-y-4">
-                <h3 className="font-black text-2xl text-primary">دليل ربط قاعدة البيانات (عام 2026)</h3>
+                <h3 className="font-black text-2xl text-primary">تنبيه: قاعدة البيانات غير متصلة</h3>
                 <p className="text-muted-foreground font-bold leading-relaxed">
-                  النظام حالياً في وضع "المعاينة". لتفعيله بالكامل، اتبع الخطوات التالية:
+                  النظام حالياً في وضع "المعاينة". لربط مشروعك الحقيقي بـ Firebase، يرجى اتباع الخطوات التالية:
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed text-right">
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
                     <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">1</span>
-                    <span className="text-sm font-bold">افتح <a href="https://console.firebase.google.com/" target="_blank" className="text-secondary underline">Firebase Console</a> وأنشئ مشروعاً.</span>
+                    <span className="text-sm font-bold">افتح <a href="https://console.firebase.google.com/" target="_blank" className="text-secondary underline font-black">Firebase Console</a> وأنشئ مشروعاً.</span>
                   </div>
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed text-right">
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
                     <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">2</span>
-                    <span className="text-sm font-bold">فعل <b>Firestore</b> في وضع التجربة (Test Mode).</span>
+                    <span className="text-sm font-bold">فعّل <b>Firestore Database</b> في وضع التجربة (Test Mode).</span>
                   </div>
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed text-right">
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
                     <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">3</span>
-                    <span className="text-sm font-bold">أضف Web App وانسخ كود <code>firebaseConfig</code>.</span>
+                    <span className="text-sm font-bold">أضف Web App وانسخ مفاتيح الإعدادات (apiKey, projectId, ...).</span>
                   </div>
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed text-right">
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
                     <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">4</span>
-                    <span className="text-sm font-bold">افتح ملف <code>src/firebase/config.ts</code> في المحرر والصق القيم.</span>
+                    <span className="text-sm font-bold">افتح ملف <code>src/firebase/config.ts</code> والصق القيم هناك.</span>
                   </div>
                 </div>
               </div>
@@ -145,7 +151,7 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">لوحة التحكم</h1>
-            <p className="text-muted-foreground font-bold">ملخص سريع لنشاط النظام وقاعدة البيانات الحقيقية</p>
+            <p className="text-muted-foreground font-bold">نظرة شاملة على قاعدة البيانات الحقيقية</p>
           </div>
           <div className="flex items-center gap-3">
             {firestore && (
@@ -153,13 +159,13 @@ export default function Dashboard() {
                 variant="outline" 
                 onClick={handleSeedData} 
                 disabled={seeding}
-                className="rounded-xl font-bold border-dashed border-2 gap-2"
+                className="rounded-xl font-bold border-dashed border-2 gap-2 h-11"
               >
                 {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-secondary" />}
-                تهيئة بيانات تجريبية
+                إضافة بيانات تجريبية حية
               </Button>
             )}
-            <div className="bg-white px-4 py-2 rounded-2xl flex items-center gap-2 border shadow-sm">
+            <div className="bg-white px-4 py-2 rounded-2xl flex items-center gap-2 border shadow-sm h-11">
               <Clock className="w-4 h-4 text-primary" />
               <span className="text-sm font-bold text-primary">
                 {formattedDate || 'جاري التحميل...'}
@@ -190,9 +196,9 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-bold text-primary flex items-center gap-2">
                 <History className="w-5 h-5 text-secondary" />
-                آخر العمليات المسجلة
+                آخر الاختبارات المؤرشفة
               </h2>
-              <button className="text-sm text-secondary font-bold hover:underline" onClick={() => window.location.href='/archive'}>عرض الكل</button>
+              <Button variant="ghost" onClick={() => window.location.href='/archive'} className="font-bold text-secondary text-sm">عرض الكل</Button>
             </div>
             
             <div className="space-y-6">
@@ -201,9 +207,9 @@ export default function Dashboard() {
                   <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary font-bold">
                     {idx + 1}
                   </div>
-                  <div className="flex-1 text-right">
-                    <p className="text-primary font-bold">{item.subjectName}: <span className="text-secondary">{item.studentName}</span></p>
-                    <p className="text-[10px] text-muted-foreground font-bold">رقم القيد: {item.studentRegId}</p>
+                  <div className="flex-1">
+                    <p className="font-bold text-primary">{item.subjectName}: <span className="text-secondary">{item.studentName}</span></p>
+                    <p className="text-[10px] text-muted-foreground font-bold">تاريخ الرفع: {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG') : 'منذ قليل'}</p>
                   </div>
                 </div>
               )) : (
@@ -211,7 +217,7 @@ export default function Dashboard() {
                   <div className="w-20 h-20 rounded-full bg-muted/30 flex items-center justify-center">
                     <FileText className="w-10 h-10 opacity-20" />
                   </div>
-                  <p>لا توجد نشاطات مسجلة حالياً في قاعدة البيانات</p>
+                  <p>لا توجد بيانات مسجلة في السحابة حالياً</p>
                 </div>
               )}
             </div>
@@ -226,10 +232,12 @@ export default function Dashboard() {
                     "w-3 h-3 rounded-full animate-pulse",
                     firestore ? "bg-green-400 shadow-[0_0_10px_#4ade80]" : "bg-red-400 shadow-[0_0_10px_#f87171]"
                   )}></div>
-                  <p className="text-white font-bold">{firestore ? "متصل بـ Firebase" : "غير متصل بالسحاب"}</p>
+                  <p className="text-white font-bold">{firestore ? "متصل بـ Firebase" : "غير متصل"}</p>
                 </div>
                 <p className="text-white/80 text-sm leading-relaxed mb-6 font-medium">
-                  عند ربط الإعدادات، سيقوم النظام بمزامنة كافة الملفات والأرشيف تلقائياً مع السحاب.
+                  {firestore 
+                    ? "قاعدة البيانات السحابية تعمل بنجاح. يمكنك الآن إدارة الأرشيف والطلاب حياً." 
+                    : "يرجى اتباع دليل الربط في الأعلى لتتمكن من استخدام النظام بشكل حقيقي."}
                 </p>
                 <Button 
                   className="bg-white text-primary hover:bg-white/90 w-full rounded-xl font-bold h-12 shadow-xl" 
@@ -244,10 +252,10 @@ export default function Dashboard() {
                </div>
             </Card>
 
-            <Card className="p-6 border-none shadow-lg bg-primary/5 rounded-3xl border-r-4 border-primary text-right">
-              <h4 className="font-bold text-primary mb-2">تلميحة ذكية</h4>
+            <Card className="p-6 border-none shadow-lg bg-primary/5 rounded-3xl border-r-4 border-primary">
+              <h4 className="font-bold text-primary mb-2">معلومات الأرشفة</h4>
               <p className="text-xs text-muted-foreground font-bold leading-relaxed">
-                بمجرد إدخال مفاتيح الربط في ملف الإعدادات، ستظهر البيانات هنا فوراً وبشكل حي.
+                يتم تخزين كافة أوراق الاختبارات على شكل سجلات رقمية في Firestore لضمان سرعة البحث والوصول من أي مكان.
               </p>
             </Card>
           </div>

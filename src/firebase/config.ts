@@ -2,7 +2,7 @@
 
 /**
  * إعدادات Firebase الخاصة بمشروعك.
- * قم بنسخ القيم من Firebase Console والصقها هنا.
+ * يرجى استبدال القيم أدناه بالقيم الحقيقية من Firebase Console.
  */
 export const firebaseConfig = {
   apiKey: "YOUR_API_KEY",

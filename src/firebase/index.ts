@@ -6,14 +6,14 @@ import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * وظيفة تهيئة Firebase بشكل آمن جداً لمنع خطأ trimEnd والانهيارات الأخرى.
+ * وظيفة تهيئة Firebase بشكل آمن جداً لمنع خطأ الانهيار عند غياب الإعدادات.
  */
 export function initializeFirebase(): {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
 } {
-  // التحقق من أن كافة القيم ليست "PLACEHOLDER" وليست فارغة
+  // التحقق مما إذا كانت الإعدادات قد تم إدخالها من قبل المستخدم
   const isConfigValid = 
     firebaseConfig && 
     firebaseConfig.apiKey && 
@@ -22,7 +22,7 @@ export function initializeFirebase(): {
     firebaseConfig.projectId !== "YOUR_PROJECT_ID";
   
   if (!isConfigValid) {
-    console.warn("⚠️ إعدادات Firebase غير صحيحة أو مفقودة. يرجى مراجعة الخطوات في لوحة التحكم.");
+    // نرجع قيم فارغة بدلاً من التسبب في انهيار التطبيق
     return { firebaseApp: null, firestore: null, auth: null };
   }
 
