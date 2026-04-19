@@ -103,25 +103,43 @@ export default function UploadPage() {
     if (files.length === 0 || !firestore) return;
     setLoading(true);
     try {
+      // 1. استخراج البيانات باستخدام AI
       const result = await extractExamDetails({ examImageDataUri: files[0] });
-      const regId = result.studentRegistrationId?.trim() || '';
       
+      // 2. تنقية رقم القيد (إزالة أي حروف أو فراغات)
+      const cleanRegId = result.studentRegistrationId?.replace(/\D/g, '') || '';
+      
+      if (!cleanRegId) {
+        throw new Error('لم يتم العثور على رقم قيد في الصورة');
+      }
+
+      // 3. البحث في قاعدة بيانات الطلاب عن الرقم المستخرج
       const studentsRef = collection(firestore, "students");
-      const q = query(studentsRef, where("regId", "==", regId));
+      const q = query(studentsRef, where("regId", "==", cleanRegId));
       const querySnapshot = await getDocs(q);
       
       if (!querySnapshot.empty) {
+        // تم العثور على الطالب في السجلات الرسمية
         const studentDoc = querySnapshot.docs[0].data();
-        setExtractedData({ id: regId, name: studentDoc.name, found: true });
-        toast({ title: "تم التعرف على الطالب", description: studentDoc.name });
+        setExtractedData({ id: cleanRegId, name: studentDoc.name, found: true });
+        toast({ title: "تمت المطابقة بنجاح", description: `الطالب: ${studentDoc.name}` });
       } else {
-        setExtractedData({ id: regId, name: result.studentName || '', found: false });
-        toast({ variant: "destructive", title: "طالب غير مسجل", description: "رقم القيد غير موجود في السجلات الرسمية." });
+        // رقم القيد غير موجود في السيستم
+        setExtractedData({ id: cleanRegId, name: result.studentName || '', found: false });
+        toast({ 
+          variant: "destructive", 
+          title: "تنبيه: طالب غير مسجل", 
+          description: "الرقم المستخرج لا يطابق أي طالب في السجلات الرسمية." 
+        });
       }
       setStep(5);
     } catch (err: any) {
-      toast({ variant: "destructive", title: "تنبيه", description: "تعذر التحليل التلقائي، يرجى إدخال البيانات يدوياً." });
-      setStep(5); 
+      toast({ 
+        variant: "destructive", 
+        title: "خطأ في التحليل", 
+        description: err.message || "تعذر قراءة البيانات من الصورة، يرجى المحاولة يدوياً." 
+      });
+      setStep(5); // الانتقال للخطوة الأخيرة للإدخال اليدوي
     } finally {
       setLoading(false);
     }
@@ -153,7 +171,7 @@ export default function UploadPage() {
       await addDoc(collection(firestore, "archives"), archiveData);
       toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ اختبار الطالب ${extractedData.name}` });
       
-      // العودة لخطوة الرفع لمواصلة العمل على نفس المادة
+      // إعادة التصفير للعودة لخطوة الرفع مع الحفاظ على سياق المادة
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false });
       setStep(2); 
@@ -293,30 +311,6 @@ export default function UploadPage() {
                   </select>
                 </div>
               </div>
-
-              {formData.subjectId && (
-                <div className="p-6 bg-green-50 rounded-3xl border-2 border-green-100 grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in shadow-sm">
-                   <div className="text-center">
-                     <p className="text-[10px] font-black text-green-600 mb-1">المستوى</p>
-                     <p className="font-black text-primary">{formData.level}</p>
-                   </div>
-                   <div className="text-center border-r border-green-100">
-                     <p className="text-[10px] font-black text-green-600 mb-1">الفصل الدراسي</p>
-                     <p className="font-black text-primary">{formData.term}</p>
-                   </div>
-                   <div className="text-center border-r border-green-100 hidden md:block">
-                     <p className="text-[10px] font-black text-green-600 mb-1">التخصص</p>
-                     <p className="font-black text-primary truncate px-2">{departments.find((d:any) => d.id === formData.deptId)?.name}</p>
-                   </div>
-                   <div className="text-center border-r border-green-100">
-                     <p className="text-[10px] font-black text-green-600 mb-1">الحالة</p>
-                     <p className="font-black text-green-700 flex items-center justify-center gap-1">
-                       <CheckCircle className="w-3 h-3" />
-                       جاهز
-                     </p>
-                   </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -419,8 +413,9 @@ export default function UploadPage() {
                     </label>
                     <input 
                       value={extractedData.id} 
-                      onChange={(e) => setExtractedData({...extractedData, id: e.target.value})} 
+                      onChange={(e) => setExtractedData({...extractedData, id: e.target.value.replace(/\D/g, '')})} 
                       className="w-full h-16 px-8 rounded-3xl border-2 border-muted bg-white font-black text-xl text-right focus:border-primary outline-none transition-all shadow-inner" 
+                      placeholder="أدخل رقم القيد..."
                     />
                   </div>
                   <div className="space-y-3 text-right">
@@ -432,6 +427,7 @@ export default function UploadPage() {
                       value={extractedData.name} 
                       onChange={(e) => setExtractedData({...extractedData, name: e.target.value})} 
                       className="w-full h-16 px-8 rounded-3xl border-2 border-muted bg-white font-black text-xl text-right focus:border-primary outline-none transition-all shadow-inner" 
+                      placeholder="أدخل اسم الطالب..."
                     />
                   </div>
                </div>

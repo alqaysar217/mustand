@@ -27,7 +27,7 @@ export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSc
 
 /**
  * Defines the Genkit prompt for extracting student details from an exam image.
- * Using exactly 'gemini-1.5-flash' on the stable v1 API.
+ * Updated with strict instructions to return only clean data.
  */
 const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
@@ -39,11 +39,17 @@ const extractExamDetailsPrompt = ai.definePrompt({
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
     ],
   },
-  prompt: `أنت مساعد ذكي متخصص في قراءة أوراق الامتحانات.
-قم بتحليل الصورة المرفقة واستخرج منها:
-1. رقم القيد (Registration ID)
-2. اسم الطالب الكامل (Student Name)
-إذا لم تجد المعلومة، اترك الحقل فارغاً.
+  prompt: `أنت خبير في قراءة وتحليل أوراق الامتحانات الجامعية.
+قم بتحليل الصورة المرفقة واستخرج البيانات التالية بدقة متناهية:
+
+1. رقم القيد (Registration ID): استخرج الأرقام فقط. إذا وجدت نصاً مثل "رقم القيد: 20210045" قم بإعادة "20210045" فقط.
+2. اسم الطالب الكامل (Student Name): استخرج الاسم الرباعي المكتوب في خانة الاسم.
+
+قواعد صارمة:
+- لا تضف أي نصوص توضيحية أو مقدمات.
+- إذا لم تكن المعلومة واضحة تماماً، حاول استنتاجها من السياق أو اترك الحقل فارغاً.
+- ركز على الجزء العلوي من الورقة حيث توجد البيانات التعريفية عادةً.
+
 Image: {{media url=examImageDataUri}}`,
 });
 
@@ -62,13 +68,17 @@ const extractExamDetailsFlow = ai.defineFlow(
         throw new Error('API_KEY_MISSING');
       }
 
-      // Explicit call to the prompt using the stable model
       const {output} = await extractExamDetailsPrompt(input);
       
-      return output || { studentRegistrationId: '', studentName: '' };
+      // Clean up the output before returning
+      const cleanRegId = output?.studentRegistrationId?.replace(/\D/g, '') || '';
+      
+      return {
+        studentRegistrationId: cleanRegId,
+        studentName: output?.studentName?.trim() || ''
+      };
     } catch (error: any) {
-      console.warn('OCR Extraction Internal Diagnostic:', error.message);
-      // We throw a controlled error string to be handled by the UI gracefully
+      console.warn('OCR Extraction Error:', error.message);
       throw new Error('AI_ANALYSIS_FAILED');
     }
   }
