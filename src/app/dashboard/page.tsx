@@ -61,7 +61,8 @@ export default function Dashboard() {
   const { data: recentActivity = [] } = useCollection(recentQuery);
 
   useEffect(() => {
-    setFormattedDate(new Date().toLocaleDateString('ar-EG', { 
+    // استخدام locale يدعم الأرقام الإنجليزية مع نص عربي
+    setFormattedDate(new Date().toLocaleDateString('ar-EG-u-nu-latn', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -120,7 +121,7 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           {stats.map((stat, i) => (
-            <Card key={i} className="p-6 border-none shadow-xl rounded-3xl bg-white group hover:-translate-y-2 transition-all duration-500 overflow-hidden relative">
+            <Card key={i} className="p-6 border-none shadow-xl rounded-2xl bg-white group hover:-translate-y-2 transition-all duration-500 overflow-hidden relative">
               <div className="flex items-start justify-between mb-4 relative z-10">
                 <div className="p-4 rounded-xl text-white shadow-lg shadow-black/10 gradient-blue">
                   <stat.icon className="w-6 h-6" />
@@ -132,9 +133,8 @@ export default function Dashboard() {
               </div>
               <div className="relative z-10">
                 <h3 className="text-muted-foreground text-sm font-bold mb-1">{stat.label}</h3>
-                <p className="text-4xl font-black text-primary tracking-tight">{stat.value.toLocaleString('ar-EG')}</p>
+                <p className="text-4xl font-black text-primary tracking-tight">{stat.value.toLocaleString('en-US')}</p>
               </div>
-              {/* Background Decor */}
               <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-5 gradient-blue"></div>
             </Card>
           ))}
@@ -142,7 +142,7 @@ export default function Dashboard() {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-          <Card className="lg:col-span-2 p-8 border-none shadow-2xl rounded-3xl bg-white">
+          <Card className="lg:col-span-2 p-8 border-none shadow-2xl rounded-2xl bg-white">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-black text-primary flex items-center gap-3">
                 <TrendingUp className="w-6 h-6 text-secondary" />
@@ -178,7 +178,7 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white flex flex-col">
+          <Card className="p-8 border-none shadow-2xl rounded-2xl bg-white flex flex-col">
             <h2 className="text-xl font-black text-primary mb-8 flex items-center gap-3">
               <PieChartIcon className="w-6 h-6 text-orange-500" />
               توزيع الطلاب حسب القسم
@@ -218,7 +218,7 @@ export default function Dashboard() {
 
         {/* Bottom Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white">
+          <Card className="p-8 border-none shadow-2xl rounded-2xl bg-white">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-black text-primary flex items-center gap-3">
                 <History className="w-6 h-6 text-secondary" />
@@ -247,7 +247,7 @@ export default function Dashboard() {
                       <span className="text-[10px] bg-secondary/10 text-secondary px-2 py-0.5 rounded-full font-bold">{item.subjectName}</span>
                       <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleTimeString('ar-EG') : 'الآن'}
+                        {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleTimeString('ar-EG-u-nu-latn') : 'الآن'}
                       </span>
                     </div>
                   </div>
@@ -266,7 +266,7 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white">
+          <Card className="p-8 border-none shadow-2xl rounded-2xl bg-white">
             <h2 className="text-xl font-black text-primary mb-8 flex items-center gap-3">
               <BarChart3 className="w-6 h-6 text-green-500" />
               أداء النظام وسعة التخزين

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -136,7 +137,7 @@ export default function ArchivePage() {
               view === 'grid' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                   {filteredResults.map((item) => (
-                    <Card key={item.id} className="group overflow-hidden border-none shadow-xl rounded-3xl bg-white hover:-translate-y-2 transition-all">
+                    <Card key={item.id} className="group overflow-hidden border-none shadow-xl rounded-2xl bg-white hover:-translate-y-2 transition-all">
                       <div className="relative aspect-[3/4] bg-muted/30 overflow-hidden">
                         <Image src={item.fileUrl || PlaceHolderImages[1].imageUrl} alt="Exam" fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end gap-2">
@@ -162,7 +163,7 @@ export default function ArchivePage() {
                         </div>
                         <p className="text-sm text-secondary font-bold mb-4">{item.subjectName}</p>
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground border-t pt-4">
-                          <div className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG') : 'قيد الأرشفة'}</div>
+                          <div className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('en-GB') : 'قيد الأرشفة'}</div>
                           <div className="font-bold">رقم القيد: {item.studentRegId}</div>
                         </div>
                       </div>
@@ -170,7 +171,7 @@ export default function ArchivePage() {
                   ))}
                 </div>
               ) : (
-                <Card className="border-none shadow-xl rounded-3xl bg-white overflow-hidden">
+                <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-right">
                       <thead><tr className="bg-muted/30 border-b"><th className="p-6">الطالب</th><th className="p-6">رقم القيد</th><th className="p-6">المادة</th><th className="p-6 text-center">إجراءات</th></tr></thead>

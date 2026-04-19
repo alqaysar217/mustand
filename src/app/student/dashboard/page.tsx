@@ -19,7 +19,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Image from "next/image";
 
 const stats = [
-  { label: 'إجمالي الاختبارات', value: '12', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-100' },
+  { label: 'إجمالي الاختبارات', value: 12, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-100' },
   { label: 'آخر مادة مضافة', value: 'برمجة 2', icon: Sparkles, color: 'text-purple-600', bg: 'bg-purple-100' },
   { label: 'آخر تحديث', value: 'منذ يومين', icon: Clock, color: 'text-green-600', bg: 'bg-green-100' },
 ];
@@ -35,7 +35,7 @@ export default function StudentDashboard() {
   const [currentTime, setCurrentTime] = useState<string | null>(null);
 
   useEffect(() => {
-    setCurrentTime(new Date().toLocaleDateString('ar-EG', { 
+    setCurrentTime(new Date().toLocaleDateString('ar-EG-u-nu-latn', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -58,12 +58,12 @@ export default function StudentDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {stats.map((stat, i) => (
-          <Card key={i} className="p-6 border-none shadow-xl rounded-3xl bg-white hover:-translate-y-1 transition-all">
-            <div className={`w-12 h-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 shadow-sm`}>
+          <Card key={i} className="p-6 border-none shadow-xl rounded-2xl bg-white hover:-translate-y-1 transition-all">
+            <div className={`w-12 h-12 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 shadow-sm`}>
               <stat.icon className="w-6 h-6" />
             </div>
             <h3 className="text-muted-foreground text-xs font-bold mb-1">{stat.label}</h3>
-            <p className="text-2xl font-black text-primary">{stat.value}</p>
+            <p className="text-2xl font-black text-primary">{typeof stat.value === 'number' ? stat.value.toLocaleString('en-US') : stat.value}</p>
           </Card>
         ))}
       </div>
@@ -83,7 +83,7 @@ export default function StudentDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {LATEST_EXAMS.map((exam) => (
-              <Card key={exam.id} className="overflow-hidden border-none shadow-xl rounded-3xl bg-white group">
+              <Card key={exam.id} className="overflow-hidden border-none shadow-xl rounded-2xl bg-white group">
                 <div className="relative aspect-[16/9] bg-muted">
                   <Image src={exam.fileUrl} alt={exam.subject} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
@@ -114,7 +114,7 @@ export default function StudentDashboard() {
 
         <div className="space-y-6">
           <h2 className="text-xl font-bold text-primary">نصائح دراسية</h2>
-          <Card className="p-8 border-none shadow-xl rounded-3xl gradient-blue text-white relative overflow-hidden">
+          <Card className="p-8 border-none shadow-xl rounded-2xl gradient-blue text-white relative overflow-hidden">
             <div className="relative z-10">
               <h3 className="text-lg font-bold mb-4">استعد للامتحان!</h3>
               <p className="text-sm text-white/80 leading-relaxed mb-6">
@@ -127,7 +127,7 @@ export default function StudentDashboard() {
             <TrendingUp className="absolute -bottom-6 -left-6 w-32 h-32 opacity-10" />
           </Card>
 
-          <Card className="p-6 border-none shadow-xl rounded-3xl bg-white">
+          <Card className="p-6 border-none shadow-xl rounded-2xl bg-white">
             <h3 className="font-bold text-primary mb-4">مواعيد هامة</h3>
             <div className="space-y-4">
               {[

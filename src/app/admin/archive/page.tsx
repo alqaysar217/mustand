@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useMemo } from "react";
@@ -194,7 +195,7 @@ export default function AdminArchivePage() {
         </Button>
       </div>
 
-      <Card className="p-6 border-none shadow-xl rounded-3xl bg-white">
+      <Card className="p-6 border-none shadow-xl rounded-2xl bg-white">
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="flex-1 relative">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -247,7 +248,7 @@ export default function AdminArchivePage() {
                   <TableCell className="text-[10px] font-bold text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG') : 'قيد الأرشفة'}
+                      {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('en-GB') : 'قيد الأرشفة'}
                     </div>
                   </TableCell>
                   <TableCell className="text-center">

@@ -57,7 +57,7 @@ export default function AdminDashboard() {
     { label: 'إجمالي الطلاب', value: students.length, icon: GraduationCap, trend: '+12%' },
     { label: 'إجمالي الاختبارات', value: archives.length, icon: FileText, trend: '+8%' },
     { label: 'الكليات المسجلة', value: colleges.length, icon: School, trend: 'ثابت' },
-    { label: 'مستخدمي النظام', value: '32', icon: Users, trend: '-2%' },
+    { label: 'مستخدمي النظام', value: 32, icon: Users, trend: '-2%' },
   ];
 
   const examData = [
@@ -89,7 +89,7 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
-          <Card key={i} className="p-6 border-none shadow-xl rounded-3xl bg-white hover:-translate-y-2 transition-all duration-300 group">
+          <Card key={i} className="p-6 border-none shadow-xl rounded-2xl bg-white hover:-translate-y-2 transition-all duration-300 group">
             <div className="flex items-start justify-between mb-4">
               <div className="p-4 rounded-xl text-white shadow-lg shadow-black/10 gradient-blue group-hover:scale-110 transition-transform">
                 <stat.icon className="w-6 h-6" />
@@ -100,13 +100,13 @@ export default function AdminDashboard() {
               </div>
             </div>
             <h3 className="text-muted-foreground text-xs font-bold mb-1">{stat.label}</h3>
-            <p className="text-4xl font-black text-primary">{stat.value.toLocaleString('ar-EG')}</p>
+            <p className="text-4xl font-black text-primary">{stat.value.toLocaleString('en-US')}</p>
           </Card>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 p-8 border-none shadow-2xl rounded-3xl bg-white">
+        <Card className="lg:col-span-2 p-8 border-none shadow-2xl rounded-2xl bg-white">
           <h2 className="text-xl font-black text-primary mb-8 flex items-center gap-3">
             <TrendingUp className="w-6 h-6 text-secondary" />
             معدل نمو البيانات (شهرياً)
@@ -127,7 +127,7 @@ export default function AdminDashboard() {
           </div>
         </Card>
 
-        <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white flex flex-col items-center justify-center">
+        <Card className="p-8 border-none shadow-2xl rounded-2xl bg-white flex flex-col items-center justify-center">
           <h2 className="text-xl font-black text-primary mb-8 w-full text-right flex items-center gap-3">
             <PieChartIcon className="w-6 h-6 text-orange-500" />
             توزيع التخصصات
@@ -164,7 +164,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white">
+        <Card className="p-8 border-none shadow-2xl rounded-2xl bg-white">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl font-black text-primary flex items-center gap-3">
               <Archive className="w-6 h-6 text-secondary" />
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
                   </p>
                   <p className="text-[10px] text-muted-foreground font-bold flex items-center justify-end gap-1 mt-1">
                     <Clock className="w-3 h-3" />
-                    {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG') : 'منذ قليل'}
+                    {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG-u-nu-latn') : 'منذ قليل'}
                   </p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
           </div>
         </Card>
 
-        <Card className="p-8 border-none shadow-2xl rounded-3xl gradient-blue text-white overflow-hidden relative">
+        <Card className="p-8 border-none shadow-2xl rounded-2xl gradient-blue text-white overflow-hidden relative">
           <div className="relative z-10 flex flex-col h-full justify-between">
             <div>
               <h2 className="text-2xl font-black mb-4">تقارير الذكاء الاصطناعي</h2>
