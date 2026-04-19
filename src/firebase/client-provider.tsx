@@ -15,11 +15,9 @@ export function FirebaseClientProvider({
   > | null>(null);
 
   useEffect(() => {
-    // تشغيل التهيئة مرة واحدة عند تحميل التطبيق في المتصفح
     setInstances(initializeFirebase());
   }, []);
 
-  // إذا لم يتم التهيئة بعد (بانتظار useEffect)
   if (!instances) return <>{children}</>;
 
   return (
@@ -27,6 +25,7 @@ export function FirebaseClientProvider({
       firebaseApp={instances.firebaseApp}
       firestore={instances.firestore}
       auth={instances.auth}
+      storage={instances.storage}
     >
       <FirebaseErrorListener />
       {children}

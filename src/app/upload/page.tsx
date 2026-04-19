@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -26,8 +25,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 
 // Firebase Imports
-import { useFirestore, useCollection } from "@/firebase";
+import { useFirestore, useCollection, useStorage } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
@@ -44,6 +44,7 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const firestore = useFirestore();
+  const storage = useStorage();
   const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
   const { data: subjects = [] } = useCollection(subjectsQuery);
 
@@ -109,39 +110,42 @@ export default function UploadPage() {
   };
 
   const handleSaveToArchive = async () => {
-    if (!firestore || !extractedData.id || !formData.subjectName) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التأكد من إدخال اسم الطالب والمادة." });
+    if (!firestore || !storage || !extractedData.id || !formData.subjectName || files.length === 0) {
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التأكد من إدخال اسم الطالب والمادة ورفع الملفات." });
       return;
     }
 
     setLoading(true);
-    const archiveData = {
-      studentRegId: extractedData.id,
-      studentName: extractedData.name,
-      subjectId: formData.subjectId,
-      subjectName: formData.subjectName,
-      year: formData.year,
-      term: formData.term,
-      fileUrl: files[0] || PlaceHolderImages[1].imageUrl,
-      pages: files.length,
-      uploadedAt: serverTimestamp()
-    };
+    try {
+      // 1. Upload to Storage
+      const fileName = `exams/${extractedData.id}_${Date.now()}.jpg`;
+      const storageRef = ref(storage, fileName);
+      await uploadString(storageRef, files[0], 'data_url');
+      const downloadUrl = await getDownloadURL(storageRef);
 
-    const archivesRef = collection(firestore, "archives");
-    addDoc(archivesRef, archiveData)
-      .then(() => {
-        toast({ title: "تمت الأرشفة", description: "تم حفظ الاختبار بنجاح في السجل المركزي." });
-        window.location.href = '/dashboard';
-      })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: archivesRef.path,
-          operation: 'create',
-          requestResourceData: archiveData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      })
-      .finally(() => setLoading(false));
+      // 2. Save Metadata to Firestore
+      const archiveData = {
+        studentRegId: extractedData.id,
+        studentName: extractedData.name,
+        subjectId: formData.subjectId,
+        subjectName: formData.subjectName,
+        year: formData.year,
+        term: formData.term,
+        fileUrl: downloadUrl,
+        pages: files.length,
+        uploadedAt: serverTimestamp()
+      };
+
+      await addDoc(collection(firestore, "archives"), archiveData);
+      
+      toast({ title: "تمت الأرشفة بنجاح", description: "تم رفع الملف وحفظ البيانات في السجل المركزي." });
+      window.location.href = '/dashboard';
+    } catch (error: any) {
+      console.error("Archive error:", error);
+      toast({ variant: "destructive", title: "فشل الأرشفة", description: "حدث خطأ أثناء محاولة رفع الملف." });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
