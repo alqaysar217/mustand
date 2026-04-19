@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 import { cn } from "@/lib/utils";
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, serverTimestamp, query, orderBy, limit } from "firebase/firestore";
+import { collection, query, orderBy, limit } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
@@ -28,15 +28,15 @@ export default function Dashboard() {
   const { isOpen } = useSidebarToggle();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [seeding, setSeeding] = useState(false);
 
+  // استعلامات البيانات الحية مع useMemo لمنع الانهيار
   const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
   const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
   const collegesQuery = useMemo(() => firestore ? collection(firestore, "colleges") : null, [firestore]);
   const recentQuery = useMemo(() => firestore ? query(collection(firestore, "archives"), orderBy("uploadedAt", "desc"), limit(5)) : null, [firestore]);
 
-  const { data: students = [] } = useCollection(studentsQuery);
-  const { data: archives = [] } = useCollection(archivesQuery);
+  const { data: students = [], loading: loadingStudents } = useCollection(studentsQuery);
+  const { data: archives = [], loading: loadingArchives } = useCollection(archivesQuery);
   const { data: colleges = [] } = useCollection(collegesQuery);
   const { data: recentActivity = [] } = useCollection(recentQuery);
 
@@ -48,44 +48,6 @@ export default function Dashboard() {
       day: 'numeric' 
     }));
   }, []);
-
-  const handleSeedData = async () => {
-    if (!firestore) return;
-    setSeeding(true);
-    try {
-      const collegeRef = await addDoc(collection(firestore, "colleges"), {
-        name: "كلية تقنية المعلومات",
-        code: "CIT",
-        createdAt: serverTimestamp()
-      });
-
-      const deptRef = await addDoc(collection(firestore, "departments"), {
-        name: "هندسة البرمجيات",
-        code: "SE",
-        collegeId: collegeRef.id,
-        collegeName: "كلية تقنية المعلومات",
-        createdAt: serverTimestamp()
-      });
-
-      await addDoc(collection(firestore, "students"), {
-        name: "أحمد محمد علي",
-        regId: "20210045",
-        departmentId: deptRef.id,
-        departmentName: "هندسة البرمجيات",
-        level: "المستوى الثالث",
-        admissionType: "عام",
-        status: "active",
-        joinDate: new Date().toISOString().split('T')[0],
-        createdAt: serverTimestamp()
-      });
-
-      toast({ title: "تمت التهيئة بنجاح", description: "قاعدة البيانات تعمل الآن وتحتوي على بيانات تجريبية." });
-    } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في التهيئة", description: "يرجى التحقق من قواعد Firestore." });
-    } finally {
-      setSeeding(false);
-    }
-  };
 
   const stats = [
     { label: 'إجمالي الكليات', value: colleges.length.toString(), icon: Database, color: 'bg-orange-500', trend: 'محدث' },
@@ -113,27 +75,7 @@ export default function Dashboard() {
               </div>
               <div className="flex-1 space-y-4">
                 <h3 className="font-black text-2xl text-primary">تنبيه: قاعدة البيانات غير متصلة</h3>
-                <p className="text-muted-foreground font-bold leading-relaxed">
-                  بسبب وصولك للحد الأقصى من المشاريع، يرجى <b>إعادة استخدام مشروع قديم</b> من القائمة الرئيسية في Firebase Console:
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-right">
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
-                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">1</span>
-                    <span className="text-sm font-bold">افتح أي مشروع قديم في <a href="https://console.firebase.google.com/" target="_blank" className="text-secondary underline font-black">Firebase Console</a>.</span>
-                  </div>
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
-                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">2</span>
-                    <span className="text-sm font-bold">اذهب للإعدادات (الترس) ثم <b>Project Settings</b>.</span>
-                  </div>
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
-                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">3</span>
-                    <span className="text-sm font-bold">أضف Web App وانسخ مفاتيح الإعدادات (apiKey, projectId, ...).</span>
-                  </div>
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
-                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">4</span>
-                    <span className="text-sm font-bold">افتح ملف <code>src/firebase/config.ts</code> في هذا المحرر والصق القيم.</span>
-                  </div>
-                </div>
+                <p className="text-muted-foreground font-bold">يرجى إضافة إعدادات Firebase (API Key, Project ID, etc.) في الملف <code>src/firebase/config.ts</code> لكي يعمل النظام بشكل حقيقي.</p>
               </div>
             </div>
           </Card>
@@ -144,24 +86,11 @@ export default function Dashboard() {
             <h1 className="text-3xl font-black text-primary mb-1">لوحة التحكم</h1>
             <p className="text-muted-foreground font-bold">نظرة شاملة على قاعدة البيانات الحقيقية</p>
           </div>
-          <div className="flex items-center gap-3">
-            {firestore && (
-              <Button 
-                variant="outline" 
-                onClick={handleSeedData} 
-                disabled={seeding}
-                className="rounded-xl font-bold border-dashed border-2 gap-2 h-11"
-              >
-                {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-secondary" />}
-                إضافة بيانات تجريبية حية
-              </Button>
-            )}
-            <div className="bg-white px-4 py-2 rounded-2xl flex items-center gap-2 border shadow-sm h-11">
-              <Clock className="w-4 h-4 text-primary" />
-              <span className="text-sm font-bold text-primary">
-                {formattedDate || 'جاري التحميل...'}
-              </span>
-            </div>
+          <div className="bg-white px-4 py-2 rounded-2xl flex items-center gap-2 border shadow-sm h-11">
+            <Clock className="w-4 h-4 text-primary" />
+            <span className="text-sm font-bold text-primary">
+              {formattedDate || 'جاري التحميل...'}
+            </span>
           </div>
         </div>
 
@@ -193,7 +122,9 @@ export default function Dashboard() {
             </div>
             
             <div className="space-y-6">
-              {recentActivity.length > 0 ? recentActivity.map((item: any, idx: number) => (
+              {loadingArchives ? (
+                <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin opacity-20" /></div>
+              ) : recentActivity.length > 0 ? recentActivity.map((item: any, idx: number) => (
                 <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
                   <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary font-bold">
                     {idx + 1}
@@ -228,7 +159,7 @@ export default function Dashboard() {
                 <p className="text-white/80 text-sm leading-relaxed mb-6 font-medium">
                   {firestore 
                     ? "قاعدة البيانات السحابية تعمل بنجاح. يمكنك الآن إدارة الأرشيف والطلاب حياً." 
-                    : "يرجى استخدام إعدادات أي مشروع قديم متاح لديك في Firebase لتفعيل النظام."}
+                    : "يرجى استخدام إعدادات أي مشروع متاح لديك في Firebase لتفعيل النظام."}
                 </p>
                 <Button 
                   className="bg-white text-primary hover:bg-white/90 w-full rounded-xl font-bold h-12 shadow-xl" 
