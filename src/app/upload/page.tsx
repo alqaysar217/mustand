@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
@@ -189,6 +189,12 @@ export default function UploadPage() {
     setLoadingText("جاري أرشفة الملف سحابياً...");
     setLoading(true);
     
+    // Safety timeout to prevent hanging UI
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+      toast({ variant: "destructive", title: "تأخر الاستجابة", description: "جاري المتابعة في الخلفية، يرجى المراجعة لاحقاً." });
+    }, 15000);
+
     const currentFiles = [...files];
     const currentData = { ...extractedData };
     const currentForm = { ...formData };
@@ -198,6 +204,7 @@ export default function UploadPage() {
       const fileName = `archives/${folderName}/${currentForm.subjectName}/${currentData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       
+      // 1. Upload the image to Storage
       await uploadString(storageRef, currentFiles[0], 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
 
@@ -214,6 +221,7 @@ export default function UploadPage() {
         uploadedAt: serverTimestamp()
       };
 
+      // 2. Save record to Firestore (Non-blocking)
       const archivesCollection = collection(firestore, "archives");
       addDoc(archivesCollection, archiveData)
         .then(() => {
@@ -228,14 +236,17 @@ export default function UploadPage() {
           errorEmitter.emit('permission-error', permissionError);
         });
 
+      // 3. Clear UI immediately for the next upload
+      clearTimeout(safetyTimeout);
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false, originalName: '' });
       setStep(2);
+      setLoading(false);
       
     } catch (error: any) {
-      toast({ variant: "destructive", title: "فشل الرفع", description: "يرجى التحقق من اتصال الإنترنت وحجم الملف." });
-    } finally {
+      clearTimeout(safetyTimeout);
       setLoading(false);
+      toast({ variant: "destructive", title: "فشل الرفع", description: "حدث خطأ أثناء محاولة الاتصال بالسحابة." });
     }
   };
 
@@ -560,3 +571,4 @@ export default function UploadPage() {
     </div>
   );
 }
+

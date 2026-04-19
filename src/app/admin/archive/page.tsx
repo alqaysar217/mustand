@@ -18,7 +18,8 @@ import {
   FileUp,
   Loader2,
   CheckCircle,
-  Download
+  Download,
+  X
 } from "lucide-react";
 import {
   Table,
@@ -51,12 +52,14 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
 
 // Firebase
-import { useFirestore, useCollection } from "@/firebase";
+import { useFirestore, useCollection, useStorage } from "@/firebase";
 import { collection, deleteDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { downloadFile } from "@/lib/storage-utils";
 
 export default function AdminArchivePage() {
   const firestore = useFirestore();
+  const storage = useStorage();
   const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
   const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
 
@@ -131,7 +134,7 @@ export default function AdminArchivePage() {
   };
 
   const handleSaveNewArchive = async () => {
-    if (!firestore || !newArchive.name || !newArchive.regId || !newArchive.subjectName || !newArchive.file) {
+    if (!firestore || !storage || !newArchive.name || !newArchive.regId || !newArchive.subjectName || !newArchive.file) {
       toast({
         variant: "destructive",
         title: "بيانات ناقصة",
@@ -142,6 +145,14 @@ export default function AdminArchivePage() {
 
     setIsSubmitting(true);
     try {
+      // 1. Upload image to Storage first (Crucial for performance)
+      const folderName = newArchive.year.replace(/\s/g, '').replace(/\//g, '-');
+      const fileName = `archives/manual/${folderName}/${newArchive.regId}_${Date.now()}.jpg`;
+      const storageRef = ref(storage, fileName);
+      
+      await uploadString(storageRef, newArchive.file, 'data_url');
+      const downloadUrl = await getDownloadURL(storageRef);
+
       const archiveData = {
         studentName: newArchive.name,
         studentRegId: newArchive.regId,
@@ -150,12 +161,13 @@ export default function AdminArchivePage() {
         year: newArchive.year,
         term: newArchive.term,
         departmentId: newArchive.department,
-        fileUrl: newArchive.file,
+        fileUrl: downloadUrl, // Save cloud URL, NOT base64 string
         pages: 1,
         uploadedAt: serverTimestamp()
       };
 
-      await addDoc(collection(firestore, "archives"), archiveData);
+      // 2. Add to Firestore (Non-blocking)
+      addDoc(collection(firestore, "archives"), archiveData);
       
       setIsAddDialogOpen(false);
       setNewArchive({
@@ -216,14 +228,13 @@ export default function AdminArchivePage() {
               <TableRow className="hover:bg-transparent border-b">
                 <TableHead className="text-right font-bold text-primary">الطالب / المادة</TableHead>
                 <TableHead className="text-right font-bold text-primary">السنة / الترم</TableHead>
-                <TableHead className="text-right font-bold text-primary">الصفحات</TableHead>
                 <TableHead className="text-right font-bold text-primary">تاريخ الأرشفة</TableHead>
                 <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
               ) : filteredArchives.length > 0 ? filteredArchives.map((item) => (
                 <TableRow key={item.id} className="hover:bg-muted/20 border-b group">
                   <TableCell className="p-4">
@@ -242,9 +253,6 @@ export default function AdminArchivePage() {
                       <span className="text-sm font-bold text-primary">{item.year}</span>
                       <span className="text-[10px] text-muted-foreground font-bold">{item.term}</span>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm font-black text-primary">{item.pages || 1}</span>
                   </TableCell>
                   <TableCell className="text-[10px] font-bold text-muted-foreground">
                     <div className="flex items-center gap-1">
@@ -287,7 +295,7 @@ export default function AdminArchivePage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">
+                  <TableCell colSpan={4} className="h-40 text-center text-muted-foreground font-bold">
                     لا توجد ملفات في الأرشيف السحابي
                   </TableCell>
                 </TableRow>
@@ -297,11 +305,10 @@ export default function AdminArchivePage() {
         </div>
       </Card>
 
-      {/* Dialog للأرشفة السريعة */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl overflow-hidden p-0" dir="rtl">
           <div className="p-8 space-y-6">
-            <DialogHeader className="text-right">
+            <DialogHeader className="text-right relative">
               <DialogTitle className="text-2xl font-black text-primary flex items-center justify-end gap-2">
                 أرشفة اختبار جديد
                 <Archive className="w-6 h-6 text-secondary" />
@@ -370,7 +377,6 @@ export default function AdminArchivePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog لمعاينة الملف */}
       <Dialog open={!!viewingArchive} onOpenChange={(open) => !open && setViewingArchive(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl p-0 overflow-hidden border-none shadow-2xl text-right" dir="rtl">
           {viewingArchive && (
@@ -412,3 +418,4 @@ export default function AdminArchivePage() {
     </div>
   );
 }
+
