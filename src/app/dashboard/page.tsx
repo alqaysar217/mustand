@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -14,7 +13,8 @@ import {
   TrendingUp,
   Database,
   Loader2,
-  Sparkles
+  Sparkles,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
@@ -52,7 +52,14 @@ export default function Dashboard() {
   }, []);
 
   const handleSeedData = async () => {
-    if (!firestore) return;
+    if (!firestore) {
+      toast({ 
+        variant: "destructive", 
+        title: "خطأ في الاتصال", 
+        description: "يرجى وضع إعدادات Firebase الصحيحة في ملف src/firebase/config.ts أولاً." 
+      });
+      return;
+    }
     setSeeding(true);
     try {
       // Seed a college
@@ -108,6 +115,18 @@ export default function Dashboard() {
         "transition-all duration-300 p-6 md:p-10 animate-fade-in text-right",
         isOpen ? "mr-0 md:mr-64" : "mr-0"
       )} dir="rtl">
+        {!firestore && (
+          <Card className="mb-8 p-6 bg-red-50 border-destructive/20 border-2 rounded-3xl flex flex-col md:flex-row items-center gap-4 text-destructive">
+            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-black text-lg">تنبيه: قاعدة البيانات غير متصلة</h3>
+              <p className="text-sm font-bold opacity-80">يرجى إضافة إعدادات Firebase (API Key, Project ID, etc.) في الملف <code>src/firebase/config.ts</code> لكي يعمل النظام بشكل حقيقي.</p>
+            </div>
+          </Card>
+        )}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-primary mb-1">الرئيسية</h1>
@@ -183,13 +202,20 @@ export default function Dashboard() {
              <div className="relative z-10">
               <h2 className="text-xl font-bold mb-4">حالة الاتصال</h2>
               <div className="flex items-center gap-2 mb-6">
-                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_#4ade80]"></div>
-                <p className="text-white/90 font-bold">متصل بـ Firebase Firestore</p>
+                <div className={cn(
+                  "w-3 h-3 rounded-full animate-pulse",
+                  firestore ? "bg-green-400 shadow-[0_0_10px_#4ade80]" : "bg-red-400 shadow-[0_0_10px_#f87171]"
+                )}></div>
+                <p className="text-white/90 font-bold">{firestore ? "متصل بـ Firebase Firestore" : "بانتظار الإعدادات..."}</p>
               </div>
               <p className="text-white/80 text-sm leading-relaxed mb-6">
-                قاعدة البيانات تعمل بنظام المزامنة الفورية.
+                قاعدة البيانات تعمل بنظام المزامنة الفورية عند توفر الإعدادات الصحيحة.
               </p>
-              <button className="bg-white text-primary px-6 py-2.5 rounded-xl text-sm font-bold shadow-xl hover:scale-105 transition-transform" onClick={() => window.location.href='/upload'}>
+              <button 
+                className="bg-white text-primary px-6 py-2.5 rounded-xl text-sm font-bold shadow-xl hover:scale-105 transition-transform disabled:opacity-50" 
+                onClick={() => window.location.href='/upload'}
+                disabled={!firestore}
+              >
                 رفع ملف الآن
               </button>
              </div>
