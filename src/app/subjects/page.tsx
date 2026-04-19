@@ -34,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -209,7 +210,7 @@ export default function SubjectsManagementPage() {
                     </Label>
                     <div className="relative">
                       <Input 
-                        value={newSubject.nameAr} 
+                        value={newSubject.nameAr || ""} 
                         onChange={(e) => setNewSubject({...newSubject, nameAr: e.target.value})} 
                         placeholder="مثال: ذكاء اصطناعي" 
                         className="rounded-xl h-12 border-muted text-right font-bold pr-10" 
@@ -224,7 +225,7 @@ export default function SubjectsManagementPage() {
                     </Label>
                     <div className="relative">
                       <Input 
-                        value={newSubject.nameEn} 
+                        value={newSubject.nameEn || ""} 
                         onChange={(e) => setNewSubject({...newSubject, nameEn: e.target.value})} 
                         placeholder="AI Fundamentals" 
                         className="rounded-xl h-12 border-muted text-left font-mono pr-10" 
