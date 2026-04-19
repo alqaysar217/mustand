@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
@@ -23,7 +23,10 @@ import {
   Calendar,
   GraduationCap,
   Fingerprint,
-  User
+  User,
+  Search,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 import Image from "next/image";
@@ -39,6 +42,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 export default function UploadPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
   const [extractedData, setExtractedData] = useState({ id: '', name: '', found: false, originalName: '' });
   const [formData, setFormData] = useState({ 
@@ -100,32 +104,70 @@ export default function UploadPage() {
     }
   };
 
+  /**
+   * وظيفة البحث عن الطالب برقم القيد
+   */
+  const findStudentByRegId = async (regId: string) => {
+    if (!firestore || !regId) return null;
+    const studentsRef = collection(firestore, "students");
+    const q = query(studentsRef, where("regId", "==", regId));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return querySnapshot.docs[0].data();
+    }
+    return null;
+  };
+
+  /**
+   * معالجة تغيير رقم القيد يدوياً للبحث الفوري عن الطالب
+   */
+  const handleRegIdChange = async (val: string) => {
+    const cleanId = val.replace(/\D/g, ''); // أرقام فقط
+    setExtractedData(prev => ({ ...prev, id: cleanId }));
+
+    if (cleanId.length >= 4) {
+      setIsSearching(true);
+      try {
+        const student = await findStudentByRegId(cleanId);
+        if (student) {
+          setExtractedData(prev => ({ 
+            ...prev, 
+            name: student.name, 
+            found: true 
+          }));
+        } else {
+          setExtractedData(prev => ({ 
+            ...prev, 
+            found: false 
+          }));
+        }
+      } finally {
+        setIsSearching(false);
+      }
+    } else {
+      setExtractedData(prev => ({ ...prev, found: false }));
+    }
+  };
+
   const handleOCR = async () => {
     if (files.length === 0 || !firestore) return;
     setLoading(true);
     try {
-      // استخراج البيانات الفعلي من الصورة باستخدام Gemini
       const result = await extractExamDetails({ examImageDataUri: files[0] });
-      
       const cleanRegId = result.studentRegistrationId?.replace(/\D/g, '') || '';
       
-      // البحث عن الطالب في السجلات المسجلة مسبقاً
-      const studentsRef = collection(firestore, "students");
-      const q = query(studentsRef, where("regId", "==", cleanRegId));
-      const querySnapshot = await getDocs(q);
+      const student = await findStudentByRegId(cleanRegId);
       
-      if (!querySnapshot.empty) {
-        // تم إيجاد الطالب
-        const studentDoc = querySnapshot.docs[0].data();
+      if (student) {
         setExtractedData({ 
           id: cleanRegId, 
-          name: studentDoc.name, 
+          name: student.name, 
           found: true,
           originalName: result.studentName || ''
         });
-        toast({ title: "تم التحليل والمطابقة", description: `تم التعرف على الطالب: ${studentDoc.name}` });
+        toast({ title: "تم التعرف الذكي", description: `تمت مطابقة الطالب: ${student.name}` });
       } else {
-        // لم يتم إيجاد الرقم في قاعدة البيانات
         setExtractedData({ 
           id: cleanRegId, 
           name: result.studentName || '', 
@@ -134,8 +176,8 @@ export default function UploadPage() {
         });
         toast({ 
           variant: "destructive", 
-          title: "تحليل ناجح ولكن لم يتم المطابقة", 
-          description: "رقم القيد مستخرج صحيحة ولكن الطالب غير مسجل في النظام." 
+          title: "فشل في المطابقة", 
+          description: "تم استخراج رقم القيد لكنه غير مسجل في النظام." 
         });
       }
       setStep(5);
@@ -143,7 +185,7 @@ export default function UploadPage() {
       toast({ 
         variant: "destructive", 
         title: "خطأ في التحليل الذكي", 
-        description: "تعذر قراءة البيانات، يرجى إدخالها يدوياً للتأكيد." 
+        description: "تعذر قراءة البيانات آلياً، يرجى إدخالها يدوياً." 
       });
       setStep(5);
     } finally {
@@ -152,17 +194,18 @@ export default function UploadPage() {
   };
 
   const handleSaveToArchive = async () => {
-    if (!firestore || !storage || !extractedData.id || !formData.subjectName) return;
+    if (!firestore || !storage || !extractedData.id || !formData.subjectName) {
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "تأكد من وجود رقم القيد والمادة." });
+      return;
+    }
 
     setLoading(true);
     try {
-      // رفع الصورة إلى التخزين السحابي
       const fileName = `archives/${formData.year.replace(/\s/g, '')}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       await uploadString(storageRef, files[0], 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
 
-      // حفظ البيانات في Firestore
       const archiveData = {
         studentRegId: extractedData.id,
         studentName: extractedData.name,
@@ -177,14 +220,13 @@ export default function UploadPage() {
       };
 
       await addDoc(collection(firestore, "archives"), archiveData);
-      toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ اختبار الطالب ${extractedData.name}` });
+      toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ ملف الطالب ${extractedData.name}` });
       
-      // العودة لخطوة الرفع لمواصلة العمل على نفس المادة
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false, originalName: '' });
       setStep(2); 
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في السحابة", description: "فشل حفظ الملف في الأرشيف المركزي." });
+      toast({ variant: "destructive", title: "خطأ في السحابة", description: "فشل حفظ الملف." });
     } finally {
       setLoading(false);
     }
@@ -402,16 +444,18 @@ export default function UploadPage() {
                     "w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg", 
                     extractedData.found ? "bg-green-500 text-white" : "bg-orange-500 text-white"
                   )}>
-                    {extractedData.found ? <UserCheck className="w-9 h-9" /> : <AlertCircle className="w-9 h-9" />}
+                    {isSearching ? <Loader2 className="w-9 h-9 animate-spin" /> : extractedData.found ? <UserCheck className="w-9 h-9" /> : <AlertCircle className="w-9 h-9" />}
                   </div>
                   <div className="text-right flex-1">
                     <h2 className={cn("text-2xl font-black", extractedData.found ? "text-green-800" : "text-orange-800")}>
-                      {extractedData.found ? "تمت مطابقة الطالب بنجاح" : "تنبيه: الطالب غير مسجل"}
+                      {isSearching ? "جاري المطابقة..." : extractedData.found ? "تم التعرف على الطالب" : "تنبيه: الطالب غير مسجل"}
                     </h2>
                     <p className="text-base font-bold opacity-70">
-                      {extractedData.found 
-                        ? "تم العثور على بيانات الطالب في السجلات الرسمية بناءً على التحليل." 
-                        : "الرقم المستخرج لا يطابق أي طالب مسجل. يرجى التأكد من الرقم أو تسجيل الطالب أولاً."}
+                      {isSearching 
+                        ? "يتم الآن جلب بيانات الطالب من السجلات الرسمية..."
+                        : extractedData.found 
+                        ? `تمت مطابقة رقم القيد (${extractedData.id}) مع سجلات الطالب ${extractedData.name}.`
+                        : "رقم القيد المدخل لا يطابق أي طالب مسجل. يرجى التأكد من الرقم."}
                     </p>
                   </div>
                </div>
@@ -420,39 +464,51 @@ export default function UploadPage() {
                   <div className="space-y-3 text-right">
                     <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
                       <Fingerprint className="w-4 h-4 text-secondary" />
-                      رقم القيد المستخرج
+                      رقم القيد الجامعي
                     </label>
-                    <div className="relative">
+                    <div className="relative group">
                       <input 
                         value={extractedData.id} 
-                        onChange={(e) => setExtractedData({...extractedData, id: e.target.value.replace(/\D/g, '')})} 
-                        className="w-full h-16 pr-12 pl-6 rounded-3xl border-2 border-muted bg-white font-black text-xl text-right focus:border-primary outline-none transition-all shadow-inner" 
-                        placeholder="20210045"
+                        onChange={(e) => handleRegIdChange(e.target.value)} 
+                        className={cn(
+                          "w-full h-16 pr-14 pl-6 rounded-3xl border-2 bg-white font-black text-2xl text-right outline-none transition-all shadow-inner",
+                          extractedData.found ? "border-green-300 focus:border-green-500" : "border-muted focus:border-primary"
+                        )}
+                        placeholder="أدخل رقم القيد..."
                       />
-                      <Scan className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        {isSearching ? <Loader2 className="w-6 h-6 animate-spin text-primary" /> : extractedData.found ? <CheckCircle2 className="w-6 h-6 text-green-500" /> : <Search className="w-6 h-6 text-muted-foreground" />}
+                      </div>
                     </div>
                   </div>
+
                   <div className="space-y-3 text-right">
                     <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
                       <User className="w-4 h-4 text-secondary" />
-                      اسم الطالب (كما يظهر في النظام)
+                      اسم الطالب الكامل (آلي)
                     </label>
                     <div className="relative">
                       <input 
                         value={extractedData.name} 
+                        readOnly={extractedData.found}
                         onChange={(e) => setExtractedData({...extractedData, name: e.target.value})} 
-                        className="w-full h-16 pr-12 pl-6 rounded-3xl border-2 border-muted bg-white font-black text-xl text-right focus:border-primary outline-none transition-all shadow-inner" 
-                        placeholder="أدخل اسم الطالب..."
+                        className={cn(
+                          "w-full h-16 pr-14 pl-6 rounded-3xl border-2 bg-muted/10 font-black text-lg text-right outline-none transition-all shadow-inner",
+                          extractedData.found ? "bg-green-50/50 border-green-200 text-green-800" : "bg-white border-muted focus:border-primary"
+                        )}
+                        placeholder={extractedData.found ? "" : "أدخل الاسم يدوياً في حال عدم المطابقة..."}
                       />
-                      <UserCheck className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        {extractedData.found ? <UserCheck className="w-6 h-6 text-green-500" /> : <User className="w-6 h-6 text-muted-foreground" />}
+                      </div>
                     </div>
                   </div>
                </div>
 
-               {extractedData.originalName && extractedData.originalName !== extractedData.name && (
-                 <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-muted text-xs font-bold text-muted-foreground flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    الاسم المكتوب في الورقة (تحليل خام): {extractedData.originalName}
+               {!extractedData.found && extractedData.id.length >= 4 && !isSearching && (
+                 <div className="p-4 bg-orange-50 rounded-2xl border border-dashed border-orange-200 text-xs font-bold text-orange-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    تلميح: إذا كان هذا الطالب جديداً، يرجى تسجيله أولاً في "إدارة الطلاب" ليتم التعرف عليه آلياً في المستقبل.
                  </div>
                )}
             </div>
@@ -486,7 +542,7 @@ export default function UploadPage() {
             ) : (
               <Button 
                 onClick={handleSaveToArchive} 
-                disabled={loading || !extractedData.id} 
+                disabled={loading || !extractedData.id || isSearching} 
                 className="h-16 px-16 rounded-[1.5rem] font-black gap-4 bg-green-600 text-white shadow-[0_15px_30px_rgba(22,163,74,0.2)] hover:bg-green-700 hover:scale-105 transition-all"
               >
                 {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <CheckCircle className="w-6 h-6" />} 
