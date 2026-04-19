@@ -12,7 +12,8 @@ import {
   FileText,
   ShieldCheck,
   School,
-  Loader2
+  Loader2,
+  Filter
 } from "lucide-react";
 import {
   Table,
@@ -57,6 +58,7 @@ export default function AdminDepartmentsPage() {
   const { data: colleges = [] } = useCollection(collegesQuery);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterCollege, setFilterCollege] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -65,12 +67,13 @@ export default function AdminDepartmentsPage() {
   const { toast } = useToast();
 
   const filteredDepartments = useMemo(() => {
-    return (departments as any[]).filter(dept => 
-      dept.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      dept.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      dept.collegeName?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [departments, searchTerm]);
+    return (departments as any[]).filter(dept => {
+      const matchesSearch = dept.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           dept.code?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCollege = filterCollege === "all" || dept.collegeId === filterCollege;
+      return matchesSearch && matchesCollege;
+    });
+  }, [departments, searchTerm, filterCollege]);
 
   const handleAddDept = () => {
     if (!firestore || !newDept.name || !newDept.code || !newDept.collegeId) {
@@ -240,7 +243,7 @@ export default function AdminDepartmentsPage() {
 
       <Card className="p-6 border-none shadow-xl rounded-3xl bg-white">
         <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 relative">
+          <div className="flex-[2] relative">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input 
               type="text"
@@ -249,6 +252,18 @@ export default function AdminDepartmentsPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+          <div className="flex-1">
+             <Select value={filterCollege} onValueChange={setFilterCollege}>
+               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
+                 <Filter className="w-4 h-4 ml-2 opacity-50" />
+                 <SelectValue placeholder="تصفية حسب الكلية" />
+               </SelectTrigger>
+               <SelectContent className="rounded-xl font-bold">
+                 <SelectItem value="all">كل الكليات</SelectItem>
+                 {colleges.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+               </SelectContent>
+             </Select>
           </div>
         </div>
 
