@@ -20,7 +20,9 @@ import {
   UserCheck,
   AlertCircle,
   Building2,
-  BookOpen
+  BookOpen,
+  Calendar,
+  GraduationCap
 } from "lucide-react";
 import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 import Image from "next/image";
@@ -38,7 +40,14 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
   const [extractedData, setExtractedData] = useState({ id: '', name: '', found: false });
-  const [formData, setFormData] = useState({ year: '', deptId: '', subjectId: '', subjectName: '', level: '', term: '' });
+  const [formData, setFormData] = useState({ 
+    year: '', 
+    deptId: '', 
+    subjectId: '', 
+    subjectName: '', 
+    level: '', 
+    term: '' 
+  });
   
   const { toast } = useToast();
   const { isOpen } = useSidebarToggle();
@@ -56,11 +65,14 @@ export default function UploadPage() {
   const { data: subjects = [] } = useCollection(subjectsQuery);
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
-  // فلترة المواد حسب القسم المختار
+  // فلترة المواد حسب القسم والمستوى المختار
   const filteredSubjects = useMemo(() => {
-    if (!formData.deptId) return [];
-    return (subjects as any[]).filter(s => s.departmentId === formData.deptId);
-  }, [subjects, formData.deptId]);
+    if (!formData.deptId || !formData.level) return [];
+    return (subjects as any[]).filter(s => 
+      s.departmentId === formData.deptId && 
+      s.level === formData.level
+    );
+  }, [subjects, formData.deptId, formData.level]);
 
   const nextStep = () => setStep(prev => Math.min(prev + 1, 5));
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
@@ -104,11 +116,11 @@ export default function UploadPage() {
         toast({ title: "تم التعرف على الطالب", description: studentDoc.name });
       } else {
         setExtractedData({ id: regId, name: result.studentName || '', found: false });
-        toast({ variant: "destructive", title: "طالب غير مسجل", description: "رقم القيد غير موجود." });
+        toast({ variant: "destructive", title: "طالب غير مسجل", description: "رقم القيد غير موجود في السجلات الرسمية." });
       }
       setStep(5);
     } catch (err: any) {
-      toast({ variant: "destructive", title: "تنبيه", description: "تحليل يدوي مطلوب." });
+      toast({ variant: "destructive", title: "تنبيه", description: "تعذر التحليل التلقائي، يرجى إدخال البيانات يدوياً." });
       setStep(5); 
     } finally {
       setLoading(false);
@@ -139,12 +151,14 @@ export default function UploadPage() {
       };
 
       await addDoc(collection(firestore, "archives"), archiveData);
-      toast({ title: "تمت الأرشفة بنجاح" });
+      toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ اختبار الطالب ${extractedData.name}` });
+      
+      // العودة لخطوة الرفع لمواصلة العمل على نفس المادة
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false });
       setStep(2); 
     } catch (error) {
-      toast({ variant: "destructive", title: "فشل الحفظ" });
+      toast({ variant: "destructive", title: "فشل الحفظ", description: "حدث خطأ أثناء محاولة إرسال البيانات للسحابة." });
     } finally {
       setLoading(false);
     }
@@ -156,68 +170,86 @@ export default function UploadPage() {
       <Navbar />
       
       <main className={cn(
-        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-4xl mx-auto text-right",
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-5xl mx-auto text-right",
         isOpen ? "mr-0 md:mr-64" : "mr-0"
       )} dir="rtl">
         <div className="mb-10 text-center">
-          <h1 className="text-3xl font-black text-primary mb-2">أرشفة رقمية ذكية</h1>
-          <p className="text-muted-foreground font-bold">استخدم الذكاء الاصطناعي للمطابقة مع سجلات الطلاب</p>
+          <h1 className="text-4xl font-black text-primary mb-2">أرشفة رقمية ذكية</h1>
+          <p className="text-muted-foreground font-bold text-lg">استخدم الذكاء الاصطناعي للمطابقة مع سجلات الطلاب الرسمية</p>
         </div>
 
-        <div className="flex items-center justify-between mb-12 relative px-4">
+        {/* Steps Progress */}
+        <div className="flex items-center justify-between mb-16 relative px-4 max-w-3xl mx-auto">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -translate-y-1/2 z-0"></div>
           {[1, 2, 3, 4, 5].map((s) => (
             <div 
               key={s} 
               className={cn(
-                "relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all border-4",
-                step >= s ? "bg-primary text-white border-primary shadow-lg" : "bg-white text-muted-foreground border-muted"
+                "relative z-10 w-11 h-11 rounded-full flex items-center justify-center font-bold transition-all border-4",
+                step >= s ? "bg-primary text-white border-primary shadow-xl scale-110" : "bg-white text-muted-foreground border-muted"
               )}
             >
-              {step > s ? <CheckCircle className="w-5 h-5" /> : s}
-              <span className={cn("absolute -bottom-8 whitespace-nowrap text-[10px] font-black", step >= s ? "text-primary" : "text-muted-foreground")}>
+              {step > s ? <CheckCircle className="w-6 h-6" /> : s}
+              <span className={cn(
+                "absolute -bottom-10 whitespace-nowrap text-[11px] font-black transition-colors", 
+                step >= s ? "text-primary" : "text-muted-foreground"
+              )}>
                 {s === 1 && 'السياق'} {s === 2 && 'الرفع'} {s === 3 && 'المعاينة'} {s === 4 && 'التحليل'} {s === 5 && 'التأكيد'}
               </span>
             </div>
           ))}
         </div>
 
-        <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white min-h-[480px] flex flex-col relative">
+        <Card className="p-8 md:p-12 border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[40px] bg-white min-h-[520px] flex flex-col relative overflow-hidden">
           {loading && (
-            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center gap-4">
-              <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              <p className="font-black text-primary animate-pulse">جاري معالجة البيانات سحابياً...</p>
+            <div className="absolute inset-0 bg-white/70 backdrop-blur-md z-50 flex flex-col items-center justify-center gap-6">
+              <div className="relative">
+                <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                <Sparkles className="w-6 h-6 text-secondary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+              </div>
+              <p className="font-black text-2xl text-primary animate-pulse">جاري معالجة البيانات سحابياً...</p>
             </div>
           )}
           
           <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleFileUpload} />
 
           {step === 1 && (
-            <div className="space-y-8 animate-slide-up flex-1">
-              <div className="flex items-center gap-3 border-b pb-4">
-                <div className="p-2 bg-primary/5 rounded-xl"><Info className="w-6 h-6 text-primary" /></div>
-                <h2 className="text-2xl font-black text-primary">تحديد سياق الاختبار</h2>
+            <div className="space-y-10 animate-slide-up flex-1">
+              <div className="flex items-center gap-4 border-b pb-6">
+                <div className="p-3 bg-primary/5 rounded-2xl border border-primary/10 text-primary">
+                  <Info className="w-7 h-7" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-primary">تحديد سياق الاختبار</h2>
+                  <p className="text-muted-foreground text-sm font-bold">يرجى تحديد البيانات الأكاديمية للمادة قبل البدء بالرفع</p>
+                </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <label className="text-sm font-black text-primary mr-1">العام الجامعي</label>
+                  <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-secondary" />
+                    العام الجامعي
+                  </label>
                   <select 
                     value={formData.year}
                     onChange={(e) => setFormData({...formData, year: e.target.value})}
-                    className="w-full h-14 px-4 rounded-2xl border-2 bg-muted/20 outline-none font-black text-primary focus:border-primary transition-all text-right"
+                    className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"
                   >
-                    <option value="">اختر العام...</option>
+                    <option value="">اختر العام الجامعي...</option>
                     {academicYears.map((y: any) => <option key={y.id} value={y.label}>{y.label}</option>)}
                   </select>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-sm font-black text-primary mr-1">التخصص</label>
+                  <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-secondary" />
+                    التخصص (القسم)
+                  </label>
                   <select 
                     value={formData.deptId}
-                    onChange={(e) => setFormData({...formData, deptId: e.target.value, subjectId: ''})}
-                    className="w-full h-14 px-4 rounded-2xl border-2 bg-muted/20 outline-none font-black text-primary focus:border-primary transition-all text-right"
+                    onChange={(e) => setFormData({...formData, deptId: e.target.value, subjectId: '', subjectName: ''})}
+                    className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"
                   >
                     <option value="">اختر التخصص...</option>
                     {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -225,35 +257,63 @@ export default function UploadPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-sm font-black text-primary mr-1">المادة</label>
+                  <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-secondary" />
+                    المستوى الدراسي
+                  </label>
                   <select 
-                    disabled={!formData.deptId}
+                    value={formData.level}
+                    onChange={(e) => setFormData({...formData, level: e.target.value, subjectId: '', subjectName: ''})}
+                    className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"
+                  >
+                    <option value="">اختر المستوى...</option>
+                    <option value="المستوى الأول">المستوى الأول</option>
+                    <option value="المستوى الثاني">المستوى الثاني</option>
+                    <option value="المستوى الثالث">المستوى الثالث</option>
+                    <option value="المستوى الرابع">المستوى الرابع</option>
+                  </select>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-secondary" />
+                    المادة الدراسية
+                  </label>
+                  <select 
+                    disabled={!formData.deptId || !formData.level}
                     value={formData.subjectId}
                     onChange={(e) => {
                       const sel = filteredSubjects.find((s: any) => s.id === e.target.value) as any;
-                      setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", level: sel?.level || "", term: sel?.term || "" });
+                      setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", term: sel?.term || "" });
                     }}
-                    className="w-full h-14 px-4 rounded-2xl border-2 bg-muted/20 outline-none font-black text-primary focus:border-primary transition-all text-right"
+                    className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none disabled:opacity-50"
                   >
-                    <option value="">{formData.deptId ? 'اختر المادة...' : 'اختر التخصص أولاً'}</option>
+                    <option value="">{(!formData.deptId || !formData.level) ? 'حدد التخصص والمستوى أولاً' : 'اختر المادة...'}</option>
                     {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
                   </select>
                 </div>
               </div>
 
               {formData.subjectId && (
-                <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 grid grid-cols-3 gap-4 animate-fade-in">
+                <div className="p-6 bg-green-50 rounded-3xl border-2 border-green-100 grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in shadow-sm">
                    <div className="text-center">
-                     <p className="text-[10px] font-bold text-muted-foreground mb-1">المستوى</p>
+                     <p className="text-[10px] font-black text-green-600 mb-1">المستوى</p>
                      <p className="font-black text-primary">{formData.level}</p>
                    </div>
-                   <div className="text-center border-x border-primary/10">
-                     <p className="text-[10px] font-bold text-muted-foreground mb-1">الفصل</p>
+                   <div className="text-center border-r border-green-100">
+                     <p className="text-[10px] font-black text-green-600 mb-1">الفصل الدراسي</p>
                      <p className="font-black text-primary">{formData.term}</p>
                    </div>
-                   <div className="text-center">
-                     <p className="text-[10px] font-bold text-muted-foreground mb-1">الحالة</p>
-                     <p className="font-black text-green-600">جاهز للرفع</p>
+                   <div className="text-center border-r border-green-100 hidden md:block">
+                     <p className="text-[10px] font-black text-green-600 mb-1">التخصص</p>
+                     <p className="font-black text-primary truncate px-2">{departments.find((d:any) => d.id === formData.deptId)?.name}</p>
+                   </div>
+                   <div className="text-center border-r border-green-100">
+                     <p className="text-[10px] font-black text-green-600 mb-1">الحالة</p>
+                     <p className="font-black text-green-700 flex items-center justify-center gap-1">
+                       <CheckCircle className="w-3 h-3" />
+                       جاهز
+                     </p>
                    </div>
                 </div>
               )}
@@ -264,12 +324,14 @@ export default function UploadPage() {
             <div className="flex-1 flex flex-col items-center justify-center animate-slide-up">
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full max-w-lg h-72 border-4 border-dashed border-primary/20 rounded-[40px] flex flex-col items-center justify-center gap-6 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group shadow-inner"
+                className="w-full max-w-xl h-80 border-4 border-dashed border-primary/20 rounded-[50px] flex flex-col items-center justify-center gap-8 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group shadow-inner bg-muted/10"
               >
-                <div className="p-8 bg-primary/5 rounded-full group-hover:scale-110 transition-transform"><FileUp className="w-16 h-16 text-primary" /></div>
-                <div className="text-center px-6">
-                  <p className="text-2xl font-black text-primary mb-2">رفع ورقة الاختبار</p>
-                  <p className="text-sm text-muted-foreground font-bold">المادة: {formData.subjectName}</p>
+                <div className="p-10 bg-white rounded-full group-hover:scale-110 transition-transform shadow-xl border border-primary/5">
+                  <FileUp className="w-20 h-20 text-primary" />
+                </div>
+                <div className="text-center px-10">
+                  <p className="text-3xl font-black text-primary mb-3">رفع أوراق الاختبار</p>
+                  <p className="text-sm text-muted-foreground font-bold bg-white px-4 py-2 rounded-full border shadow-sm">المادة المختارة: {formData.subjectName}</p>
                 </div>
               </div>
             </div>
@@ -277,18 +339,26 @@ export default function UploadPage() {
 
           {step === 3 && (
             <div className="animate-slide-up flex-1">
-               <div className="flex items-center justify-between mb-8">
-                 <h2 className="text-xl font-black text-primary">معاينة صفحات الاختبار</h2>
-                 <Button variant="ghost" onClick={() => fileInputRef.current?.click()} className="rounded-xl font-black text-secondary gap-2"><Plus className="w-4 h-4" /> إضافة صفحة</Button>
+               <div className="flex items-center justify-between mb-10 border-b pb-6">
+                 <div>
+                  <h2 className="text-2xl font-black text-primary">معاينة صفحات الاختبار</h2>
+                  <p className="text-muted-foreground font-bold text-sm">تأكد من وضوح كافة الصفحات قبل التحليل</p>
+                 </div>
+                 <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="rounded-2xl h-12 px-6 font-black text-secondary border-2 gap-2 hover:bg-secondary/5 transition-all">
+                    <Plus className="w-5 h-5" />
+                    إضافة صفحة
+                 </Button>
                </div>
-               <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+               <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
                  {files.map((f, i) => (
-                   <div key={i} className="relative group aspect-[3/4] rounded-2xl overflow-hidden border-2 shadow-lg">
+                   <div key={i} className="relative group aspect-[3/4] rounded-3xl overflow-hidden border-4 border-white shadow-2xl transition-transform hover:-translate-y-2">
                      <Image src={f} alt="Page" fill className="object-cover" />
-                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Button size="icon" variant="destructive" className="rounded-full w-10 h-10 shadow-xl" onClick={() => setFiles(files.filter((_, idx) => idx !== i))}><Trash2 className="w-4 h-4" /></Button>
+                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                        <Button size="icon" variant="destructive" className="rounded-2xl w-12 h-12 shadow-xl hover:scale-110 transition-transform" onClick={() => setFiles(files.filter((_, idx) => idx !== i))} title="حذف هذه الصفحة">
+                          <Trash2 className="w-5 h-5" />
+                        </Button>
                      </div>
-                     <div className="absolute bottom-2 right-2 bg-primary/80 backdrop-blur-md text-white text-[10px] px-2 py-0.5 rounded font-black">صفحة {i + 1}</div>
+                     <div className="absolute bottom-3 right-3 bg-primary/90 backdrop-blur-md text-white text-xs px-3 py-1 rounded-xl font-black shadow-lg">صفحة {i + 1}</div>
                    </div>
                  ))}
                </div>
@@ -296,53 +366,112 @@ export default function UploadPage() {
           )}
 
           {step === 4 && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-10">
+            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-12">
               <div className="relative">
-                <div className="w-40 h-40 bg-secondary/10 rounded-full flex items-center justify-center shadow-inner"><Scan className="w-20 h-20 text-secondary" /></div>
-                <div className="absolute -top-4 -right-4 w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center border border-primary/10"><Sparkles className="w-8 h-8 text-primary animate-pulse" /></div>
+                <div className="w-48 h-48 bg-secondary/5 rounded-full flex items-center justify-center shadow-inner relative z-10 overflow-hidden">
+                  <Scan className="w-24 h-24 text-secondary animate-pulse" />
+                </div>
+                <div className="absolute -top-6 -right-6 w-16 h-16 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-primary/5 z-20">
+                  <Sparkles className="w-8 h-8 text-primary animate-bounce" />
+                </div>
+                <div className="absolute inset-0 bg-secondary/10 rounded-full blur-3xl opacity-20 animate-pulse"></div>
               </div>
-              <div className="max-w-md">
-                <h2 className="text-3xl font-black text-primary mb-3">التحليل والمطابقة الذكية</h2>
-                <p className="text-muted-foreground font-bold">سيقوم النظام بمطابقة رقم القيد مع سجلات الطلاب الرسمية.</p>
+              <div className="max-w-lg">
+                <h2 className="text-4xl font-black text-primary mb-4">التحليل والمطابقة الذكية</h2>
+                <p className="text-muted-foreground font-bold text-lg leading-relaxed">سيقوم محرك الذكاء الاصطناعي بمطابقة رقم القيد المستخرج من الورقة مع سجلات الطلاب الرسمية في النظام.</p>
               </div>
-              <Button onClick={handleOCR} disabled={loading} className="h-16 px-12 rounded-2xl text-xl font-black gradient-blue shadow-2xl hover:scale-105 transition-transform">
-                {loading ? <Loader2 className="w-7 h-7 animate-spin ml-3" /> : <Scan className="w-7 h-7 ml-3" />}
-                بدء المطابقة
+              <Button onClick={handleOCR} disabled={loading} className="h-20 px-16 rounded-[2rem] text-2xl font-black gradient-blue shadow-[0_20px_40px_rgba(11,60,93,0.3)] hover:scale-105 transition-all group">
+                {loading ? <Loader2 className="w-8 h-8 animate-spin ml-4" /> : <Scan className="w-8 h-8 ml-4 group-hover:rotate-90 transition-transform" />}
+                بدء المطابقة الآن
               </Button>
             </div>
           )}
 
           {step === 5 && (
-            <div className="animate-slide-up flex-1 space-y-8">
-               <div className={cn("flex items-center gap-5 p-6 rounded-[32px] border-2 shadow-sm", extractedData.found ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200")}>
-                  <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center", extractedData.found ? "bg-green-500 text-white" : "bg-orange-500 text-white")}>
-                    {extractedData.found ? <UserCheck className="w-8 h-8" /> : <AlertCircle className="w-8 h-8" />}
+            <div className="animate-slide-up flex-1 space-y-12">
+               <div className={cn(
+                 "flex items-center gap-6 p-8 rounded-[40px] border-2 shadow-sm transition-all", 
+                 extractedData.found ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"
+               )}>
+                  <div className={cn(
+                    "w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg", 
+                    extractedData.found ? "bg-green-500 text-white" : "bg-orange-500 text-white"
+                  )}>
+                    {extractedData.found ? <UserCheck className="w-9 h-9" /> : <AlertCircle className="w-9 h-9" />}
                   </div>
                   <div className="text-right flex-1">
-                    <h2 className={cn("text-xl font-black", extractedData.found ? "text-green-800" : "text-orange-800")}>{extractedData.found ? "تمت المطابقة بنجاح" : "طالب غير مسجل"}</h2>
-                    <p className="text-sm font-bold opacity-80">يرجى تأكيد البيانات النهائية قبل الحفظ.</p>
+                    <h2 className={cn("text-2xl font-black", extractedData.found ? "text-green-800" : "text-orange-800")}>
+                      {extractedData.found ? "تمت مطابقة الطالب بنجاح" : "تنبيه: الطالب غير مسجل"}
+                    </h2>
+                    <p className="text-base font-bold opacity-70">
+                      {extractedData.found 
+                        ? "تم جلب البيانات الأكاديمية تلقائياً، يرجى المراجعة قبل الحفظ." 
+                        : "رقم القيد المستخرج غير موجود في قاعدة البيانات، يرجى التحقق يدوياً."}
+                    </p>
                   </div>
                </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2 text-right">
-                    <label className="text-xs font-black text-primary">رقم القيد</label>
-                    <input value={extractedData.id} onChange={(e) => setExtractedData({...extractedData, id: e.target.value})} className="w-full h-14 px-6 rounded-2xl border-2 font-black text-lg text-right" />
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-3 text-right">
+                    <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                      <Scan className="w-4 h-4 text-secondary" />
+                      رقم القيد المستخرج
+                    </label>
+                    <input 
+                      value={extractedData.id} 
+                      onChange={(e) => setExtractedData({...extractedData, id: e.target.value})} 
+                      className="w-full h-16 px-8 rounded-3xl border-2 border-muted bg-white font-black text-xl text-right focus:border-primary outline-none transition-all shadow-inner" 
+                    />
                   </div>
-                  <div className="space-y-2 text-right">
-                    <label className="text-xs font-black text-primary">اسم الطالب الرباعي</label>
-                    <input value={extractedData.name} onChange={(e) => setExtractedData({...extractedData, name: e.target.value})} className="w-full h-14 px-6 rounded-2xl border-2 font-black text-lg text-right" />
+                  <div className="space-y-3 text-right">
+                    <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-secondary" />
+                      اسم الطالب الكامل
+                    </label>
+                    <input 
+                      value={extractedData.name} 
+                      onChange={(e) => setExtractedData({...extractedData, name: e.target.value})} 
+                      className="w-full h-16 px-8 rounded-3xl border-2 border-muted bg-white font-black text-xl text-right focus:border-primary outline-none transition-all shadow-inner" 
+                    />
                   </div>
                </div>
             </div>
           )}
 
-          <div className="mt-auto pt-10 flex items-center justify-between flex-row-reverse border-t">
-            <Button variant="outline" onClick={prevStep} disabled={step === 1 || loading} className="h-14 px-8 rounded-2xl border-2 font-black gap-3 shadow-sm"><ChevronRight className="w-5 h-5" /> السابق</Button>
+          {/* Action Buttons */}
+          <div className="mt-auto pt-10 flex items-center justify-between flex-row-reverse border-t-2 border-muted/50">
+            <Button 
+              variant="outline" 
+              onClick={prevStep} 
+              disabled={step === 1 || loading} 
+              className="h-16 px-10 rounded-[1.5rem] border-2 border-muted font-black gap-4 shadow-sm hover:bg-muted/10 transition-all"
+            >
+              <ChevronRight className="w-6 h-6" /> 
+              السابق
+            </Button>
+            
             {step < 5 ? (
-              <Button onClick={nextStep} disabled={(step === 2 && files.length === 0) || (step === 1 && !formData.subjectId)} className="h-14 px-12 rounded-2xl font-black gap-3 gradient-blue shadow-xl">التالي <ChevronLeft className="w-5 h-5" /></Button>
+              <Button 
+                onClick={nextStep} 
+                disabled={
+                  (step === 2 && files.length === 0) || 
+                  (step === 1 && (!formData.subjectId || !formData.level)) ||
+                  (step === 3 && files.length === 0)
+                } 
+                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-[0_15px_30px_rgba(11,60,93,0.2)] hover:scale-105 transition-all"
+              >
+                التالي 
+                <ChevronLeft className="w-6 h-6" />
+              </Button>
             ) : (
-              <Button onClick={handleSaveToArchive} disabled={loading} className="h-14 px-12 rounded-2xl font-black gap-3 bg-green-600 text-white shadow-xl hover:bg-green-700">{loading ? <Loader2 className="animate-spin" /> : <CheckCircle className="w-6 h-6" />} حفظ نهائي</Button>
+              <Button 
+                onClick={handleSaveToArchive} 
+                disabled={loading || !extractedData.id} 
+                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 bg-green-600 text-white shadow-[0_15px_30px_rgba(22,163,74,0.2)] hover:bg-green-700 hover:scale-105 transition-all"
+              >
+                {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <CheckCircle className="w-6 h-6" />} 
+                حفظ نهائي في الأرشيف
+              </Button>
             )}
           </div>
         </Card>
