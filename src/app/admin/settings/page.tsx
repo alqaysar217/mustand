@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 
-const CS_CURRICULUM = [
+const SHARED_LEVELS_1_2 = [
   // المستوى الأول - الترم الأول
   { l: "المستوى الأول", t: "الفصل الأول", ar: "مقدمة في الحاسوب", en: "Introduction to Computer" },
   { l: "المستوى الأول", t: "الفصل الأول", ar: "رياضيات (1)", en: "Mathematics (1)" },
@@ -56,6 +56,9 @@ const CS_CURRICULUM = [
   { l: "المستوى الثاني", t: "الفصل الثاني", ar: "عمارة حاسوب", en: "Computer Architecture" },
   { l: "المستوى الثاني", t: "الفصل الثاني", ar: "احتمالات وإحصاء", en: "Probability and Statistics" },
   { l: "المستوى الثاني", t: "الفصل الثاني", ar: "تراكيب محددة", en: "Discrete Structures" },
+];
+
+const CS_LEVELS_3_4 = [
   // المستوى الثالث - الترم الأول
   { l: "المستوى الثالث", t: "الفصل الأول", ar: "هندسة برمجيات (1)", en: "Software Engineering (1)" },
   { l: "المستوى الثالث", t: "الفصل الأول", ar: "نظم تشغيل", en: "Operating Systems" },
@@ -86,10 +89,42 @@ const CS_CURRICULUM = [
   { l: "المستوى الرابع", t: "الفصل الثاني", ar: "مشروع التخرج (1)", en: "Graduation Project (1)" },
 ];
 
+const IT_LEVELS_3_4 = [
+  // المستوى الثالث - الترم الأول
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "هندسة برمجيات (1)", en: "Software Engineering (1)" },
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "نظم تشغيل", en: "Operating Systems" },
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "ذكاء اصطناعي", en: "Artificial Intelligence" },
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "إدارة مشاريع", en: "Project Management" },
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "اتصالات وبيانات", en: "Data Communications" },
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "بحوث عمليات", en: "Operations Research" },
+  // المستوى الثالث - الترم الثاني
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "هندسة برمجيات (2)", en: "Software Engineering (2)" },
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "شبكات الحاسوب", en: "Computer Networks" },
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "برمجة مرئية", en: "Visual Programming" },
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "تكنولوجيا الوسائط المتعددة", en: "Multimedia Technology" },
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "أمن الشبكات", en: "Network Security" },
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "نظم المعلومات الإدارية", en: "Management Information Systems" },
+  // المستوى الرابع - الترم الأول
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "معالجة صور", en: "Image Processing" },
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "أمن معلومات", en: "Information Security" },
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "حوسبة سحابية", en: "Cloud Computing" },
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "تجارة إلكترونية", en: "E-Commerce" },
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "حوسبة متنقلة", en: "Mobile Computing" },
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "ندوة", en: "Seminar" },
+  // المستوى الرابع - الترم الثاني
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "نظم موزعة", en: "Distributed Systems" },
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "إدارة شبكات", en: "Network Administration" },
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "نظم المعلومات الجغرافية", en: "Geographic Information Systems" },
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "التنقيب في الويب", en: "Web Mining" },
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "الحوسبة في كل مكان", en: "Ubiquitous Computing" },
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "مشروع التخرج (1)", en: "Graduation Project (1)" },
+];
+
 export default function AdminSettingsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [importingCS, setImportingCS] = useState(false);
+  const [importingIT, setImportingIT] = useState(false);
   const firestore = useFirestore();
 
   const handleSave = (section: string) => {
@@ -103,21 +138,20 @@ export default function AdminSettingsPage() {
     }, 1000);
   };
 
-  const handleImportCurriculum = async () => {
+  const importCurriculum = async (deptName: string, deptCode: string, curriculum: any[], setStatus: any) => {
     if (!firestore) return;
-    setImporting(true);
+    setStatus(true);
     try {
-      // 1. التأكد من وجود تخصص علوم الحاسوب أو إنشاؤه
+      // 1. التأكد من وجود التخصص
       const deptsRef = collection(firestore, "departments");
-      const deptQuery = query(deptsRef, where("name", "==", "علوم الحاسوب"));
+      const deptQuery = query(deptsRef, where("name", "==", deptName));
       const deptSnap = await getDocs(deptQuery);
       
       let deptId = "";
       if (deptSnap.empty) {
-        // إنشاء التخصص إذا لم يكن موجوداً
         const newDept = await addDoc(deptsRef, {
-          name: "علوم الحاسوب",
-          code: "CS",
+          name: deptName,
+          code: deptCode,
           collegeName: "كلية تقنية المعلومات",
           collegeId: "manual_import",
           createdAt: serverTimestamp()
@@ -131,31 +165,44 @@ export default function AdminSettingsPage() {
       const subjectsRef = collection(firestore, "subjects");
       let count = 0;
       
-      for (const item of CS_CURRICULUM) {
-        // فحص بسيط لمنع التكرار (اختياري)
+      for (const item of curriculum) {
         await addDoc(subjectsRef, {
           nameAr: item.ar,
           nameEn: item.en,
           level: item.l,
           term: item.t,
           departmentId: deptId,
-          departmentName: "علوم الحاسوب",
+          departmentName: deptName,
           createdAt: serverTimestamp()
         });
         count++;
       }
 
       toast({
-        title: "تم الاستيراد بنجاح",
-        description: `تمت إضافة ${count} مادة دراسية إلى تخصص علوم الحاسوب.`,
+        title: `تم استيراد منهج ${deptName} بنجاح`,
+        description: `تمت إضافة ${count} مادة دراسية إلى النظام.`,
       });
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "خطأ في الاستيراد", description: "فشل إرسال البيانات إلى السحابة." });
     } finally {
-      setImporting(false);
+      setStatus(false);
     }
   };
+
+  const handleImportCS = () => importCurriculum(
+    "علوم الحاسوب", 
+    "CS", 
+    [...SHARED_LEVELS_1_2, ...CS_LEVELS_3_4], 
+    setImportingCS
+  );
+
+  const handleImportIT = () => importCurriculum(
+    "تقنية المعلومات", 
+    "IT", 
+    [...SHARED_LEVELS_1_2, ...IT_LEVELS_3_4], 
+    setImportingIT
+  );
 
   return (
     <div className="space-y-8 text-right" dir="rtl">
@@ -215,21 +262,45 @@ export default function AdminSettingsPage() {
               <h2 className="text-xl font-bold text-primary">إدارة البيانات والمنهج</h2>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-6">
               <p className="text-sm font-bold text-muted-foreground">يمكنك استيراد البيانات الأساسية للنظام دفعة واحدة لتهيئة التخصصات والمواد الدراسية.</p>
-              <div className="p-6 bg-muted/20 rounded-2xl border border-dashed border-secondary/30 flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="text-right">
-                  <h4 className="font-bold text-primary">منهج قسم علوم الحاسوب</h4>
-                  <p className="text-[10px] text-muted-foreground font-bold">استيراد 48 مادة (المستوى 1 إلى 4)</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-6 bg-muted/20 rounded-2xl border border-dashed border-primary/30 flex flex-col items-center text-center gap-4">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                    <CloudDownload className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-primary">منهج علوم الحاسوب</h4>
+                    <p className="text-[10px] text-muted-foreground font-bold">48 مادة (المستوى 1 - 4)</p>
+                  </div>
+                  <Button 
+                    disabled={importingCS || !firestore}
+                    onClick={handleImportCS}
+                    className="rounded-xl h-10 w-full font-bold gradient-blue shadow-lg gap-2"
+                  >
+                    {importingCS ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    استيراد (CS)
+                  </Button>
                 </div>
-                <Button 
-                  disabled={importing || !firestore}
-                  onClick={handleImportCurriculum}
-                  className="rounded-xl h-12 font-bold bg-secondary hover:bg-secondary/90 shadow-lg gap-2"
-                >
-                  {importing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CloudDownload className="w-5 h-5" />}
-                  استيراد المنهج الدراسي (CS)
-                </Button>
+
+                <div className="p-6 bg-muted/20 rounded-2xl border border-dashed border-secondary/30 flex flex-col items-center text-center gap-4">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                    <CloudDownload className="w-6 h-6 text-secondary" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-primary">منهج تقنية المعلومات</h4>
+                    <p className="text-[10px] text-muted-foreground font-bold">48 مادة (المستوى 1 - 4)</p>
+                  </div>
+                  <Button 
+                    disabled={importingIT || !firestore}
+                    onClick={handleImportIT}
+                    className="rounded-xl h-10 w-full font-bold bg-secondary hover:bg-secondary/90 shadow-lg gap-2"
+                  >
+                    {importingIT ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    استيراد (IT)
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
