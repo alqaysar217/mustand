@@ -1,12 +1,14 @@
 'use client';
 
-// سيتم تعويض هذه القيم تلقائياً من قبل نظام الاستضافة، 
-// أو يمكنك الحصول عليها من واجهة Firebase Console.
+/**
+ * إعدادات Firebase الخاصة بمشروعك.
+ * قم بنسخ القيم من Firebase Console والصقها هنا.
+ */
 export const firebaseConfig = {
-  apiKey: "PLACEHOLDER",
-  authDomain: "PLACEHOLDER",
-  projectId: "PLACEHOLDER",
-  storageBucket: "PLACEHOLDER",
-  messagingSenderId: "PLACEHOLDER",
-  appId: "PLACEHOLDER"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };

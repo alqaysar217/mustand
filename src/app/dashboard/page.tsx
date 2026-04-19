@@ -15,8 +15,8 @@ import {
   Loader2,
   Sparkles,
   AlertTriangle,
-  ArrowLeft,
-  ExternalLink
+  ExternalLink,
+  Code
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
@@ -108,40 +108,34 @@ export default function Dashboard() {
         isOpen ? "mr-0 md:mr-64" : "mr-0"
       )} dir="rtl">
         {!firestore && (
-          <Card className="mb-10 p-8 border-destructive/30 border-2 rounded-[2rem] bg-white shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/5 rounded-full -mr-16 -mt-16"></div>
+          <Card className="mb-10 p-8 border-primary/30 border-2 rounded-[2rem] bg-white shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16"></div>
             <div className="flex flex-col md:flex-row items-start gap-6 relative z-10">
-              <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-8 h-8 text-destructive" />
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Code className="w-8 h-8 text-primary" />
               </div>
               <div className="flex-1 space-y-4">
-                <h3 className="font-black text-2xl text-destructive">تنبيه: يلزم ربط قاعدة البيانات</h3>
+                <h3 className="font-black text-2xl text-primary">دليل ربط قاعدة البيانات (عام 2026)</h3>
                 <p className="text-muted-foreground font-bold leading-relaxed">
-                  النظام حالياً يعمل في وضع "المعاينة" فقط. لكي تتمكن من حفظ البيانات بشكل حقيقي، يجب عليك اتباع الخطوات التالية:
+                  النظام حالياً في وضع "المعاينة". لتفعيله بالكامل، اتبع الخطوات التالية:
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
-                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2">1</span>
-                    <span className="text-sm font-bold">اذهب إلى Firebase Console وأنشئ مشروعاً جديداً.</span>
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed text-right">
+                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">1</span>
+                    <span className="text-sm font-bold">افتح <a href="https://console.firebase.google.com/" target="_blank" className="text-secondary underline">Firebase Console</a> وأنشئ مشروعاً.</span>
                   </div>
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
-                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2">2</span>
-                    <span className="text-sm font-bold">قم بتفعيل Cloud Firestore في وضع "Test Mode".</span>
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed text-right">
+                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">2</span>
+                    <span className="text-sm font-bold">فعل <b>Firestore</b> في وضع التجربة (Test Mode).</span>
                   </div>
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
-                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2">3</span>
-                    <span className="text-sm font-bold">أضف Web App وانسخ كود "firebaseConfig".</span>
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed text-right">
+                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">3</span>
+                    <span className="text-sm font-bold">أضف Web App وانسخ كود <code>firebaseConfig</code>.</span>
                   </div>
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
-                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2">4</span>
-                    <span className="text-sm font-bold">الصق الإعدادات في ملف <code>src/firebase/config.ts</code>.</span>
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed text-right">
+                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">4</span>
+                    <span className="text-sm font-bold">افتح ملف <code>src/firebase/config.ts</code> في المحرر والصق القيم.</span>
                   </div>
-                </div>
-                <div className="pt-4 flex gap-4">
-                  <Button className="rounded-xl font-bold bg-primary gap-2" onClick={() => window.open('https://console.firebase.google.com/', '_blank')}>
-                    فتح Firebase Console
-                    <ExternalLink className="w-4 h-4" />
-                  </Button>
                 </div>
               </div>
             </div>
@@ -151,7 +145,7 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">لوحة التحكم</h1>
-            <p className="text-muted-foreground font-bold">ملخص سريع لنشاط النظام وقاعدة البيانات</p>
+            <p className="text-muted-foreground font-bold">ملخص سريع لنشاط النظام وقاعدة البيانات الحقيقية</p>
           </div>
           <div className="flex items-center gap-3">
             {firestore && (
@@ -235,7 +229,7 @@ export default function Dashboard() {
                   <p className="text-white font-bold">{firestore ? "متصل بـ Firebase" : "غير متصل بالسحاب"}</p>
                 </div>
                 <p className="text-white/80 text-sm leading-relaxed mb-6 font-medium">
-                  عند ربط الإعدادات، سيقوم النظام بمزامنة كافة الملفات والأرشيف تلقائياً مع خوادم جوجل الآمنة.
+                  عند ربط الإعدادات، سيقوم النظام بمزامنة كافة الملفات والأرشيف تلقائياً مع السحاب.
                 </p>
                 <Button 
                   className="bg-white text-primary hover:bg-white/90 w-full rounded-xl font-bold h-12 shadow-xl" 
@@ -250,10 +244,10 @@ export default function Dashboard() {
                </div>
             </Card>
 
-            <Card className="p-6 border-none shadow-lg bg-primary/5 rounded-3xl border-r-4 border-primary">
-              <h4 className="font-bold text-primary mb-2">تلميذه ذكية</h4>
+            <Card className="p-6 border-none shadow-lg bg-primary/5 rounded-3xl border-r-4 border-primary text-right">
+              <h4 className="font-bold text-primary mb-2">تلميحة ذكية</h4>
               <p className="text-xs text-muted-foreground font-bold leading-relaxed">
-                يمكنك استخدام ميزة OCR لاستخراج بيانات الطلاب من أوراق الاختبار وتوفير 80% من وقت الإدخال اليدوي.
+                بمجرد إدخال مفاتيح الربط في ملف الإعدادات، ستظهر البيانات هنا فوراً وبشكل حي.
               </p>
             </Card>
           </div>

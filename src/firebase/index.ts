@@ -17,14 +17,12 @@ export function initializeFirebase(): {
   const isConfigValid = 
     firebaseConfig && 
     firebaseConfig.apiKey && 
-    firebaseConfig.apiKey !== "PLACEHOLDER" &&
+    firebaseConfig.apiKey !== "YOUR_API_KEY" &&
     firebaseConfig.projectId && 
-    firebaseConfig.projectId !== "PLACEHOLDER" &&
-    firebaseConfig.appId && 
-    firebaseConfig.appId !== "PLACEHOLDER";
+    firebaseConfig.projectId !== "YOUR_PROJECT_ID";
   
   if (!isConfigValid) {
-    console.warn("⚠️ إعدادات Firebase غير صحيحة أو مفقودة. سيتم تشغيل النظام في وضع المعاينة فقط.");
+    console.warn("⚠️ إعدادات Firebase غير صحيحة أو مفقودة. يرجى مراجعة الخطوات في لوحة التحكم.");
     return { firebaseApp: null, firestore: null, auth: null };
   }
 
