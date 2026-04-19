@@ -15,7 +15,8 @@ import {
   Fingerprint,
   User,
   Building2,
-  Banknote
+  Banknote,
+  Filter
 } from "lucide-react";
 import {
   Table,
@@ -54,6 +55,9 @@ export default function StudentsPage() {
   const { data: departments = [] } = useCollection(deptsQuery);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterDept, setFilterDept] = useState("all");
+  const [filterLevel, setFilterLevel] = useState("all");
+  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -70,11 +74,15 @@ export default function StudentsPage() {
   const { toast } = useToast();
 
   const filteredStudents = useMemo(() => {
-    return (students as any[]).filter(student => 
-      student.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      student.regId?.includes(searchTerm)
-    );
-  }, [students, searchTerm]);
+    return (students as any[]).filter(student => {
+      const matchesSearch = student.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           student.regId?.includes(searchTerm);
+      const matchesDept = filterDept === "all" || student.departmentId === filterDept;
+      const matchesLevel = filterLevel === "all" || student.level === filterLevel;
+      
+      return matchesSearch && matchesDept && matchesLevel;
+    });
+  }, [students, searchTerm, filterDept, filterLevel]);
 
   const handleAddStudent = async () => {
     if (!firestore || !newStudent.name || !newStudent.regId || !newStudent.departmentId) {
@@ -203,9 +211,9 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      <Card className="p-6 border-none shadow-xl rounded-3xl bg-white">
+      <Card className="p-6 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
         <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 relative">
+          <div className="flex-[2] relative">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input 
               type="text"
@@ -214,6 +222,32 @@ export default function StudentsPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+          <div className="flex-1">
+             <Select value={filterDept} onValueChange={setFilterDept}>
+               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
+                 <Filter className="w-4 h-4 ml-2 opacity-50" />
+                 <SelectValue placeholder="كل التخصصات" />
+               </SelectTrigger>
+               <SelectContent className="rounded-xl font-bold">
+                 <SelectItem value="all">جميع التخصصات</SelectItem>
+                 {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+               </SelectContent>
+             </Select>
+          </div>
+          <div className="flex-1">
+             <Select value={filterLevel} onValueChange={setFilterLevel}>
+               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
+                 <SelectValue placeholder="كل المستويات" />
+               </SelectTrigger>
+               <SelectContent className="rounded-xl font-bold">
+                 <SelectItem value="all">جميع المستويات</SelectItem>
+                 <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                 <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                 <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                 <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+               </SelectContent>
+             </Select>
           </div>
         </div>
 

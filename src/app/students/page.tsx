@@ -61,6 +61,9 @@ export default function StudentsManagementPage() {
   const { data: departments = [], loading: loadingDepts } = useCollection(deptsQuery);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterDept, setFilterDept] = useState("all");
+  const [filterLevel, setFilterLevel] = useState("all");
+  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -74,10 +77,6 @@ export default function StudentsManagementPage() {
     level: "المستوى الأول",
     admissionType: "عام"
   });
-
-  // Filter States
-  const [filterDept, setFilterDept] = useState("all");
-  const [filterLevel, setFilterLevel] = useState("all");
 
   const { toast } = useToast();
 
@@ -252,7 +251,7 @@ export default function StudentsManagementPage() {
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
                         {loadingDepts ? (
-                          <div className="p-2 text-center text-xs opacity-50">جاري التحميل...</div>
+                          <div className="p-2 text-center text-xs opacity-50">جاري تحميل الكليات...</div>
                         ) : departments.map((d: any) => (
                           <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                         ))}
@@ -312,7 +311,7 @@ export default function StudentsManagementPage() {
 
         <Card className="p-6 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
           <div className="flex flex-col md:flex-row gap-4 mb-8">
-            <div className="flex-1 relative">
+            <div className="flex-[2] relative">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input 
                 type="text"
@@ -321,6 +320,32 @@ export default function StudentsManagementPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+            </div>
+            <div className="flex-1">
+               <Select value={filterDept} onValueChange={setFilterDept}>
+                 <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
+                   <Filter className="w-4 h-4 ml-2 opacity-50" />
+                   <SelectValue placeholder="كل التخصصات" />
+                 </SelectTrigger>
+                 <SelectContent className="rounded-xl font-bold">
+                   <SelectItem value="all">جميع التخصصات</SelectItem>
+                   {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                 </SelectContent>
+               </Select>
+            </div>
+            <div className="flex-1">
+               <Select value={filterLevel} onValueChange={setFilterLevel}>
+                 <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
+                   <SelectValue placeholder="كل المستويات" />
+                 </SelectTrigger>
+                 <SelectContent className="rounded-xl font-bold">
+                   <SelectItem value="all">جميع المستويات</SelectItem>
+                   <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                   <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                   <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                   <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                 </SelectContent>
+               </Select>
             </div>
           </div>
 
@@ -400,7 +425,7 @@ export default function StudentsManagementPage() {
       <Dialog open={!!editingStudent} onOpenChange={(open) => !open && setEditingStudent(null)}>
         <DialogContent className="sm:max-w-[500px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
           <div className="p-8">
-            <DialogHeader className="text-right items-start space-y-2 mb-8">
+            <DialogHeader className="text-right items-start space-y-2 mb-8 relative">
               <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات الطالب
