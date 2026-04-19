@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useRef } from "react";
@@ -22,7 +21,9 @@ import {
   Building2,
   BookOpen,
   Calendar,
-  GraduationCap
+  GraduationCap,
+  Fingerprint,
+  User
 } from "lucide-react";
 import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 import Image from "next/image";
@@ -39,7 +40,7 @@ export default function UploadPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
-  const [extractedData, setExtractedData] = useState({ id: '', name: '', found: false });
+  const [extractedData, setExtractedData] = useState({ id: '', name: '', found: false, originalName: '' });
   const [formData, setFormData] = useState({ 
     year: '', 
     deptId: '', 
@@ -56,7 +57,7 @@ export default function UploadPage() {
   const firestore = useFirestore();
   const storage = useStorage();
 
-  // جلب البيانات من السحابة
+  // جلب البيانات الأساسية من السحابة
   const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
   const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
   const yearsQuery = useMemo(() => firestore ? collection(firestore, "academicYears") : null, [firestore]);
@@ -65,7 +66,7 @@ export default function UploadPage() {
   const { data: subjects = [] } = useCollection(subjectsQuery);
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
-  // فلترة المواد حسب القسم والمستوى المختار
+  // فلترة المواد بناءً على التخصص والمستوى
   const filteredSubjects = useMemo(() => {
     if (!formData.deptId || !formData.level) return [];
     return (subjects as any[]).filter(s => 
@@ -103,43 +104,48 @@ export default function UploadPage() {
     if (files.length === 0 || !firestore) return;
     setLoading(true);
     try {
-      // 1. استخراج البيانات باستخدام AI
+      // استخراج البيانات الفعلي من الصورة باستخدام Gemini
       const result = await extractExamDetails({ examImageDataUri: files[0] });
       
-      // 2. تنقية رقم القيد (إزالة أي حروف أو فراغات)
       const cleanRegId = result.studentRegistrationId?.replace(/\D/g, '') || '';
       
-      if (!cleanRegId) {
-        throw new Error('لم يتم العثور على رقم قيد في الصورة');
-      }
-
-      // 3. البحث في قاعدة بيانات الطلاب عن الرقم المستخرج
+      // البحث عن الطالب في السجلات المسجلة مسبقاً
       const studentsRef = collection(firestore, "students");
       const q = query(studentsRef, where("regId", "==", cleanRegId));
       const querySnapshot = await getDocs(q);
       
       if (!querySnapshot.empty) {
-        // تم العثور على الطالب في السجلات الرسمية
+        // تم إيجاد الطالب
         const studentDoc = querySnapshot.docs[0].data();
-        setExtractedData({ id: cleanRegId, name: studentDoc.name, found: true });
-        toast({ title: "تمت المطابقة بنجاح", description: `الطالب: ${studentDoc.name}` });
+        setExtractedData({ 
+          id: cleanRegId, 
+          name: studentDoc.name, 
+          found: true,
+          originalName: result.studentName || ''
+        });
+        toast({ title: "تم التحليل والمطابقة", description: `تم التعرف على الطالب: ${studentDoc.name}` });
       } else {
-        // رقم القيد غير موجود في السيستم
-        setExtractedData({ id: cleanRegId, name: result.studentName || '', found: false });
+        // لم يتم إيجاد الرقم في قاعدة البيانات
+        setExtractedData({ 
+          id: cleanRegId, 
+          name: result.studentName || '', 
+          found: false,
+          originalName: result.studentName || ''
+        });
         toast({ 
           variant: "destructive", 
-          title: "تنبيه: طالب غير مسجل", 
-          description: "الرقم المستخرج لا يطابق أي طالب في السجلات الرسمية." 
+          title: "تحليل ناجح ولكن لم يتم المطابقة", 
+          description: "رقم القيد مستخرج صحيحة ولكن الطالب غير مسجل في النظام." 
         });
       }
       setStep(5);
     } catch (err: any) {
       toast({ 
         variant: "destructive", 
-        title: "خطأ في التحليل", 
-        description: err.message || "تعذر قراءة البيانات من الصورة، يرجى المحاولة يدوياً." 
+        title: "خطأ في التحليل الذكي", 
+        description: "تعذر قراءة البيانات، يرجى إدخالها يدوياً للتأكيد." 
       });
-      setStep(5); // الانتقال للخطوة الأخيرة للإدخال اليدوي
+      setStep(5);
     } finally {
       setLoading(false);
     }
@@ -150,11 +156,13 @@ export default function UploadPage() {
 
     setLoading(true);
     try {
+      // رفع الصورة إلى التخزين السحابي
       const fileName = `archives/${formData.year.replace(/\s/g, '')}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       await uploadString(storageRef, files[0], 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
 
+      // حفظ البيانات في Firestore
       const archiveData = {
         studentRegId: extractedData.id,
         studentName: extractedData.name,
@@ -171,12 +179,12 @@ export default function UploadPage() {
       await addDoc(collection(firestore, "archives"), archiveData);
       toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ اختبار الطالب ${extractedData.name}` });
       
-      // إعادة التصفير للعودة لخطوة الرفع مع الحفاظ على سياق المادة
+      // العودة لخطوة الرفع لمواصلة العمل على نفس المادة
       setFiles([]);
-      setExtractedData({ id: '', name: '', found: false });
+      setExtractedData({ id: '', name: '', found: false, originalName: '' });
       setStep(2); 
     } catch (error) {
-      toast({ variant: "destructive", title: "فشل الحفظ", description: "حدث خطأ أثناء محاولة إرسال البيانات للسحابة." });
+      toast({ variant: "destructive", title: "خطأ في السحابة", description: "فشل حفظ الملف في الأرشيف المركزي." });
     } finally {
       setLoading(false);
     }
@@ -220,12 +228,15 @@ export default function UploadPage() {
 
         <Card className="p-8 md:p-12 border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[40px] bg-white min-h-[520px] flex flex-col relative overflow-hidden">
           {loading && (
-            <div className="absolute inset-0 bg-white/70 backdrop-blur-md z-50 flex flex-col items-center justify-center gap-6">
+            <div className="absolute inset-0 bg-white/70 backdrop-blur-md z-50 flex flex-col items-center justify-center gap-6 text-center p-10">
               <div className="relative">
-                <Loader2 className="w-16 h-16 animate-spin text-primary" />
-                <Sparkles className="w-6 h-6 text-secondary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                <Loader2 className="w-20 h-20 animate-spin text-primary" />
+                <Sparkles className="w-8 h-8 text-secondary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
               </div>
-              <p className="font-black text-2xl text-primary animate-pulse">جاري معالجة البيانات سحابياً...</p>
+              <div>
+                <p className="font-black text-3xl text-primary mb-2">جاري المعالجة الذكية...</p>
+                <p className="text-muted-foreground font-bold">يتم الآن قراءة بيانات الورقة ومطابقتها سحابياً</p>
+              </div>
             </div>
           )}
           
@@ -382,7 +393,7 @@ export default function UploadPage() {
           )}
 
           {step === 5 && (
-            <div className="animate-slide-up flex-1 space-y-12">
+            <div className="animate-slide-up flex-1 space-y-10">
                <div className={cn(
                  "flex items-center gap-6 p-8 rounded-[40px] border-2 shadow-sm transition-all", 
                  extractedData.found ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"
@@ -399,38 +410,51 @@ export default function UploadPage() {
                     </h2>
                     <p className="text-base font-bold opacity-70">
                       {extractedData.found 
-                        ? "تم جلب البيانات الأكاديمية تلقائياً، يرجى المراجعة قبل الحفظ." 
-                        : "رقم القيد المستخرج غير موجود في قاعدة البيانات، يرجى التحقق يدوياً."}
+                        ? "تم العثور على بيانات الطالب في السجلات الرسمية بناءً على التحليل." 
+                        : "الرقم المستخرج لا يطابق أي طالب مسجل. يرجى التأكد من الرقم أو تسجيل الطالب أولاً."}
                     </p>
                   </div>
                </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3 text-right">
                     <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
-                      <Scan className="w-4 h-4 text-secondary" />
+                      <Fingerprint className="w-4 h-4 text-secondary" />
                       رقم القيد المستخرج
                     </label>
-                    <input 
-                      value={extractedData.id} 
-                      onChange={(e) => setExtractedData({...extractedData, id: e.target.value.replace(/\D/g, '')})} 
-                      className="w-full h-16 px-8 rounded-3xl border-2 border-muted bg-white font-black text-xl text-right focus:border-primary outline-none transition-all shadow-inner" 
-                      placeholder="أدخل رقم القيد..."
-                    />
+                    <div className="relative">
+                      <input 
+                        value={extractedData.id} 
+                        onChange={(e) => setExtractedData({...extractedData, id: e.target.value.replace(/\D/g, '')})} 
+                        className="w-full h-16 pr-12 pl-6 rounded-3xl border-2 border-muted bg-white font-black text-xl text-right focus:border-primary outline-none transition-all shadow-inner" 
+                        placeholder="20210045"
+                      />
+                      <Scan className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    </div>
                   </div>
                   <div className="space-y-3 text-right">
                     <label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
-                      <UserCheck className="w-4 h-4 text-secondary" />
-                      اسم الطالب الكامل
+                      <User className="w-4 h-4 text-secondary" />
+                      اسم الطالب (كما يظهر في النظام)
                     </label>
-                    <input 
-                      value={extractedData.name} 
-                      onChange={(e) => setExtractedData({...extractedData, name: e.target.value})} 
-                      className="w-full h-16 px-8 rounded-3xl border-2 border-muted bg-white font-black text-xl text-right focus:border-primary outline-none transition-all shadow-inner" 
-                      placeholder="أدخل اسم الطالب..."
-                    />
+                    <div className="relative">
+                      <input 
+                        value={extractedData.name} 
+                        onChange={(e) => setExtractedData({...extractedData, name: e.target.value})} 
+                        className="w-full h-16 pr-12 pl-6 rounded-3xl border-2 border-muted bg-white font-black text-xl text-right focus:border-primary outline-none transition-all shadow-inner" 
+                        placeholder="أدخل اسم الطالب..."
+                      />
+                      <UserCheck className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    </div>
                   </div>
                </div>
+
+               {extractedData.originalName && extractedData.originalName !== extractedData.name && (
+                 <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-muted text-xs font-bold text-muted-foreground flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    الاسم المكتوب في الورقة (تحليل خام): {extractedData.originalName}
+                 </div>
+               )}
             </div>
           )}
 

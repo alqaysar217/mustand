@@ -39,16 +39,16 @@ const extractExamDetailsPrompt = ai.definePrompt({
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
     ],
   },
-  prompt: `أنت خبير في قراءة وتحليل أوراق الامتحانات الجامعية.
+  prompt: `أنت خبير في قراءة وتحليل أوراق الامتحانات الجامعية العربية.
 قم بتحليل الصورة المرفقة واستخرج البيانات التالية بدقة متناهية:
 
-1. رقم القيد (Registration ID): استخرج الأرقام فقط. إذا وجدت نصاً مثل "رقم القيد: 20210045" قم بإعادة "20210045" فقط.
+1. رقم القيد (Registration ID): ابحث عن خانة "رقم القيد" أو "رقم الجلوس". استخرج الأرقام فقط (مثلاً: 20210045). لا تضف أي نص عربي قبل أو بعد الرقم.
 2. اسم الطالب الكامل (Student Name): استخرج الاسم الرباعي المكتوب في خانة الاسم.
 
 قواعد صارمة:
-- لا تضف أي نصوص توضيحية أو مقدمات.
-- إذا لم تكن المعلومة واضحة تماماً، حاول استنتاجها من السياق أو اترك الحقل فارغاً.
-- ركز على الجزء العلوي من الورقة حيث توجد البيانات التعريفية عادةً.
+- أعد البيانات بصيغة JSON نظيفة كما هو محدد في الـ Output Schema.
+- إذا لم تجد رقم القيد، حاول البحث عن أي رقم تسلسلي في أعلى الورقة.
+- ركز على الجزء العلوي (Header) من ورقة الامتحان.
 
 Image: {{media url=examImageDataUri}}`,
 });
@@ -70,7 +70,7 @@ const extractExamDetailsFlow = ai.defineFlow(
 
       const {output} = await extractExamDetailsPrompt(input);
       
-      // Clean up the output before returning
+      // Clean up the output before returning: Remove all non-digits from Registration ID
       const cleanRegId = output?.studentRegistrationId?.replace(/\D/g, '') || '';
       
       return {
