@@ -13,13 +13,11 @@ import {
   MoreVertical, 
   Edit2, 
   Trash2, 
-  Filter,
-  X,
   PlusCircle,
   FileText,
-  Users,
-  BookOpen,
-  School
+  School,
+  Loader2,
+  BookOpen
 } from "lucide-react";
 import {
   Table,
@@ -59,33 +57,88 @@ import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 import { cn } from "@/lib/utils";
 
-const INITIAL_DEPARTMENTS = [
-  { id: '1', name: 'تقنية المعلومات', college: 'تقنية المعلومات', code: 'IT', studentsCount: 1240, subjectsCount: 45 },
-  { id: '2', name: 'علوم الحاسوب', college: 'تقنية المعلومات', code: 'CS', studentsCount: 850, subjectsCount: 38 },
-  { id: '3', name: 'هندسة البرمجيات', college: 'تقنية المعلومات', code: 'SE', studentsCount: 620, subjectsCount: 42 },
-  { id: '4', name: 'الهندسة المدنية', college: 'الهندسة', code: 'CE', studentsCount: 480, subjectsCount: 30 },
-];
+// Firebase Imports
+import { useFirestore, useCollection } from "@/firebase";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function DepartmentsManagementPage() {
-  const [departments, setDepartments] = useState(INITIAL_DEPARTMENTS);
+  const firestore = useFirestore();
+  const { data: departments = [], loading: loadingDepts } = useCollection(
+    firestore ? collection(firestore, "departments") : null
+  );
+  const { data: colleges = [], loading: loadingColleges } = useCollection(
+    firestore ? collection(firestore, "colleges") : null
+  );
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [newDept, setNewDept] = useState({ name: "", code: "", collegeId: "" });
+
   const { isOpen } = useSidebarToggle();
   const { toast } = useToast();
 
   const filteredDepartments = useMemo(() => {
-    return departments.filter(dept => 
-      dept.name.includes(searchTerm) || dept.code.includes(searchTerm.toUpperCase()) || dept.college.includes(searchTerm)
+    return (departments as any[]).filter(dept => 
+      dept.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      dept.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (dept.collegeName && dept.collegeName.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [departments, searchTerm]);
 
+  const handleAddDept = () => {
+    if (!firestore || !newDept.name || !newDept.code || !newDept.collegeId) {
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى ملء كافة الحقول." });
+      return;
+    }
+    
+    setSubmitting(true);
+    const selectedCollege = (colleges as any[]).find(c => c.id === newDept.collegeId);
+    const deptsRef = collection(firestore, "departments");
+    const data = {
+      ...newDept,
+      collegeName: selectedCollege?.name || "",
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(deptsRef, data)
+      .then(() => {
+        setIsAddDialogOpen(false);
+        setNewDept({ name: "", code: "", collegeId: "" });
+        toast({ title: "تم الحفظ", description: "تمت إضافة التخصص بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: deptsRef.path,
+          operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
   const handleDelete = (id: string) => {
-    setDepartments(prev => prev.filter(d => d.id !== id));
-    toast({
-      variant: "destructive",
-      title: "تم حذف التخصص",
-      description: "تمت إزالة التخصص من النظام بنجاح.",
-    });
+    if (!firestore) return;
+    const docRef = doc(firestore, "departments", id);
+
+    deleteDoc(docRef)
+      .then(() => {
+        toast({
+          variant: "destructive",
+          title: "تم حذف القسم",
+          description: "تمت إزالة القسم العلمي من النظام بنجاح.",
+        });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   return (
@@ -100,7 +153,7 @@ export default function DepartmentsManagementPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة التخصصات</h1>
-            <p className="text-muted-foreground font-bold">إدارة الأقسام العلمية وتوزيعها على الكليات</p>
+            <p className="text-muted-foreground font-bold">إدارة الأقسام العلمية وتوزيعها على الكليات في Firestore</p>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -112,7 +165,7 @@ export default function DepartmentsManagementPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
               <div className="p-8">
-                <DialogHeader className="text-right items-start space-y-2 mb-8">
+                <DialogHeader className="text-right items-start space-y-2 mb-8 relative">
                   <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
                     <PlusCircle className="w-6 h-6 text-secondary" />
                     تخصص جديد
@@ -128,14 +181,16 @@ export default function DepartmentsManagementPage() {
                       <School className="w-4 h-4 text-secondary" />
                       الكلية التابع لها
                     </Label>
-                    <Select>
+                    <Select onValueChange={(v) => setNewDept({...newDept, collegeId: v})}>
                       <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
                         <SelectValue placeholder="اختر الكلية" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
-                        <SelectItem value="it">كلية تقنية المعلومات</SelectItem>
-                        <SelectItem value="eng">كلية الهندسة</SelectItem>
-                        <SelectItem value="eco">كلية الاقتصاد</SelectItem>
+                        {loadingColleges ? (
+                          <div className="p-2 text-center text-xs opacity-50">جاري تحميل الكليات...</div>
+                        ) : colleges.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -144,18 +199,35 @@ export default function DepartmentsManagementPage() {
                       <Building2 className="w-4 h-4 text-secondary" />
                       اسم التخصص
                     </Label>
-                    <Input placeholder="مثال: الذكاء الاصطناعي" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" />
+                    <Input 
+                      value={newDept.name}
+                      onChange={(e) => setNewDept({...newDept, name: e.target.value})}
+                      placeholder="مثال: الذكاء الاصطناعي" 
+                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
+                    />
                   </div>
                   <div className="space-y-2 text-right">
                     <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                       <FileText className="w-4 h-4 text-secondary" />
                       رمز التخصص (Code)
                     </Label>
-                    <Input placeholder="مثال: AI" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" />
+                    <Input 
+                      value={newDept.code}
+                      onChange={(e) => setNewDept({...newDept, code: e.target.value})}
+                      placeholder="مثال: AI" 
+                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" 
+                    />
                   </div>
                 </div>
                 <DialogFooter className="flex-row gap-3 pt-8">
-                  <Button type="submit" onClick={() => { setIsAddDialogOpen(false); toast({ title: "تم الحفظ", description: "تمت إضافة التخصص بنجاح." }); }} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">حفظ التخصص</Button>
+                  <Button 
+                    disabled={submitting}
+                    onClick={handleAddDept}
+                    className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+                    حفظ التخصص
+                  </Button>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
                 </DialogFooter>
               </div>
@@ -184,13 +256,17 @@ export default function DepartmentsManagementPage() {
                   <TableHead className="text-right font-bold text-primary">التخصص</TableHead>
                   <TableHead className="text-right font-bold text-primary">الكلية</TableHead>
                   <TableHead className="text-right font-bold text-primary">الرمز</TableHead>
-                  <TableHead className="text-right font-bold text-primary">عدد الطلاب</TableHead>
-                  <TableHead className="text-right font-bold text-primary">عدد المواد</TableHead>
                   <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDepartments.length > 0 ? filteredDepartments.map((dept) => (
+                {loadingDepts ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-40 text-center">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary opacity-20" />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredDepartments.length > 0 ? filteredDepartments.map((dept) => (
                   <TableRow key={dept.id} className="hover:bg-muted/20 border-b group">
                     <TableCell className="p-4">
                       <div className="flex items-center gap-3">
@@ -201,22 +277,10 @@ export default function DepartmentsManagementPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-bold text-muted-foreground">{dept.college}</span>
+                      <span className="text-sm font-bold text-muted-foreground">{dept.collegeName}</span>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm font-black text-secondary">{dept.code}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 justify-end">
-                        <span className="text-sm font-bold text-muted-foreground">{dept.studentsCount}</span>
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 justify-end">
-                        <span className="text-sm font-bold text-muted-foreground">{dept.subjectsCount}</span>
-                        <BookOpen className="w-4 h-4 text-muted-foreground" />
-                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <DropdownMenu>
@@ -246,8 +310,8 @@ export default function DepartmentsManagementPage() {
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-40 text-center text-muted-foreground font-bold">
-                      لا توجد تخصصات مطابقة للبحث
+                    <TableCell colSpan={4} className="h-40 text-center text-muted-foreground font-bold">
+                      لا توجد تخصصات مسجلة حالياً
                     </TableCell>
                   </TableRow>
                 )}

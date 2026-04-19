@@ -1,0 +1,99 @@
+
+{
+  "entities": {
+    "College": {
+      "title": "الكلية",
+      "description": "تمثل الكلية الجامعية في النظام.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "اسم الكلية الرسمي" },
+        "code": { "type": "string", "description": "رمز الكلية المختصر" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "code"]
+    },
+    "Department": {
+      "title": "التخصص/القسم",
+      "description": "يمثل القسم العلمي التابع لكلية معينة.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "اسم القسم" },
+        "code": { "type": "string", "description": "رمز القسم" },
+        "collegeId": { "type": "string", "description": "معرف الكلية التابع لها" },
+        "collegeName": { "type": "string", "description": "اسم الكلية للسهولة" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "code", "collegeId"]
+    },
+    "Student": {
+      "title": "الطالب",
+      "description": "بيانات الطالب الأكاديمية.",
+      "type": "object",
+      "properties": {
+        "regId": { "type": "string", "description": "رقم القيد الجامعي" },
+        "name": { "type": "string", "description": "الاسم الرباعي للطالب" },
+        "departmentId": { "type": "string", "description": "معرف القسم" },
+        "level": { "type": "string", "description": "المستوى الدراسي الحالي" },
+        "admissionType": { "type": "string", "enum": ["عام", "موازي", "نفقة خاصة"] },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "joinDate": { "type": "string" }
+      },
+      "required": ["regId", "name", "departmentId", "level"]
+    },
+    "Subject": {
+      "title": "المادة الدراسية",
+      "description": "المادة العلمية المرفق اختباراتها في الأرشيف.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "اسم المادة" },
+        "departmentId": { "type": "string", "description": "معرف القسم التابع له" },
+        "level": { "type": "string", "description": "المستوى المخصصة له المادة" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "departmentId", "level"]
+    },
+    "Archive": {
+      "title": "الملف المؤرشف",
+      "description": "يمثل ورقة اختبار ممسوحة ضوئياً ومؤرشفة.",
+      "type": "object",
+      "properties": {
+        "studentRegId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "subjectId": { "type": "string" },
+        "subjectName": { "type": "string" },
+        "departmentId": { "type": "string" },
+        "year": { "type": "string" },
+        "term": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "pages": { "type": "number" },
+        "uploadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentRegId", "subjectId", "fileUrl"]
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "/colleges/{collegeId}": {
+      "schema": "#/entities/College",
+      "description": "مجموعة الكليات الجامعية"
+    },
+    "/departments/{departmentId}": {
+      "schema": "#/entities/Department",
+      "description": "مجموعة الأقسام العلمية"
+    },
+    "/students/{studentId}": {
+      "schema": "#/entities/Student",
+      "description": "بيانات الطلاب المسجلين"
+    },
+    "/subjects/{subjectId}": {
+      "schema": "#/entities/Subject",
+      "description": "المواد الدراسية"
+    },
+    "/archives/{archiveId}": {
+      "schema": "#/entities/Archive",
+      "description": "الأرشيف المركزي للاختبارات"
+    }
+  }
+}

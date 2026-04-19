@@ -16,7 +16,8 @@ import {
   Building2,
   Users,
   PlusCircle,
-  FileText
+  FileText,
+  Loader2
 } from "lucide-react";
 import {
   Table,
@@ -49,32 +50,79 @@ import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 import { cn } from "@/lib/utils";
 
-const INITIAL_COLLEGES = [
-  { id: '1', name: 'كلية تقنية المعلومات', code: 'CIT', departmentsCount: 4, studentsCount: 2200 },
-  { id: '2', name: 'كلية الهندسة', code: 'ENG', departmentsCount: 6, studentsCount: 1800 },
-  { id: '3', name: 'كلية الاقتصاد', code: 'ECO', departmentsCount: 3, studentsCount: 1500 },
-];
+// Firebase Imports
+import { useFirestore, useCollection } from "@/firebase";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function CollegesManagementPage() {
-  const [colleges, setColleges] = useState(INITIAL_COLLEGES);
+  const firestore = useFirestore();
+  const { data: colleges = [], loading } = useCollection(
+    firestore ? collection(firestore, "colleges") : null
+  );
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newCollege, setNewCollege] = useState({ name: "", code: "" });
+  const [submitting, setSubmitting] = useState(false);
+
   const { isOpen } = useSidebarToggle();
   const { toast } = useToast();
 
   const filteredColleges = useMemo(() => {
-    return colleges.filter(college => 
-      college.name.includes(searchTerm) || college.code.includes(searchTerm.toUpperCase())
+    return (colleges as any[]).filter(college => 
+      college.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      college.code.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [colleges, searchTerm]);
 
+  const handleAddCollege = () => {
+    if (!firestore || !newCollege.name || !newCollege.code) return;
+    
+    setSubmitting(true);
+    const collegesRef = collection(firestore, "colleges");
+    const data = {
+      ...newCollege,
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(collegesRef, data)
+      .then(() => {
+        setIsAddDialogOpen(false);
+        setNewCollege({ name: "", code: "" });
+        toast({ title: "تم الحفظ", description: "تمت إضافة الكلية بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: collegesRef.path,
+          operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
   const handleDelete = (id: string) => {
-    setColleges(prev => prev.filter(c => c.id !== id));
-    toast({
-      variant: "destructive",
-      title: "تم حذف الكلية",
-      description: "تمت إزالة الكلية من النظام بنجاح.",
-    });
+    if (!firestore) return;
+    const docRef = doc(firestore, "colleges", id);
+
+    deleteDoc(docRef)
+      .then(() => {
+        toast({
+          variant: "destructive",
+          title: "تم حذف الكلية",
+          description: "تمت إزالة الكلية من النظام بنجاح.",
+        });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   return (
@@ -89,7 +137,7 @@ export default function CollegesManagementPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة الكليات</h1>
-            <p className="text-muted-foreground font-bold">إضافة وتحديث بيانات الكليات في المؤسسة التعليمية</p>
+            <p className="text-muted-foreground font-bold">إدارة وتحديث بيانات الكليات في قاعدة البيانات الحقيقية</p>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -101,7 +149,7 @@ export default function CollegesManagementPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
               <div className="p-8">
-                <DialogHeader className="text-right items-start space-y-2 mb-8">
+                <DialogHeader className="text-right items-start space-y-2 mb-8 relative">
                   <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
                     <PlusCircle className="w-6 h-6 text-secondary" />
                     كلية جديدة
@@ -117,18 +165,35 @@ export default function CollegesManagementPage() {
                       <School className="w-4 h-4 text-secondary" />
                       اسم الكلية
                     </Label>
-                    <Input placeholder="مثال: كلية العلوم التطبيقية" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" />
+                    <Input 
+                      value={newCollege.name}
+                      onChange={(e) => setNewCollege({...newCollege, name: e.target.value})}
+                      placeholder="مثال: كلية العلوم التطبيقية" 
+                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
+                    />
                   </div>
                   <div className="space-y-2 text-right">
                     <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                       <FileText className="w-4 h-4 text-secondary" />
                       رمز الكلية (Code)
                     </Label>
-                    <Input placeholder="مثال: CAS" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" />
+                    <Input 
+                      value={newCollege.code}
+                      onChange={(e) => setNewCollege({...newCollege, code: e.target.value})}
+                      placeholder="مثال: CAS" 
+                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" 
+                    />
                   </div>
                 </div>
                 <DialogFooter className="flex-row gap-3 pt-8">
-                  <Button type="submit" onClick={() => { setIsAddDialogOpen(false); toast({ title: "تم الحفظ", description: "تمت إضافة الكلية بنجاح." }); }} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">حفظ الكلية</Button>
+                  <Button 
+                    disabled={submitting}
+                    onClick={handleAddCollege}
+                    className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+                    حفظ الكلية
+                  </Button>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
                 </DialogFooter>
               </div>
@@ -156,13 +221,17 @@ export default function CollegesManagementPage() {
                 <TableRow className="hover:bg-transparent border-b">
                   <TableHead className="text-right font-bold text-primary">الكلية</TableHead>
                   <TableHead className="text-right font-bold text-primary">الرمز</TableHead>
-                  <TableHead className="text-right font-bold text-primary">عدد الأقسام</TableHead>
-                  <TableHead className="text-right font-bold text-primary">إجمالي الطلاب</TableHead>
                   <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredColleges.length > 0 ? filteredColleges.map((college) => (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-40 text-center">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary opacity-20" />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredColleges.length > 0 ? filteredColleges.map((college) => (
                   <TableRow key={college.id} className="hover:bg-muted/20 border-b group">
                     <TableCell className="p-4">
                       <div className="flex items-center gap-3">
@@ -174,18 +243,6 @@ export default function CollegesManagementPage() {
                     </TableCell>
                     <TableCell>
                       <span className="text-sm font-black text-secondary">{college.code}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 justify-end">
-                        <span className="text-sm font-bold text-muted-foreground">{college.departmentsCount}</span>
-                        <Building2 className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 justify-end">
-                        <span className="text-sm font-bold text-muted-foreground">{college.studentsCount}</span>
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <DropdownMenu>
@@ -215,8 +272,8 @@ export default function CollegesManagementPage() {
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">
-                      لا توجد كليات مطابقة لبحثك
+                    <TableCell colSpan={3} className="h-40 text-center text-muted-foreground font-bold">
+                      لا توجد كليات مسجلة حالياً
                     </TableCell>
                   </TableRow>
                 )}
