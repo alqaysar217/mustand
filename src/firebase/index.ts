@@ -1,13 +1,14 @@
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { firebaseConfig } from './config';
 
 /**
  * وظيفة تهيئة Firebase بشكل آمن.
+ * تم تحديثها لاستخدام Long Polling لضمان الاتصال في بيئات العمل السحابية.
  */
 export function initializeFirebase(): {
   firebaseApp: FirebaseApp | null;
@@ -26,7 +27,17 @@ export function initializeFirebase(): {
 
   try {
     const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    const firestore = getFirestore(firebaseApp);
+    
+    // تهيئة Firestore مع تفعيل Force Long Polling لتجاوز مشاكل الاتصال في بيئات العمل
+    let firestore: Firestore;
+    if (getApps().length === 0) {
+      firestore = initializeFirestore(firebaseApp, {
+        experimentalForceLongPolling: true,
+      });
+    } else {
+      firestore = getFirestore(firebaseApp);
+    }
+
     const auth = getAuth(firebaseApp);
     const storage = getStorage(firebaseApp);
 
