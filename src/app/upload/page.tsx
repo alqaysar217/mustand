@@ -89,7 +89,6 @@ export default function UploadPage() {
     if (files.length === 0) return;
     setLoading(true);
     try {
-      // Step 4: AI Analysis
       const result = await extractExamDetails({ examImageDataUri: files[0] });
       
       setExtractedData({
@@ -102,9 +101,8 @@ export default function UploadPage() {
         description: "تم استخراج البيانات من ورقة الاختبار بنجاح.",
       });
       
-      nextStep(); // Go to step 5 (Confirmation)
+      nextStep();
     } catch (err: any) {
-      // Use warn instead of error to prevent Next.js full-screen error overlay during development
       console.warn("AI Analysis Fallback triggered:", err.message);
       
       toast({
@@ -113,7 +111,6 @@ export default function UploadPage() {
         description: "لم نتمكن من تحليل الملف تلقائياً، يرجى إدخال البيانات يدوياً.",
       });
       
-      // Move to step 5 directly for manual entry
       setExtractedData({ id: '', name: '' });
       setStep(5); 
     } finally {
@@ -234,13 +231,13 @@ export default function UploadPage() {
                     value={formData.subjectId}
                     onChange={(e) => {
                       const sel = subjects.find((s: any) => s.id === e.target.value) as any;
-                      setFormData({...formData, subjectId: e.target.value, subjectName: sel?.name || ""});
+                      setFormData({...formData, subjectId: e.target.value, subjectName: sel?.nameAr || ""});
                     }}
                     className="w-full h-12 px-4 rounded-xl border bg-muted/20 outline-none font-bold text-right"
                   >
                     <option value="">اختر المادة ....</option>
                     {subjects.map((s: any) => (
-                      <option key={s.id} value={s.id}>{s.name} ({s.departmentName})</option>
+                      <option key={s.id} value={s.id}>{s.nameAr} ({s.departmentName})</option>
                     ))}
                   </select>
                 </div>
