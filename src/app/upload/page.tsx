@@ -99,7 +99,7 @@ export default function UploadPage() {
       toast({
         variant: "destructive",
         title: "خطأ في التحليل",
-        description: err.message || "فشل التحليل الذكي. يمكنك إدخال البيانات يدوياً.",
+        description: err.message || "فشل التحليل الذكي. يمكنك إدخل البيانات يدوياً.",
       });
       nextStep();
     } finally {
@@ -224,7 +224,7 @@ export default function UploadPage() {
                     }}
                     className="w-full h-12 px-4 rounded-xl border bg-muted/20 outline-none font-bold text-right"
                   >
-                    <option value="">قم باضافة مادة جديدة باسم (الحاسب ) في القائمة  لاقوم باختيارها</option>
+                    <option value="">اختر المادة ...</option>
                     {subjects.map((s: any) => (
                       <option key={s.id} value={s.id}>{s.name} ({s.departmentName})</option>
                     ))}
