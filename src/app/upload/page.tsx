@@ -186,15 +186,9 @@ export default function UploadPage() {
       return;
     }
 
-    setLoadingText("جاري أرشفة الملف سحابياً...");
+    setLoadingText("جاري الحفظ الفوري...");
     setLoading(true);
     
-    // Safety timeout to prevent hanging UI
-    const safetyTimeout = setTimeout(() => {
-      setLoading(false);
-      toast({ variant: "destructive", title: "تأخر الاستجابة", description: "جاري المتابعة في الخلفية، يرجى المراجعة لاحقاً." });
-    }, 15000);
-
     const currentFiles = [...files];
     const currentData = { ...extractedData };
     const currentForm = { ...formData };
@@ -204,30 +198,24 @@ export default function UploadPage() {
       const fileName = `archives/${folderName}/${currentForm.subjectName}/${currentData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       
-      // 1. Upload the image to Storage
-      await uploadString(storageRef, currentFiles[0], 'data_url');
-      const downloadUrl = await getDownloadURL(storageRef);
+      // 1. Start upload but move UI forward ASAP
+      uploadString(storageRef, currentFiles[0], 'data_url').then(async () => {
+        const downloadUrl = await getDownloadURL(storageRef);
+        const archiveData = {
+          studentRegId: currentData.id,
+          studentName: currentData.name || "طالب غير معروف",
+          subjectId: currentForm.subjectId,
+          subjectName: currentForm.subjectName,
+          year: currentForm.year,
+          term: currentForm.term,
+          departmentId: currentForm.deptId,
+          fileUrl: downloadUrl,
+          pages: currentFiles.length,
+          uploadedAt: serverTimestamp()
+        };
 
-      const archiveData = {
-        studentRegId: currentData.id,
-        studentName: currentData.name || "طالب غير معروف",
-        subjectId: currentForm.subjectId,
-        subjectName: currentForm.subjectName,
-        year: currentForm.year,
-        term: currentForm.term,
-        departmentId: currentForm.deptId,
-        fileUrl: downloadUrl,
-        pages: currentFiles.length,
-        uploadedAt: serverTimestamp()
-      };
-
-      // 2. Save record to Firestore (Non-blocking)
-      const archivesCollection = collection(firestore, "archives");
-      addDoc(archivesCollection, archiveData)
-        .then(() => {
-          toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ ملف الطالب ${currentData.name}` });
-        })
-        .catch(async (err) => {
+        const archivesCollection = collection(firestore, "archives");
+        addDoc(archivesCollection, archiveData).catch(async (err) => {
           const permissionError = new FirestorePermissionError({
             path: archivesCollection.path,
             operation: 'create',
@@ -235,18 +223,22 @@ export default function UploadPage() {
           });
           errorEmitter.emit('permission-error', permissionError);
         });
+      });
 
-      // 3. Clear UI immediately for the next upload
-      clearTimeout(safetyTimeout);
+      // 2. Clear UI immediately for the next upload to ensure speed
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false, originalName: '' });
       setStep(2);
       setLoading(false);
       
+      toast({ 
+        title: "تمت الأرشفة بنجاح", 
+        description: "تم نقل الملف للسحابة وتصفير النموذج للعملية التالية." 
+      });
+      
     } catch (error: any) {
-      clearTimeout(safetyTimeout);
       setLoading(false);
-      toast({ variant: "destructive", title: "فشل الرفع", description: "حدث خطأ أثناء محاولة الاتصال بالسحابة." });
+      toast({ variant: "destructive", title: "فشل الرفع", description: "حدث خطأ أثناء محاولة الحفظ السريع." });
     }
   };
 
@@ -294,12 +286,12 @@ export default function UploadPage() {
               </div>
               <div>
                 <p className="font-black text-3xl text-primary mb-2">{loadingText}</p>
-                <p className="text-muted-foreground font-bold">يرجى الانتظار، النظام يقوم بمعالجة طلبك بأعلى سرعة</p>
+                <p className="text-muted-foreground font-bold">يتم التخزين الآن في السحابة بسرعات عالية...</p>
               </div>
             </div>
           )}
           
-          <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleFileUpload} />
+          <input type="file" path="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleFileUpload} />
 
           {step === 1 && (
             <div className="space-y-10 animate-slide-up flex-1">
@@ -521,13 +513,6 @@ export default function UploadPage() {
                     </div>
                   </div>
                </div>
-
-               {!extractedData.found && extractedData.id.length >= 4 && !isSearching && (
-                 <div className="p-4 bg-orange-50 rounded-2xl border border-dashed border-orange-200 text-xs font-bold text-orange-700 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    تلميح: إذا كان هذا الطالب جديداً، يرجى تسجيله أولاً في "إدارة الطلاب" ليتم التعرف عليه آلياً في المستقبل.
-                 </div>
-               )}
             </div>
           )}
 

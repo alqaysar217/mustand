@@ -8,7 +8,6 @@ import {
   Archive, 
   Search, 
   Eye, 
-  Edit2, 
   Trash2, 
   FileText,
   Calendar,
@@ -18,8 +17,7 @@ import {
   FileUp,
   Loader2,
   CheckCircle,
-  Download,
-  X
+  Download
 } from "lucide-react";
 import {
   Table,
@@ -145,48 +143,41 @@ export default function AdminArchivePage() {
 
     setIsSubmitting(true);
     try {
-      // 1. Upload image to Storage first (Crucial for performance)
       const folderName = newArchive.year.replace(/\s/g, '').replace(/\//g, '-');
       const fileName = `archives/manual/${folderName}/${newArchive.regId}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       
-      await uploadString(storageRef, newArchive.file, 'data_url');
-      const downloadUrl = await getDownloadURL(storageRef);
-
-      const archiveData = {
-        studentName: newArchive.name,
-        studentRegId: newArchive.regId,
-        subjectName: newArchive.subjectName,
-        subjectId: newArchive.subjectId,
-        year: newArchive.year,
-        term: newArchive.term,
-        departmentId: newArchive.department,
-        fileUrl: downloadUrl, // Save cloud URL, NOT base64 string
-        pages: 1,
-        uploadedAt: serverTimestamp()
-      };
-
-      // 2. Add to Firestore (Non-blocking)
-      addDoc(collection(firestore, "archives"), archiveData);
+      // Fast Path: Upload then Save
+      uploadString(storageRef, newArchive.file, 'data_url').then(async () => {
+        const downloadUrl = await getDownloadURL(storageRef);
+        const archiveData = {
+          studentName: newArchive.name,
+          studentRegId: newArchive.regId,
+          subjectName: newArchive.subjectName,
+          subjectId: newArchive.subjectId,
+          year: newArchive.year,
+          term: newArchive.term,
+          departmentId: newArchive.department,
+          fileUrl: downloadUrl,
+          pages: 1,
+          uploadedAt: serverTimestamp()
+        };
+        addDoc(collection(firestore, "archives"), archiveData);
+      });
       
+      // Close UI ASAP
       setIsAddDialogOpen(false);
       setNewArchive({
-        name: '',
-        regId: '',
-        subjectId: '',
-        subjectName: '',
-        year: '2023 / 2024',
-        term: 'الفصل الأول',
-        department: 'تقنية المعلومات',
-        file: null
+        name: '', regId: '', subjectId: '', subjectName: '',
+        year: '2023 / 2024', term: 'الفصل الأول', department: 'تقنية المعلومات', file: null
       });
 
       toast({
-        title: "تمت الأرشفة بنجاح",
-        description: `تمت إضافة اختبار الطالب ${archiveData.studentName} إلى السجل.`,
+        title: "تم إرسال الملف للحفظ",
+        description: "يتم الآن إكمال العملية في الخلفية لتسريع عملك.",
       });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ البيانات." });
+      toast({ variant: "destructive", title: "خطأ", description: "فشل بدء الحفظ السريع." });
     } finally {
       setIsSubmitting(false);
     }
@@ -418,4 +409,3 @@ export default function AdminArchivePage() {
     </div>
   );
 }
-
