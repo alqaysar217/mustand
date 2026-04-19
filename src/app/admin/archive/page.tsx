@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { 
   Archive, 
   Search, 
-  MoreVertical, 
   Eye, 
   Edit2, 
   Trash2, 
@@ -14,7 +13,6 @@ import {
   Calendar,
   GraduationCap,
   BookOpen,
-  Building,
   Plus,
   FileUp,
   Loader2,
@@ -30,23 +28,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -55,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -228,7 +216,7 @@ export default function AdminArchivePage() {
                 <TableHead className="text-right font-bold text-primary">السنة / الترم</TableHead>
                 <TableHead className="text-right font-bold text-primary">الصفحات</TableHead>
                 <TableHead className="text-right font-bold text-primary">تاريخ الأرشفة</TableHead>
-                <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
+                <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -263,38 +251,36 @@ export default function AdminArchivePage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-xl hover:bg-primary/5">
-                          <MoreVertical className="w-4 h-4 text-primary" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 text-right" dir="rtl">
-                        <DropdownMenuItem 
-                          onClick={() => setViewingArchive(item)}
-                          className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold"
-                        >
-                          عرض الملف
-                          <Eye className="w-4 h-4 text-primary" />
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          disabled={downloadingId === item.id}
-                          onClick={() => handleDownload(item)}
-                          className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold"
-                        >
-                          {downloadingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-secondary" />}
-                          تحميل الملف
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => handleDelete(item.id)}
-                          className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive"
-                        >
-                          حذف من الأرشيف
-                          <Trash2 className="w-4 h-4" />
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center justify-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setViewingArchive(item)}
+                        className="rounded-xl hover:bg-primary/5 text-primary"
+                        title="عرض"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        disabled={downloadingId === item.id}
+                        onClick={() => handleDownload(item)}
+                        className="rounded-xl hover:bg-primary/5 text-secondary"
+                        title="تحميل"
+                      >
+                        {downloadingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleDelete(item.id)}
+                        className="rounded-xl hover:bg-destructive/10 text-destructive"
+                        title="حذف"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               )) : (
