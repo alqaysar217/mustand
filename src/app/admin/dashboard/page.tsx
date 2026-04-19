@@ -54,10 +54,10 @@ export default function AdminDashboard() {
   const { data: recentActivity = [] } = useCollection(recentQuery);
 
   const stats = [
-    { label: 'إجمالي الطلاب', value: students.length, icon: GraduationCap, color: 'text-blue-600', bg: 'bg-blue-100', trend: '+12%' },
-    { label: 'إجمالي الاختبارات', value: archives.length, icon: FileText, color: 'text-green-600', bg: 'bg-green-100', trend: '+8%' },
-    { label: 'الكليات المسجلة', value: colleges.length, icon: School, color: 'text-purple-600', bg: 'bg-purple-100', trend: 'ثابت' },
-    { label: 'مستخدمي النظام', value: '32', icon: Users, color: 'text-orange-600', bg: 'bg-orange-100', trend: '-2%' },
+    { label: 'إجمالي الطلاب', value: students.length, icon: GraduationCap, trend: '+12%' },
+    { label: 'إجمالي الاختبارات', value: archives.length, icon: FileText, trend: '+8%' },
+    { label: 'الكليات المسجلة', value: colleges.length, icon: School, trend: 'ثابت' },
+    { label: 'مستخدمي النظام', value: '32', icon: Users, trend: '-2%' },
   ];
 
   const examData = [
@@ -89,9 +89,9 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
-          <Card key={i} className="p-6 border-none shadow-xl rounded-[2.5rem] bg-white hover:-translate-y-2 transition-all duration-300 group">
+          <Card key={i} className="p-6 border-none shadow-xl rounded-3xl bg-white hover:-translate-y-2 transition-all duration-300 group">
             <div className="flex items-start justify-between mb-4">
-              <div className={`p-4 rounded-2xl ${stat.bg} ${stat.color} shadow-sm group-hover:scale-110 transition-transform`}>
+              <div className="p-4 rounded-xl text-white shadow-lg shadow-black/10 gradient-blue group-hover:scale-110 transition-transform">
                 <stat.icon className="w-6 h-6" />
               </div>
               <div className="flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black bg-green-50 text-green-600">
@@ -106,7 +106,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 p-8 border-none shadow-2xl rounded-[2.5rem] bg-white">
+        <Card className="lg:col-span-2 p-8 border-none shadow-2xl rounded-3xl bg-white">
           <h2 className="text-xl font-black text-primary mb-8 flex items-center gap-3">
             <TrendingUp className="w-6 h-6 text-secondary" />
             معدل نمو البيانات (شهرياً)
@@ -127,7 +127,7 @@ export default function AdminDashboard() {
           </div>
         </Card>
 
-        <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white flex flex-col items-center justify-center">
+        <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white flex flex-col items-center justify-center">
           <h2 className="text-xl font-black text-primary mb-8 w-full text-right flex items-center gap-3">
             <PieChartIcon className="w-6 h-6 text-orange-500" />
             توزيع التخصصات
@@ -164,7 +164,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white">
+        <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl font-black text-primary flex items-center gap-3">
               <Archive className="w-6 h-6 text-secondary" />
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
             {loadingArchives ? (
               <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin opacity-20" /></div>
             ) : recentActivity.length > 0 ? recentActivity.map((item: any, i: number) => (
-              <div key={i} className="flex items-center gap-5 p-4 rounded-3xl hover:bg-muted/30 transition-all border border-transparent hover:border-border group">
+              <div key={i} className="flex items-center gap-5 p-4 rounded-2xl hover:bg-muted/30 transition-all border border-transparent hover:border-border group">
                 <div className={cn(
                   "w-1.5 h-12 rounded-full",
                   i % 2 === 0 ? "bg-green-500" : "bg-blue-500"
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
           </div>
         </Card>
 
-        <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] gradient-blue text-white overflow-hidden relative">
+        <Card className="p-8 border-none shadow-2xl rounded-3xl gradient-blue text-white overflow-hidden relative">
           <div className="relative z-10 flex flex-col h-full justify-between">
             <div>
               <h2 className="text-2xl font-black mb-4">تقارير الذكاء الاصطناعي</h2>
@@ -209,7 +209,7 @@ export default function AdminDashboard() {
               </p>
             </div>
             <div className="space-y-4">
-              <div className="flex justify-between items-center bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10">
+              <div className="flex justify-between items-center bg-white/10 p-4 rounded-xl backdrop-blur-md border border-white/10">
                 <span className="font-bold">دقة استخراج البيانات (OCR)</span>
                 <span className="font-black text-xl">98%</span>
               </div>

@@ -85,10 +85,10 @@ export default function Dashboard() {
   ];
 
   const stats = [
-    { label: 'إجمالي الكليات', value: colleges.length, icon: School, color: 'bg-blue-600', trend: '+1' },
-    { label: 'إجمالي الطلاب', value: students.length, icon: Users, color: 'bg-purple-600', trend: '+12' },
-    { label: 'الملفات المؤرشفة', value: archives.length, icon: FileText, color: 'bg-green-600', trend: '+5' },
-    { label: 'المواد الدراسية', value: subjects.length, icon: Database, color: 'bg-orange-600', trend: 'محدث' },
+    { label: 'إجمالي الكليات', value: colleges.length, icon: School, trend: '+1' },
+    { label: 'إجمالي الطلاب', value: students.length, icon: Users, trend: '+12' },
+    { label: 'الملفات المؤرشفة', value: archives.length, icon: FileText, trend: '+5' },
+    { label: 'المواد الدراسية', value: subjects.length, icon: Database, trend: 'محدث' },
   ];
 
   return (
@@ -120,9 +120,9 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           {stats.map((stat, i) => (
-            <Card key={i} className="p-6 border-none shadow-xl rounded-[2rem] bg-white group hover:-translate-y-2 transition-all duration-500 overflow-hidden relative">
+            <Card key={i} className="p-6 border-none shadow-xl rounded-3xl bg-white group hover:-translate-y-2 transition-all duration-500 overflow-hidden relative">
               <div className="flex items-start justify-between mb-4 relative z-10">
-                <div className={cn("p-4 rounded-2xl text-white shadow-lg shadow-black/10", stat.color)}>
+                <div className="p-4 rounded-xl text-white shadow-lg shadow-black/10 gradient-blue">
                   <stat.icon className="w-6 h-6" />
                 </div>
                 <div className="flex items-center gap-1 text-green-600 bg-green-50 px-3 py-1 rounded-full text-[10px] font-black">
@@ -135,14 +135,14 @@ export default function Dashboard() {
                 <p className="text-4xl font-black text-primary tracking-tight">{stat.value.toLocaleString('ar-EG')}</p>
               </div>
               {/* Background Decor */}
-              <div className={cn("absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-5", stat.color)}></div>
+              <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-5 gradient-blue"></div>
             </Card>
           ))}
         </div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-          <Card className="lg:col-span-2 p-8 border-none shadow-2xl rounded-[2.5rem] bg-white">
+          <Card className="lg:col-span-2 p-8 border-none shadow-2xl rounded-3xl bg-white">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-black text-primary flex items-center gap-3">
                 <TrendingUp className="w-6 h-6 text-secondary" />
@@ -178,7 +178,7 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white flex flex-col">
+          <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white flex flex-col">
             <h2 className="text-xl font-black text-primary mb-8 flex items-center gap-3">
               <PieChartIcon className="w-6 h-6 text-orange-500" />
               توزيع الطلاب حسب القسم
@@ -218,7 +218,7 @@ export default function Dashboard() {
 
         {/* Bottom Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white">
+          <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-black text-primary flex items-center gap-3">
                 <History className="w-6 h-6 text-secondary" />
@@ -237,8 +237,8 @@ export default function Dashboard() {
               {loadingArchives ? (
                 <div className="flex justify-center py-10"><Loader2 className="w-10 h-10 animate-spin opacity-20 text-primary" /></div>
               ) : recentActivity.length > 0 ? recentActivity.map((item: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-4 p-4 rounded-[1.5rem] hover:bg-muted/30 transition-all border border-transparent hover:border-border group">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-muted/30 transition-all border border-transparent hover:border-border group">
+                  <div className="w-14 h-14 rounded-xl bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
                     <FileText className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
@@ -266,7 +266,7 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white">
+          <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white">
             <h2 className="text-xl font-black text-primary mb-8 flex items-center gap-3">
               <BarChart3 className="w-6 h-6 text-green-500" />
               أداء النظام وسعة التخزين
@@ -286,20 +286,20 @@ export default function Dashboard() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-6 rounded-3xl bg-green-50 border border-green-100">
+                <div className="p-6 rounded-2xl bg-green-50 border border-green-100">
                   <p className="text-xs font-bold text-green-700 mb-1">حالة الاتصال</p>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                     <span className="text-lg font-black text-green-900">متصل الآن</span>
                   </div>
                 </div>
-                <div className="p-6 rounded-3xl bg-blue-50 border border-blue-100">
+                <div className="p-6 rounded-2xl bg-blue-50 border border-blue-100">
                   <p className="text-xs font-bold text-blue-700 mb-1">سرعة المعالجة</p>
                   <p className="text-lg font-black text-blue-900">0.8 ثانية</p>
                 </div>
               </div>
 
-              <div className="p-6 rounded-[2rem] gradient-blue text-white relative overflow-hidden">
+              <div className="p-6 rounded-2xl gradient-blue text-white relative overflow-hidden">
                 <div className="relative z-10">
                   <h4 className="font-black text-lg mb-2">تحديثات النظام</h4>
                   <p className="text-xs text-white/80 font-bold leading-relaxed">تمت ترقية محرك البحث الذكي وزيادة سرعة استخراج البيانات بنسبة 30% في الإصدار الأخير.</p>
