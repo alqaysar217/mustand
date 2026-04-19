@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -26,7 +27,8 @@ import {
   User,
   Search,
   CheckCircle2,
-  XCircle
+  XCircle,
+  CloudUpload
 } from "lucide-react";
 import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 import Image from "next/image";
@@ -42,6 +44,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 export default function UploadPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("جاري المعالجة...");
   const [isSearching, setIsSearching] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
   const [extractedData, setExtractedData] = useState({ id: '', name: '', found: false, originalName: '' });
@@ -104,9 +107,6 @@ export default function UploadPage() {
     }
   };
 
-  /**
-   * وظيفة البحث عن الطالب برقم القيد
-   */
   const findStudentByRegId = async (regId: string) => {
     if (!firestore || !regId) return null;
     const studentsRef = collection(firestore, "students");
@@ -119,11 +119,8 @@ export default function UploadPage() {
     return null;
   };
 
-  /**
-   * معالجة تغيير رقم القيد يدوياً للبحث الفوري عن الطالب
-   */
   const handleRegIdChange = async (val: string) => {
-    const cleanId = val.replace(/\D/g, ''); // أرقام فقط
+    const cleanId = val.replace(/\D/g, '');
     setExtractedData(prev => ({ ...prev, id: cleanId }));
 
     if (cleanId.length >= 4) {
@@ -139,6 +136,7 @@ export default function UploadPage() {
         } else {
           setExtractedData(prev => ({ 
             ...prev, 
+            name: '',
             found: false 
           }));
         }
@@ -146,12 +144,13 @@ export default function UploadPage() {
         setIsSearching(false);
       }
     } else {
-      setExtractedData(prev => ({ ...prev, found: false }));
+      setExtractedData(prev => ({ ...prev, name: '', found: false }));
     }
   };
 
   const handleOCR = async () => {
     if (files.length === 0 || !firestore) return;
+    setLoadingText("جاري التحليل واستخراج البيانات...");
     setLoading(true);
     try {
       const result = await extractExamDetails({ examImageDataUri: files[0] });
@@ -199,9 +198,10 @@ export default function UploadPage() {
       return;
     }
 
+    setLoadingText("جاري أرشفة الملف سحابياً...");
     setLoading(true);
     try {
-      const fileName = `archives/${formData.year.replace(/\s/g, '')}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
+      const fileName = `archives/${formData.year.replace(/\s/g, '').replace(/\//g, '-')}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       await uploadString(storageRef, files[0], 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
@@ -222,6 +222,7 @@ export default function UploadPage() {
       await addDoc(collection(firestore, "archives"), archiveData);
       toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ ملف الطالب ${extractedData.name}` });
       
+      // العودة لخطوة الرفع مع الحفاظ على السياق
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false, originalName: '' });
       setStep(2); 
@@ -270,14 +271,14 @@ export default function UploadPage() {
 
         <Card className="p-8 md:p-12 border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[40px] bg-white min-h-[520px] flex flex-col relative overflow-hidden">
           {loading && (
-            <div className="absolute inset-0 bg-white/70 backdrop-blur-md z-50 flex flex-col items-center justify-center gap-6 text-center p-10">
+            <div className="absolute inset-0 bg-white/70 backdrop-blur-md z-50 flex flex-col items-center justify-center gap-6 text-center p-10 animate-fade-in">
               <div className="relative">
                 <Loader2 className="w-20 h-20 animate-spin text-primary" />
                 <Sparkles className="w-8 h-8 text-secondary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
               </div>
               <div>
-                <p className="font-black text-3xl text-primary mb-2">جاري المعالجة الذكية...</p>
-                <p className="text-muted-foreground font-bold">يتم الآن قراءة بيانات الورقة ومطابقتها سحابياً</p>
+                <p className="font-black text-3xl text-primary mb-2">{loadingText}</p>
+                <p className="text-muted-foreground font-bold">يرجى الانتظار، النظام يقوم بمعالجة طلبك بأعلى سرعة</p>
               </div>
             </div>
           )}
@@ -545,7 +546,7 @@ export default function UploadPage() {
                 disabled={loading || !extractedData.id || isSearching} 
                 className="h-16 px-16 rounded-[1.5rem] font-black gap-4 bg-green-600 text-white shadow-[0_15px_30px_rgba(22,163,74,0.2)] hover:bg-green-700 hover:scale-105 transition-all"
               >
-                {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <CheckCircle className="w-6 h-6" />} 
+                {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <CloudUpload className="w-6 h-6" />} 
                 حفظ نهائي في الأرشيف
               </Button>
             )}
@@ -555,3 +556,4 @@ export default function UploadPage() {
     </div>
   );
 }
+
