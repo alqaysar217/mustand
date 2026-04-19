@@ -6,23 +6,23 @@ import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * وظيفة تهيئة Firebase بشكل آمن جداً لمنع خطأ الانهيار عند غياب الإعدادات.
+ * وظيفة تهيئة Firebase بشكل آمن جداً لمنع خطأ الانهيار (مثل trimEnd) عند غياب الإعدادات.
  */
 export function initializeFirebase(): {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
 } {
-  // التحقق مما إذا كانت الإعدادات قد تم إدخالها من قبل المستخدم
-  const isConfigValid = 
+  // التحقق الصارم من الإعدادات قبل البدء
+  const isValid = 
     firebaseConfig && 
     firebaseConfig.apiKey && 
     firebaseConfig.apiKey !== "YOUR_API_KEY" &&
     firebaseConfig.projectId && 
     firebaseConfig.projectId !== "YOUR_PROJECT_ID";
   
-  if (!isConfigValid) {
-    // نرجع قيم فارغة بدلاً من التسبب في انهيار التطبيق
+  if (!isValid) {
+    // نرجع قيم فارغة بأمان لتجنب انهيار التطبيق
     return { firebaseApp: null, firestore: null, auth: null };
   }
 

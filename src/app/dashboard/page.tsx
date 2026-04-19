@@ -5,7 +5,6 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
 import { 
-  FileText, 
   Users, 
   History, 
   CheckCircle2,
@@ -15,9 +14,7 @@ import {
   Loader2,
   Sparkles,
   AlertTriangle,
-  ExternalLink,
-  Code,
-  ArrowLeft
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
@@ -33,13 +30,11 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [seeding, setSeeding] = useState(false);
 
-  // Memoize Queries to prevent infinite loops
   const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
   const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
   const collegesQuery = useMemo(() => firestore ? collection(firestore, "colleges") : null, [firestore]);
   const recentQuery = useMemo(() => firestore ? query(collection(firestore, "archives"), orderBy("uploadedAt", "desc"), limit(5)) : null, [firestore]);
 
-  // Fetch stats safely
   const { data: students = [] } = useCollection(studentsQuery);
   const { data: archives = [] } = useCollection(archivesQuery);
   const { data: colleges = [] } = useCollection(collegesQuery);
@@ -58,14 +53,12 @@ export default function Dashboard() {
     if (!firestore) return;
     setSeeding(true);
     try {
-      // 1. Add College
       const collegeRef = await addDoc(collection(firestore, "colleges"), {
         name: "كلية تقنية المعلومات",
         code: "CIT",
         createdAt: serverTimestamp()
       });
 
-      // 2. Add Department
       const deptRef = await addDoc(collection(firestore, "departments"), {
         name: "هندسة البرمجيات",
         code: "SE",
@@ -74,7 +67,6 @@ export default function Dashboard() {
         createdAt: serverTimestamp()
       });
 
-      // 3. Add Student
       await addDoc(collection(firestore, "students"), {
         name: "أحمد محمد علي",
         regId: "20210045",
@@ -87,9 +79,9 @@ export default function Dashboard() {
         createdAt: serverTimestamp()
       });
 
-      toast({ title: "تمت التهيئة بنجاح", description: "قاعدة البيانات تحتوي الآن على بيانات تجريبية حقيقية." });
+      toast({ title: "تمت التهيئة بنجاح", description: "قاعدة البيانات تعمل الآن وتحتوي على بيانات تجريبية." });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في التهيئة", description: "تأكد من ضبط القواعد (Rules) في Firestore." });
+      toast({ variant: "destructive", title: "خطأ في التهيئة", description: "يرجى التحقق من قواعد Firestore." });
     } finally {
       setSeeding(false);
     }
@@ -112,7 +104,6 @@ export default function Dashboard() {
         isOpen ? "mr-0 md:mr-64" : "mr-0"
       )}>
         
-        {/* دليل الربط - يظهر فقط إذا لم يتم الربط بعد */}
         {!firestore && (
           <Card className="mb-10 p-8 border-primary/30 border-2 rounded-[2rem] bg-white shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16"></div>
@@ -123,16 +114,16 @@ export default function Dashboard() {
               <div className="flex-1 space-y-4">
                 <h3 className="font-black text-2xl text-primary">تنبيه: قاعدة البيانات غير متصلة</h3>
                 <p className="text-muted-foreground font-bold leading-relaxed">
-                  النظام حالياً في وضع "المعاينة". لربط مشروعك الحقيقي بـ Firebase، يرجى اتباع الخطوات التالية:
+                  بسبب وصولك للحد الأقصى من المشاريع، يرجى <b>إعادة استخدام مشروع قديم</b> من القائمة الرئيسية في Firebase Console:
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-right">
                   <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
                     <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">1</span>
-                    <span className="text-sm font-bold">افتح <a href="https://console.firebase.google.com/" target="_blank" className="text-secondary underline font-black">Firebase Console</a> وأنشئ مشروعاً.</span>
+                    <span className="text-sm font-bold">افتح أي مشروع قديم في <a href="https://console.firebase.google.com/" target="_blank" className="text-secondary underline font-black">Firebase Console</a>.</span>
                   </div>
                   <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
                     <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">2</span>
-                    <span className="text-sm font-bold">فعّل <b>Firestore Database</b> في وضع التجربة (Test Mode).</span>
+                    <span className="text-sm font-bold">اذهب للإعدادات (الترس) ثم <b>Project Settings</b>.</span>
                   </div>
                   <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
                     <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">3</span>
@@ -140,7 +131,7 @@ export default function Dashboard() {
                   </div>
                   <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
                     <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2 font-bold">4</span>
-                    <span className="text-sm font-bold">افتح ملف <code>src/firebase/config.ts</code> والصق القيم هناك.</span>
+                    <span className="text-sm font-bold">افتح ملف <code>src/firebase/config.ts</code> في هذا المحرر والصق القيم.</span>
                   </div>
                 </div>
               </div>
@@ -237,7 +228,7 @@ export default function Dashboard() {
                 <p className="text-white/80 text-sm leading-relaxed mb-6 font-medium">
                   {firestore 
                     ? "قاعدة البيانات السحابية تعمل بنجاح. يمكنك الآن إدارة الأرشيف والطلاب حياً." 
-                    : "يرجى اتباع دليل الربط في الأعلى لتتمكن من استخدام النظام بشكل حقيقي."}
+                    : "يرجى استخدام إعدادات أي مشروع قديم متاح لديك في Firebase لتفعيل النظام."}
                 </p>
                 <Button 
                   className="bg-white text-primary hover:bg-white/90 w-full rounded-xl font-bold h-12 shadow-xl" 
@@ -250,13 +241,6 @@ export default function Dashboard() {
                <div className="absolute top-0 right-0 p-4 opacity-10">
                 <Database className="w-24 h-24" />
                </div>
-            </Card>
-
-            <Card className="p-6 border-none shadow-lg bg-primary/5 rounded-3xl border-r-4 border-primary">
-              <h4 className="font-bold text-primary mb-2">معلومات الأرشفة</h4>
-              <p className="text-xs text-muted-foreground font-bold leading-relaxed">
-                يتم تخزين كافة أوراق الاختبارات على شكل سجلات رقمية في Firestore لضمان سرعة البحث والوصول من أي مكان.
-              </p>
             </Card>
           </div>
         </div>
