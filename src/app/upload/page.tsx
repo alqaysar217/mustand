@@ -28,8 +28,6 @@ import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 import { useFirestore, useCollection, useStorage } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function UploadPage() {
   const [step, setStep] = useState(1);
@@ -117,13 +115,11 @@ export default function UploadPage() {
 
     setLoading(true);
     try {
-      // 1. Upload to Storage
       const fileName = `exams/${extractedData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       await uploadString(storageRef, files[0], 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
 
-      // 2. Save Metadata to Firestore
       const archiveData = {
         studentRegId: extractedData.id,
         studentName: extractedData.name,
@@ -228,7 +224,7 @@ export default function UploadPage() {
                     }}
                     className="w-full h-12 px-4 rounded-xl border bg-muted/20 outline-none font-bold text-right"
                   >
-                    <option value="">اختر المادة...</option>
+                    <option value="">قم باضافة مادة جديدة باسم (الحاسب ) في القائمة  لاقوم باختيارها</option>
                     {subjects.map((s: any) => (
                       <option key={s.id} value={s.id}>{s.name} ({s.departmentName})</option>
                     ))}
@@ -366,4 +362,8 @@ export default function UploadPage() {
       </main>
     </div>
   );
+}
+
+function Label({ children, className }: { children: React.ReactNode, className?: string }) {
+  return <label className={cn("text-sm block", className)}>{children}</label>;
 }
