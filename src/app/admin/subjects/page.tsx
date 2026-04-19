@@ -9,11 +9,11 @@ import {
   Search, 
   Edit2, 
   Trash2, 
-  GraduationCap,
+  PlusCircle,
+  Clock,
   Building2,
   Loader2,
-  PlusCircle,
-  Clock
+  Filter
 } from "lucide-react";
 import {
   Table,
@@ -51,6 +51,9 @@ export default function SubjectsPage() {
   const { data: departments = [] } = useCollection(deptsQuery);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterDept, setFilterDept] = useState("all");
+  const [filterLevel, setFilterLevel] = useState("all");
+  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -66,16 +69,19 @@ export default function SubjectsPage() {
   const { toast } = useToast();
 
   const filteredSubjects = useMemo(() => {
-    return (subjects as any[]).filter(s => 
-      s.nameAr?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      s.nameEn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.departmentName?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [subjects, searchTerm]);
+    return (subjects as any[]).filter(s => {
+      const matchesSearch = s.nameAr?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           s.nameEn?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesDept = filterDept === "all" || s.departmentId === filterDept;
+      const matchesLevel = filterLevel === "all" || s.level === filterLevel;
+      
+      return matchesSearch && matchesDept && matchesLevel;
+    });
+  }, [subjects, searchTerm, filterDept, filterLevel]);
 
   const handleAddSubject = () => {
     if (!firestore || !newSubject.nameAr || !newSubject.departmentId) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى إكمال الحقول الأساسية." });
+      toast({ variant: "destructive", title: "بيانات ناقصة" });
       return;
     }
     
@@ -143,7 +149,7 @@ export default function SubjectsPage() {
 
     deleteDoc(docRef)
       .then(() => {
-        toast({ variant: "destructive", title: "تم الحذف", description: "تمت إزالة المادة من السجلات." });
+        toast({ variant: "destructive", title: "تم الحذف" });
       })
       .catch(async (error) => {
         const permissionError = new FirestorePermissionError({
@@ -249,7 +255,7 @@ export default function SubjectsPage() {
 
       <Card className="p-6 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
         <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 relative">
+          <div className="flex-[2] relative">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input 
               type="text"
@@ -258,6 +264,32 @@ export default function SubjectsPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+          <div className="flex-1">
+             <Select value={filterDept} onValueChange={setFilterDept}>
+               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
+                 <Filter className="w-4 h-4 ml-2 opacity-50" />
+                 <SelectValue placeholder="كل التخصصات" />
+               </SelectTrigger>
+               <SelectContent className="rounded-xl font-bold">
+                 <SelectItem value="all">جميع التخصصات</SelectItem>
+                 {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+               </SelectContent>
+             </Select>
+          </div>
+          <div className="flex-1">
+             <Select value={filterLevel} onValueChange={setFilterLevel}>
+               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
+                 <SelectValue placeholder="كل المستويات" />
+               </SelectTrigger>
+               <SelectContent className="rounded-xl font-bold">
+                 <SelectItem value="all">جميع المستويات</SelectItem>
+                 <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                 <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                 <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                 <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+               </SelectContent>
+             </Select>
           </div>
         </div>
 
@@ -326,7 +358,7 @@ export default function SubjectsPage() {
                   </TableCell>
                 </TableRow>
               )) : (
-                <TableRow><TableCell colSpan={4} className="h-40 text-center text-muted-foreground font-bold">لا توجد مواد مسجلة حالياً</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-40 text-center text-muted-foreground font-bold">لا توجد مواد تطابق خيارات البحث</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
