@@ -89,7 +89,7 @@ export default function UploadPage() {
     if (files.length === 0) return;
     setLoading(true);
     try {
-      // Trying to extract details using Gemini AI (v1 Stable)
+      // Step 4: AI Analysis
       const result = await extractExamDetails({ examImageDataUri: files[0] });
       
       setExtractedData({
@@ -97,19 +97,25 @@ export default function UploadPage() {
         name: result.studentName || ''
       });
       
-      // Moving to confirmation step
-      nextStep();
+      toast({
+        title: "تم التحليل بنجاح",
+        description: "تم استخراج البيانات من ورقة الاختبار بنجاح.",
+      });
+      
+      nextStep(); // Go to step 5 (Confirmation)
     } catch (err: any) {
-      // Robust Fallback: If AI fails (404, 500, Key error), allow manual entry
+      // Robust Fallback: Silence technical red error and show friendly Arabic message
+      console.error("AI Error Silenced:", err.message);
+      
       toast({
         variant: "destructive",
         title: "تنبيه النظام",
-        description: "تعذر التحليل التلقائي حالياً (خطأ في الخدمة). يرجى إدخال البيانات يدوياً.",
+        description: "لم نتمكن من تحليل الملف تلقائياً، يرجى إدخال البيانات يدوياً.",
       });
       
-      // Clear any partial data to ensure clean manual entry
+      // Move to step 5 directly for manual entry
       setExtractedData({ id: '', name: '' });
-      setStep(5); // Jump to Confirmation/Manual Entry step
+      setStep(5); 
     } finally {
       setLoading(false);
     }
@@ -312,7 +318,7 @@ export default function UploadPage() {
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">رقم قيد الطالب</Label>
+                    <label className="text-sm font-bold text-primary block mb-1">رقم قيد الطالب</label>
                     <input 
                       type="text" 
                       value={extractedData.id}
@@ -322,7 +328,7 @@ export default function UploadPage() {
                     />
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">اسم الطالب الرباعي</Label>
+                    <label className="text-sm font-bold text-primary block mb-1">اسم الطالب الرباعي</label>
                     <input 
                       type="text" 
                       value={extractedData.name}
@@ -370,8 +376,4 @@ export default function UploadPage() {
       </main>
     </div>
   );
-}
-
-function Label({ children, className }: { children: React.ReactNode, className?: string }) {
-  return <label className={cn("text-sm block", className)}>{children}</label>;
 }

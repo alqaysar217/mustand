@@ -3,16 +3,11 @@
  * @fileOverview This flow extracts student registration ID and name from an uploaded exam image using AI-powered OCR.
  *
  * - extractExamDetails - A function that handles the extraction process.
- * - ExtractExamDetailsInput - The input type for the extractExamDetails function.
- * - ExtractExamDetailsOutput - The return type for the extractExamDetails function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-/**
- * Schema for the input of the extractExamDetails flow.
- */
 const ExtractExamDetailsInputSchema = z.object({
   examImageDataUri: z
     .string()
@@ -22,9 +17,6 @@ const ExtractExamDetailsInputSchema = z.object({
 });
 export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSchema>;
 
-/**
- * Schema for the output of the extractExamDetails flow.
- */
 const ExtractExamDetailsOutputSchema = z.object({
   studentRegistrationId: z
     .string()
@@ -34,23 +26,19 @@ const ExtractExamDetailsOutputSchema = z.object({
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
 /**
- * Wrapper function to call the Genkit flow for extracting exam details.
- */
-export async function extractExamDetails(
-  input: ExtractExamDetailsInput
-): Promise<ExtractExamDetailsOutput> {
-  return extractExamDetailsFlow(input);
-}
-
-/**
  * Defines the Genkit prompt for extracting student details from an exam image.
- * Explicitly using gemini-1.5-flash which is standard for v1.
+ * Using exactly 'gemini-1.5-flash' on the stable v1 API.
  */
 const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
   input: {schema: ExtractExamDetailsInputSchema},
   output: {schema: ExtractExamDetailsOutputSchema},
   model: 'googleai/gemini-1.5-flash',
+  config: {
+    safetySettings: [
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+    ],
+  },
   prompt: `أنت مساعد ذكي متخصص في قراءة أوراق الامتحانات.
 قم بتحليل الصورة المرفقة واستخرج منها:
 1. رقم القيد (Registration ID)
@@ -60,7 +48,7 @@ Image: {{media url=examImageDataUri}}`,
 });
 
 /**
- * Defines the Genkit flow for extracting student details from an exam image.
+ * Defines the Genkit flow with robust error catching to prevent UI freezing.
  */
 const extractExamDetailsFlow = ai.defineFlow(
   {
@@ -74,19 +62,20 @@ const extractExamDetailsFlow = ai.defineFlow(
         throw new Error('API_KEY_MISSING');
       }
 
-      // Call the prompt and return output
+      // Explicit call to the prompt using the stable model
       const {output} = await extractExamDetailsPrompt(input);
       
-      if (!output) {
-        return { studentRegistrationId: '', studentName: '' };
-      }
-      
-      return output;
+      return output || { studentRegistrationId: '', studentName: '' };
     } catch (error: any) {
-      console.error('OCR Flow Error:', error);
-      
-      // We throw a generic error to trigger the UI fallback to manual input
-      throw new Error('FAILED_TO_ANALYZE');
+      console.error('OCR Extraction Failed:', error.message);
+      // We throw a controlled error string to be handled by the UI
+      throw new Error('AI_ANALYSIS_FAILED');
     }
   }
 );
+
+export async function extractExamDetails(
+  input: ExtractExamDetailsInput
+): Promise<ExtractExamDetailsOutput> {
+  return extractExamDetailsFlow(input);
+}
