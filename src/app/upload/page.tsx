@@ -236,7 +236,7 @@ export default function UploadPage() {
                     }}
                     className="w-full h-12 px-4 rounded-xl border bg-muted/20 outline-none font-bold text-right"
                   >
-                    <option value="">اختر المادة ...</option>
+                    <option value="">اختر المادة ....</option>
                     {subjects.map((s: any) => (
                       <option key={s.id} value={s.id}>{s.name} ({s.departmentName})</option>
                     ))}
