@@ -27,7 +27,6 @@ import {
   User,
   Search,
   CheckCircle2,
-  XCircle,
   CloudUpload
 } from "lucide-react";
 import { extractExamDetails } from "@/ai/flows/extract-exam-details";
@@ -40,6 +39,8 @@ import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 import { useFirestore, useCollection, useStorage } from "@/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function UploadPage() {
   const [step, setStep] = useState(1);
@@ -140,6 +141,8 @@ export default function UploadPage() {
             found: false 
           }));
         }
+      } catch (err) {
+        console.error("Match error:", err);
       } finally {
         setIsSearching(false);
       }
@@ -200,15 +203,19 @@ export default function UploadPage() {
 
     setLoadingText("جاري أرشفة الملف سحابياً...");
     setLoading(true);
+    
     try {
-      const fileName = `archives/${formData.year.replace(/\s/g, '').replace(/\//g, '-')}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
+      // 1. رفع الصورة أولاً للحصول على الرابط (ضروري للحفظ)
+      const folderName = formData.year.replace(/\s/g, '').replace(/\//g, '-');
+      const fileName = `archives/${folderName}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
+      
       await uploadString(storageRef, files[0], 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
 
       const archiveData = {
         studentRegId: extractedData.id,
-        studentName: extractedData.name,
+        studentName: extractedData.name || "طالب غير معروف",
         subjectId: formData.subjectId,
         subjectName: formData.subjectName,
         year: formData.year,
@@ -219,15 +226,33 @@ export default function UploadPage() {
         uploadedAt: serverTimestamp()
       };
 
-      await addDoc(collection(firestore, "archives"), archiveData);
-      toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ ملف الطالب ${extractedData.name}` });
-      
-      // العودة لخطوة الرفع مع الحفاظ على السياق
+      // 2. الحفظ في Firestore: لا نستخدم await هنا لضمان سرعة الواجهة (Optimistic UI)
+      const archivesCollection = collection(firestore, "archives");
+      addDoc(archivesCollection, archiveData)
+        .then(() => {
+          toast({ title: "تمت الأرشفة بنجاح", description: `تم حفظ ملف الطالب ${extractedData.name}` });
+        })
+        .catch(async (err) => {
+          const permissionError = new FirestorePermissionError({
+            path: archivesCollection.path,
+            operation: 'create',
+            requestResourceData: archiveData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
+
+      // 3. العودة الفورية لخطوة الرفع لمواصلة العمل
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false, originalName: '' });
       setStep(2); 
-    } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في السحابة", description: "فشل حفظ الملف." });
+      
+    } catch (error: any) {
+      console.error("Storage error:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "خطأ في السحابة", 
+        description: "فشل رفع الملف. يرجى التأكد من اتصال الإنترنت وحجم الصورة." 
+      });
     } finally {
       setLoading(false);
     }
@@ -556,4 +581,3 @@ export default function UploadPage() {
     </div>
   );
 }
-
