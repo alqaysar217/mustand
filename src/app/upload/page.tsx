@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { 
   FileUp, 
   Trash2, 
@@ -179,7 +180,6 @@ export default function UploadPage() {
     }
   };
 
-  // وظيفة الحفظ الفوري والسريع
   const handleSaveToArchive = async () => {
     if (!firestore || !storage || !extractedData.id || !formData.subjectName || files.length === 0) {
       toast({ variant: "destructive", title: "بيانات ناقصة" });
@@ -189,13 +189,11 @@ export default function UploadPage() {
     setLoadingText("جاري أرشفة الملف سحابياً...");
     setLoading(true);
     
-    // حفظ نسخة من البيانات والملفات الحالية قبل التصفير
     const currentFiles = [...files];
     const currentData = { ...extractedData };
     const currentForm = { ...formData };
 
     try {
-      // 1. رفع الصورة فوراً (هذا الجزء هو الأهم والوحيد الذي سننتظره)
       const folderName = currentForm.year.replace(/\s/g, '').replace(/\//g, '-');
       const fileName = `archives/${folderName}/${currentForm.subjectName}/${currentData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
@@ -216,7 +214,6 @@ export default function UploadPage() {
         uploadedAt: serverTimestamp()
       };
 
-      // 2. الحفظ في Firestore (غير معطل - Non-blocking)
       const archivesCollection = collection(firestore, "archives");
       addDoc(archivesCollection, archiveData)
         .then(() => {
@@ -231,7 +228,6 @@ export default function UploadPage() {
           errorEmitter.emit('permission-error', permissionError);
         });
 
-      // 3. التصفير الفوري والانتقال للخطوة التالية دون انتظار
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false, originalName: '' });
       setStep(2);
@@ -239,7 +235,6 @@ export default function UploadPage() {
     } catch (error: any) {
       toast({ variant: "destructive", title: "فشل الرفع", description: "يرجى التحقق من اتصال الإنترنت وحجم الملف." });
     } finally {
-      // نغلق شاشة التحميل فوراً ليعود المستخدم للعمل
       setLoading(false);
     }
   };
@@ -525,9 +520,7 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* أزرار التنقل مع تبديل الأماكن للاتجاه العربي */}
           <div className="mt-auto pt-10 flex items-center justify-between border-t-2 border-muted/50">
-            {/* زر السابق في اليمين */}
             <Button 
               variant="outline" 
               onClick={prevStep} 
@@ -538,7 +531,6 @@ export default function UploadPage() {
               <ChevronRight className="w-6 h-6" /> 
             </Button>
             
-            {/* زر التالي/الحفظ في اليسار */}
             {step < 5 ? (
               <Button 
                 onClick={nextStep} 
