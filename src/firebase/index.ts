@@ -6,36 +6,38 @@ import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * وظيفة تهيئة Firebase بشكل آمن.
- * إذا كانت الإعدادات عبارة عن "PLACEHOLDER"، سيعيد النظام قيم فارغة لمنع الانهيار.
+ * وظيفة تهيئة Firebase بشكل آمن جداً لمنع خطأ trimEnd والانهيارات الأخرى.
  */
 export function initializeFirebase(): {
-  firebaseApp: FirebaseApp;
+  firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
 } {
-  // التحقق من صحة الإعدادات (التأكد من أنها ليست PLACEHOLDER)
-  const isValidConfig = 
+  // التحقق من أن كافة القيم ليست "PLACEHOLDER" وليست فارغة
+  const isConfigValid = 
     firebaseConfig && 
     firebaseConfig.apiKey && 
     firebaseConfig.apiKey !== "PLACEHOLDER" &&
-    firebaseConfig.projectId &&
-    firebaseConfig.projectId !== "PLACEHOLDER";
+    firebaseConfig.projectId && 
+    firebaseConfig.projectId !== "PLACEHOLDER" &&
+    firebaseConfig.appId && 
+    firebaseConfig.appId !== "PLACEHOLDER";
   
-  if (!isValidConfig) {
-    console.warn("إعدادات Firebase غير مكتملة. يرجى وضع الإعدادات الصحيحة في src/firebase/config.ts");
-    // تهيئة تطبيق وهمي لمنع الأخطاء البرمجية في المكونات التي تتوقع وجود تطبيق
-    const app = getApps().length === 0 
-      ? initializeApp({ projectId: 'archiva-smart-placeholder' }) 
-      : getApp();
-    return { firebaseApp: app, firestore: null, auth: null };
+  if (!isConfigValid) {
+    console.warn("⚠️ إعدادات Firebase غير صحيحة أو مفقودة. سيتم تشغيل النظام في وضع المعاينة فقط.");
+    return { firebaseApp: null, firestore: null, auth: null };
   }
 
-  const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  const firestore = getFirestore(firebaseApp);
-  const auth = getAuth(firebaseApp);
+  try {
+    const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    const firestore = getFirestore(firebaseApp);
+    const auth = getAuth(firebaseApp);
 
-  return { firebaseApp, firestore, auth };
+    return { firebaseApp, firestore, auth };
+  } catch (error) {
+    console.error("❌ فشل في تهيئة خدمات Firebase:", error);
+    return { firebaseApp: null, firestore: null, auth: null };
+  }
 }
 
 export * from './provider';

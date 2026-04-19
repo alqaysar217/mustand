@@ -15,9 +15,11 @@ export function FirebaseClientProvider({
   > | null>(null);
 
   useEffect(() => {
+    // تشغيل التهيئة مرة واحدة عند تحميل التطبيق في المتصفح
     setInstances(initializeFirebase());
   }, []);
 
+  // إذا لم يتم التهيئة بعد (بانتظار useEffect)
   if (!instances) return <>{children}</>;
 
   return (

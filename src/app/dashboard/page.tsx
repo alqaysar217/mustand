@@ -14,7 +14,9 @@ import {
   Database,
   Loader2,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  ArrowLeft,
+  ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
@@ -30,13 +32,13 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [seeding, setSeeding] = useState(false);
 
-  // Memoize Queries to prevent infinite loops
+  // Memoize Queries
   const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
   const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
   const collegesQuery = useMemo(() => firestore ? collection(firestore, "colleges") : null, [firestore]);
   const recentQuery = useMemo(() => firestore ? query(collection(firestore, "archives"), orderBy("uploadedAt", "desc"), limit(5)) : null, [firestore]);
 
-  // Fetch real stats
+  // Fetch stats safely
   const { data: students = [] } = useCollection(studentsQuery);
   const { data: archives = [] } = useCollection(archivesQuery);
   const { data: colleges = [] } = useCollection(collegesQuery);
@@ -52,24 +54,15 @@ export default function Dashboard() {
   }, []);
 
   const handleSeedData = async () => {
-    if (!firestore) {
-      toast({ 
-        variant: "destructive", 
-        title: "خطأ في الاتصال", 
-        description: "يرجى وضع إعدادات Firebase الصحيحة في ملف src/firebase/config.ts أولاً." 
-      });
-      return;
-    }
+    if (!firestore) return;
     setSeeding(true);
     try {
-      // Seed a college
       const collegeRef = await addDoc(collection(firestore, "colleges"), {
         name: "كلية تقنية المعلومات",
         code: "CIT",
         createdAt: serverTimestamp()
       });
 
-      // Seed a department
       const deptRef = await addDoc(collection(firestore, "departments"), {
         name: "هندسة البرمجيات",
         code: "SE",
@@ -78,7 +71,6 @@ export default function Dashboard() {
         createdAt: serverTimestamp()
       });
 
-      // Seed a student
       await addDoc(collection(firestore, "students"), {
         name: "أحمد محمد علي",
         regId: "20210045",
@@ -91,9 +83,9 @@ export default function Dashboard() {
         createdAt: serverTimestamp()
       });
 
-      toast({ title: "تمت التهيئة", description: "تم إضافة بيانات تجريبية بنجاح للتأكد من عمل النظام." });
+      toast({ title: "تمت التهيئة", description: "تم إضافة بيانات تجريبية بنجاح." });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في التهيئة", description: "تأكد من إعدادات الـ Firebase وقواعد الحماية." });
+      toast({ variant: "destructive", title: "خطأ في التهيئة", description: "تأكد من إعدادات قاعدة البيانات." });
     } finally {
       setSeeding(false);
     }
@@ -116,36 +108,67 @@ export default function Dashboard() {
         isOpen ? "mr-0 md:mr-64" : "mr-0"
       )} dir="rtl">
         {!firestore && (
-          <Card className="mb-8 p-6 bg-red-50 border-destructive/20 border-2 rounded-3xl flex flex-col md:flex-row items-center gap-4 text-destructive">
-            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-black text-lg">تنبيه: قاعدة البيانات غير متصلة</h3>
-              <p className="text-sm font-bold opacity-80">يرجى إضافة إعدادات Firebase (API Key, Project ID, etc.) في الملف <code>src/firebase/config.ts</code> لكي يعمل النظام بشكل حقيقي.</p>
+          <Card className="mb-10 p-8 border-destructive/30 border-2 rounded-[2rem] bg-white shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/5 rounded-full -mr-16 -mt-16"></div>
+            <div className="flex flex-col md:flex-row items-start gap-6 relative z-10">
+              <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-8 h-8 text-destructive" />
+              </div>
+              <div className="flex-1 space-y-4">
+                <h3 className="font-black text-2xl text-destructive">تنبيه: يلزم ربط قاعدة البيانات</h3>
+                <p className="text-muted-foreground font-bold leading-relaxed">
+                  النظام حالياً يعمل في وضع "المعاينة" فقط. لكي تتمكن من حفظ البيانات بشكل حقيقي، يجب عليك اتباع الخطوات التالية:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
+                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2">1</span>
+                    <span className="text-sm font-bold">اذهب إلى Firebase Console وأنشئ مشروعاً جديداً.</span>
+                  </div>
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
+                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2">2</span>
+                    <span className="text-sm font-bold">قم بتفعيل Cloud Firestore في وضع "Test Mode".</span>
+                  </div>
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
+                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2">3</span>
+                    <span className="text-sm font-bold">أضف Web App وانسخ كود "firebaseConfig".</span>
+                  </div>
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-dashed">
+                    <span className="bg-primary text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs ml-2">4</span>
+                    <span className="text-sm font-bold">الصق الإعدادات في ملف <code>src/firebase/config.ts</code>.</span>
+                  </div>
+                </div>
+                <div className="pt-4 flex gap-4">
+                  <Button className="rounded-xl font-bold bg-primary gap-2" onClick={() => window.open('https://console.firebase.google.com/', '_blank')}>
+                    فتح Firebase Console
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </Card>
         )}
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-primary mb-1">الرئيسية</h1>
-            <p className="text-muted-foreground">ملخص سريع لنشاط النظام وقاعدة البيانات</p>
+            <h1 className="text-3xl font-black text-primary mb-1">لوحة التحكم</h1>
+            <p className="text-muted-foreground font-bold">ملخص سريع لنشاط النظام وقاعدة البيانات</p>
           </div>
           <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              onClick={handleSeedData} 
-              disabled={seeding}
-              className="rounded-xl font-bold border-dashed border-2 gap-2"
-            >
-              {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-secondary" />}
-              تهيئة بيانات تجريبية
-            </Button>
-            <div className="bg-primary/5 px-4 py-2 rounded-2xl flex items-center gap-2 border border-primary/10">
+            {firestore && (
+              <Button 
+                variant="outline" 
+                onClick={handleSeedData} 
+                disabled={seeding}
+                className="rounded-xl font-bold border-dashed border-2 gap-2"
+              >
+                {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-secondary" />}
+                تهيئة بيانات تجريبية
+              </Button>
+            )}
+            <div className="bg-white px-4 py-2 rounded-2xl flex items-center gap-2 border shadow-sm">
               <Clock className="w-4 h-4 text-primary" />
               <span className="text-sm font-bold text-primary">
-                {formattedDate || '...'}
+                {formattedDate || 'جاري التحميل...'}
               </span>
             </div>
           </div>
@@ -153,7 +176,7 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           {stats.map((stat, i) => (
-            <Card key={i} className="p-6 border-none shadow-xl rounded-3xl group hover:-translate-y-1 transition-all">
+            <Card key={i} className="p-6 border-none shadow-xl rounded-3xl group hover:-translate-y-1 transition-all bg-white">
               <div className="flex items-start justify-between mb-4">
                 <div className={`p-3 rounded-2xl ${stat.color} text-white shadow-lg`}>
                   <stat.icon className="w-6 h-6" />
@@ -162,7 +185,7 @@ export default function Dashboard() {
                   {stat.trend}
                 </div>
               </div>
-              <h3 className="text-muted-foreground text-sm font-medium mb-1">{stat.label}</h3>
+              <h3 className="text-muted-foreground text-xs font-bold mb-1">{stat.label}</h3>
               <p className="text-3xl font-black text-primary">{stat.value}</p>
             </Card>
           ))}
@@ -172,8 +195,8 @@ export default function Dashboard() {
           <Card className="lg:col-span-2 p-8 border-none shadow-xl rounded-3xl bg-white">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-bold text-primary flex items-center gap-2">
-                <History className="w-5 h-5" />
-                آخر الملفات المرفوعة
+                <History className="w-5 h-5 text-secondary" />
+                آخر العمليات المسجلة
               </h2>
               <button className="text-sm text-secondary font-bold hover:underline" onClick={() => window.location.href='/archive'}>عرض الكل</button>
             </div>
@@ -186,43 +209,54 @@ export default function Dashboard() {
                   </div>
                   <div className="flex-1 text-right">
                     <p className="text-primary font-bold">{item.subjectName}: <span className="text-secondary">{item.studentName}</span></p>
-                    <p className="text-xs text-muted-foreground">رقم القيد: {item.studentRegId}</p>
+                    <p className="text-[10px] text-muted-foreground font-bold">رقم القيد: {item.studentRegId}</p>
                   </div>
                 </div>
               )) : (
-                <div className="py-10 text-center text-muted-foreground font-bold">
-                  <FileText className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                  لا توجد نشاطات مسجلة حالياً
+                <div className="py-20 text-center text-muted-foreground font-bold flex flex-col items-center gap-4">
+                  <div className="w-20 h-20 rounded-full bg-muted/30 flex items-center justify-center">
+                    <FileText className="w-10 h-10 opacity-20" />
+                  </div>
+                  <p>لا توجد نشاطات مسجلة حالياً في قاعدة البيانات</p>
                 </div>
               )}
             </div>
           </Card>
 
-          <Card className="p-8 border-none shadow-xl rounded-3xl gradient-blue text-white relative overflow-hidden">
-             <div className="relative z-10">
-              <h2 className="text-xl font-bold mb-4">حالة الاتصال</h2>
-              <div className="flex items-center gap-2 mb-6">
-                <div className={cn(
-                  "w-3 h-3 rounded-full animate-pulse",
-                  firestore ? "bg-green-400 shadow-[0_0_10px_#4ade80]" : "bg-red-400 shadow-[0_0_10px_#f87171]"
-                )}></div>
-                <p className="text-white/90 font-bold">{firestore ? "متصل بـ Firebase Firestore" : "بانتظار الإعدادات..."}</p>
-              </div>
-              <p className="text-white/80 text-sm leading-relaxed mb-6">
-                قاعدة البيانات تعمل بنظام المزامنة الفورية عند توفر الإعدادات الصحيحة.
+          <div className="space-y-8">
+            <Card className="p-8 border-none shadow-xl rounded-3xl gradient-blue text-white relative overflow-hidden">
+               <div className="relative z-10">
+                <h2 className="text-xl font-bold mb-4">حالة الاتصال</h2>
+                <div className="flex items-center gap-2 mb-6">
+                  <div className={cn(
+                    "w-3 h-3 rounded-full animate-pulse",
+                    firestore ? "bg-green-400 shadow-[0_0_10px_#4ade80]" : "bg-red-400 shadow-[0_0_10px_#f87171]"
+                  )}></div>
+                  <p className="text-white font-bold">{firestore ? "متصل بـ Firebase" : "غير متصل بالسحاب"}</p>
+                </div>
+                <p className="text-white/80 text-sm leading-relaxed mb-6 font-medium">
+                  عند ربط الإعدادات، سيقوم النظام بمزامنة كافة الملفات والأرشيف تلقائياً مع خوادم جوجل الآمنة.
+                </p>
+                <Button 
+                  className="bg-white text-primary hover:bg-white/90 w-full rounded-xl font-bold h-12 shadow-xl" 
+                  onClick={() => window.location.href='/upload'}
+                  disabled={!firestore}
+                >
+                  بدء أرشفة جديدة
+                </Button>
+               </div>
+               <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Database className="w-24 h-24" />
+               </div>
+            </Card>
+
+            <Card className="p-6 border-none shadow-lg bg-primary/5 rounded-3xl border-r-4 border-primary">
+              <h4 className="font-bold text-primary mb-2">تلميذه ذكية</h4>
+              <p className="text-xs text-muted-foreground font-bold leading-relaxed">
+                يمكنك استخدام ميزة OCR لاستخراج بيانات الطلاب من أوراق الاختبار وتوفير 80% من وقت الإدخال اليدوي.
               </p>
-              <button 
-                className="bg-white text-primary px-6 py-2.5 rounded-xl text-sm font-bold shadow-xl hover:scale-105 transition-transform disabled:opacity-50" 
-                onClick={() => window.location.href='/upload'}
-                disabled={!firestore}
-              >
-                رفع ملف الآن
-              </button>
-             </div>
-             <div className="absolute top-0 right-0 p-4 opacity-20">
-              <Database className="w-24 h-24" />
-             </div>
-          </Card>
+            </Card>
+          </div>
         </div>
       </main>
     </div>
