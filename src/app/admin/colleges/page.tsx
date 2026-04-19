@@ -39,6 +39,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
@@ -158,13 +159,19 @@ export default function AdminCollegesPage() {
         <TabsList className="bg-white p-1 rounded-2xl h-14 shadow-sm border mb-8 flex items-stretch overflow-hidden">
           <TabsTrigger 
             value="colleges" 
-            className="flex-1 rounded-xl font-black transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className={cn(
+              "flex-1 rounded-xl font-black transition-all duration-300",
+              activeTab === "colleges" ? "gradient-blue text-white shadow-lg" : "text-muted-foreground hover:bg-muted/50"
+            )}
           >
             إدارة الكليات
           </TabsTrigger>
           <TabsTrigger 
             value="years" 
-            className="flex-1 rounded-xl font-black transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className={cn(
+              "flex-1 rounded-xl font-black transition-all duration-300",
+              activeTab === "years" ? "gradient-blue text-white shadow-lg" : "text-muted-foreground hover:bg-muted/50"
+            )}
           >
             الأعوام الدراسية
           </TabsTrigger>
@@ -268,30 +275,32 @@ export default function AdminCollegesPage() {
           <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label className="font-bold text-primary flex items-center gap-2">
-                <Type className="w-4 h-4" />
+                <Type className="w-4 h-4 text-secondary" />
                 الاسم الرسمي للكلية
               </Label>
               <div className="relative">
                 <Input 
-                  value={newCollege.name} 
+                  value={newCollege.name || ""} 
                   onChange={(e) => setNewCollege({...newCollege, name: e.target.value})} 
                   placeholder="مثال: كلية الهندسة"
-                  className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20" 
+                  className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20 pr-10" 
                 />
+                <School className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               </div>
             </div>
             <div className="space-y-2">
               <Label className="font-bold text-primary flex items-center gap-2">
-                <Hash className="w-4 h-4" />
+                <Hash className="w-4 h-4 text-secondary" />
                 الرمز المختصر
               </Label>
               <div className="relative">
                 <Input 
-                  value={newCollege.code} 
+                  value={newCollege.code || ""} 
                   onChange={(e) => setNewCollege({...newCollege, code: e.target.value})} 
-                  className="rounded-xl h-12 bg-muted/20 border-muted uppercase" 
+                  className="rounded-xl h-12 bg-muted/20 border-muted uppercase pr-10" 
                   placeholder="ENG"
                 />
+                <Hash className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               </div>
             </div>
           </div>
@@ -312,20 +321,20 @@ export default function AdminCollegesPage() {
               <Calendar className="w-6 h-6 text-secondary" />
               عام دراسي جديد
             </DialogTitle>
-            <DialogDescription className="font-bold text-muted-foreground">تحديد مسمى العام الجامعي (مثلاً: 2024 / 2025).</DialogDescription>
+            <DialogDescription className="font-bold text-muted-foreground text-right">تحديد مسمى العام الجامعي (مثلاً: 2024 / 2025).</DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label className="font-bold text-primary flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-4 h-4 text-secondary" />
                 تسمية العام
               </Label>
               <div className="relative">
                 <Input 
                   placeholder="2024 / 2025" 
-                  value={newYear.label} 
+                  value={newYear.label || ""} 
                   onChange={(e) => setNewYear({...newYear, label: e.target.value})} 
-                  className="rounded-xl h-12 bg-muted/20 border-muted pr-10 font-bold" 
+                  className="rounded-xl h-12 bg-muted/20 border-muted pr-10 font-bold text-right" 
                 />
                 <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               </div>
@@ -353,17 +362,23 @@ export default function AdminCollegesPage() {
            <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label className="font-bold text-primary flex items-center gap-2">
-                  <Type className="w-4 h-4" />
+                  <Type className="w-4 h-4 text-secondary" />
                   الاسم الرسمي
                 </Label>
-                <Input value={editingCollege?.name || ""} onChange={(e) => setEditingCollege({...editingCollege, name: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted" />
+                <div className="relative">
+                  <Input value={editingCollege?.name || ""} onChange={(e) => setEditingCollege({...editingCollege, name: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted pr-10" />
+                  <School className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label className="font-bold text-primary flex items-center gap-2">
-                  <Hash className="w-4 h-4" />
+                  <Hash className="w-4 h-4 text-secondary" />
                   الرمز المختصر
                 </Label>
-                <Input value={editingCollege?.code || ""} onChange={(e) => setEditingCollege({...editingCollege, code: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted uppercase" />
+                <div className="relative">
+                  <Input value={editingCollege?.code || ""} onChange={(e) => setEditingCollege({...editingCollege, code: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted uppercase pr-10" />
+                  <Hash className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                </div>
               </div>
            </div>
            <DialogFooter className="flex-row gap-3 pt-6">
@@ -380,16 +395,16 @@ export default function AdminCollegesPage() {
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل العام الدراسي
               </DialogTitle>
-              <DialogDescription className="font-bold text-muted-foreground">تحديث تسمية العام الدراسي المختار.</DialogDescription>
+              <DialogDescription className="font-bold text-muted-foreground text-right">تحديث تسمية العام الدراسي المختار.</DialogDescription>
            </DialogHeader>
            <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label className="font-bold text-primary flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
+                  <Calendar className="w-4 h-4 text-secondary" />
                   تسمية العام
                 </Label>
                 <div className="relative">
-                  <Input value={editingYear?.label || ""} onChange={(e) => setEditingYear({...editingYear, label: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted pr-10 font-bold" />
+                  <Input value={editingYear?.label || ""} onChange={(e) => setEditingYear({...editingYear, label: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted pr-10 font-bold text-right" />
                   <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 </div>
               </div>
