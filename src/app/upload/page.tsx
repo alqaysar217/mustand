@@ -226,7 +226,7 @@ export default function UploadPage() {
         uploadedAt: serverTimestamp()
       };
 
-      // 2. الحفظ في Firestore: لا نستخدم await هنا لضمان سرعة الواجهة (Optimistic UI)
+      // 2. الحفظ في Firestore بشكل غير معطل (Non-blocking)
       const archivesCollection = collection(firestore, "archives");
       addDoc(archivesCollection, archiveData)
         .then(() => {
@@ -541,15 +541,15 @@ export default function UploadPage() {
           )}
 
           {/* Action Buttons */}
-          <div className="mt-auto pt-10 flex items-center justify-between flex-row-reverse border-t-2 border-muted/50">
+          <div className="mt-auto pt-10 flex items-center justify-between border-t-2 border-muted/50">
             <Button 
               variant="outline" 
               onClick={prevStep} 
               disabled={step === 1 || loading} 
               className="h-16 px-10 rounded-[1.5rem] border-2 border-muted font-black gap-4 shadow-sm hover:bg-muted/10 transition-all"
             >
-              <ChevronRight className="w-6 h-6" /> 
               السابق
+              <ChevronRight className="w-6 h-6" /> 
             </Button>
             
             {step < 5 ? (
@@ -562,8 +562,8 @@ export default function UploadPage() {
                 } 
                 className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-[0_15px_30px_rgba(11,60,93,0.2)] hover:scale-105 transition-all"
               >
-                التالي 
                 <ChevronLeft className="w-6 h-6" />
+                التالي 
               </Button>
             ) : (
               <Button 
