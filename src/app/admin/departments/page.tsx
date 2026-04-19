@@ -11,13 +11,10 @@ import {
   MoreVertical, 
   Edit2, 
   Trash2, 
-  Filter,
-  X,
-  PlusCircle,
   FileText,
-  Users,
   ShieldCheck,
-  BookOpen
+  School,
+  Loader2
 } from "lucide-react";
 import {
   Table,
@@ -45,35 +42,96 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
-const INITIAL_DEPARTMENTS = [
-  { id: '1', name: 'تقنية المعلومات', code: 'IT', studentsCount: 1240, subjectsCount: 45, status: 'active' },
-  { id: '2', name: 'علوم الحاسوب', code: 'CS', studentsCount: 850, subjectsCount: 38, status: 'active' },
-  { id: '3', name: 'هندسة البرمجيات', code: 'SE', studentsCount: 620, subjectsCount: 42, status: 'active' },
-  { id: '4', name: 'نظم المعلومات', code: 'IS', studentsCount: 480, subjectsCount: 30, status: 'active' },
-];
+// Firebase
+import { useFirestore, useCollection } from "@/firebase";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function AdminDepartmentsPage() {
-  const [departments, setDepartments] = useState(INITIAL_DEPARTMENTS);
+  const firestore = useFirestore();
+  const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
+  const collegesQuery = useMemo(() => firestore ? collection(firestore, "colleges") : null, [firestore]);
+
+  const { data: departments = [], loading } = useCollection(deptsQuery);
+  const { data: colleges = [] } = useCollection(collegesQuery);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [newDept, setNewDept] = useState({ name: '', code: '', collegeId: '' });
+  
   const { toast } = useToast();
 
   const filteredDepartments = useMemo(() => {
-    return departments.filter(dept => 
-      dept.name.includes(searchTerm) || dept.code.includes(searchTerm.toUpperCase())
+    return (departments as any[]).filter(dept => 
+      dept.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      dept.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      dept.collegeName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [departments, searchTerm]);
 
+  const handleAddDept = () => {
+    if (!firestore || !newDept.name || !newDept.code || !newDept.collegeId) {
+      toast({ variant: "destructive", title: "بيانات ناقصة" });
+      return;
+    }
+
+    setSubmitting(true);
+    const selectedCollege = (colleges as any[]).find(c => c.id === newDept.collegeId);
+    const deptsRef = collection(firestore, "departments");
+    const data = {
+      ...newDept,
+      collegeName: selectedCollege?.name || "",
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(deptsRef, data)
+      .then(() => {
+        setIsAddDialogOpen(false);
+        setNewDept({ name: '', code: '', collegeId: '' });
+        toast({ title: "تم التفعيل", description: "تم إنشاء القسم وتفعيله بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: deptsRef.path,
+          operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
   const handleDelete = (id: string) => {
-    setDepartments(prev => prev.filter(d => d.id !== id));
-    toast({
-      variant: "destructive",
-      title: "تم حذف التخصص",
-      description: "تمت إزالة القسم العلمي من قاعدة البيانات المركزية.",
-    });
+    if (!firestore) return;
+    const docRef = doc(firestore, "departments", id);
+
+    deleteDoc(docRef)
+      .then(() => {
+        toast({
+          variant: "destructive",
+          title: "تم حذف التخصص",
+          description: "تمت إزالة القسم العلمي من قاعدة البيانات المركزية.",
+        });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   return (
@@ -106,21 +164,52 @@ export default function AdminDepartmentsPage() {
               <div className="grid gap-6 py-4">
                 <div className="space-y-2 text-right">
                   <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                    <School className="w-4 h-4 text-secondary" />
+                    الكلية التابع لها
+                  </Label>
+                  <Select onValueChange={(v) => setNewDept({...newDept, collegeId: v})}>
+                    <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                      <SelectValue placeholder="اختر الكلية" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl font-bold">
+                      {colleges.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 text-right">
+                  <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                     <Building2 className="w-4 h-4 text-secondary" />
                     اسم القسم العلمي
                   </Label>
-                  <Input placeholder="مثال: هندسة الحاسوب" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" />
+                  <Input 
+                    value={newDept.name}
+                    onChange={(e) => setNewDept({...newDept, name: e.target.value})}
+                    placeholder="مثال: هندسة الحاسوب" 
+                    className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
+                  />
                 </div>
                 <div className="space-y-2 text-right">
                   <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                     <FileText className="w-4 h-4 text-secondary" />
                     رمز القسم المختصر
                   </Label>
-                  <Input placeholder="مثال: CE" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" />
+                  <Input 
+                    value={newDept.code}
+                    onChange={(e) => setNewDept({...newDept, code: e.target.value})}
+                    placeholder="مثال: CE" 
+                    className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" 
+                  />
                 </div>
               </div>
               <DialogFooter className="flex-row gap-3 pt-8">
-                <Button type="submit" onClick={() => { setIsAddDialogOpen(false); toast({ title: "تم التفعيل", description: "تم إنشاء القسم وتفعيله بنجاح." }); }} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">تفعيل القسم</Button>
+                <Button 
+                  disabled={submitting}
+                  onClick={handleAddDept}
+                  className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "تفعيل القسم"}
+                </Button>
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
               </DialogFooter>
             </div>
@@ -148,13 +237,14 @@ export default function AdminDepartmentsPage() {
               <TableRow className="hover:bg-transparent border-b">
                 <TableHead className="text-right font-bold text-primary">القسم العلمي</TableHead>
                 <TableHead className="text-right font-bold text-primary">الرمز</TableHead>
-                <TableHead className="text-right font-bold text-primary">إجمالي الطلاب</TableHead>
-                <TableHead className="text-right font-bold text-primary">إجمالي المواد</TableHead>
+                <TableHead className="text-right font-bold text-primary">الكلية</TableHead>
                 <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDepartments.length > 0 ? filteredDepartments.map((dept) => (
+              {loading ? (
+                <TableRow><TableCell colSpan={4} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+              ) : filteredDepartments.length > 0 ? filteredDepartments.map((dept) => (
                 <TableRow key={dept.id} className="hover:bg-muted/20 border-b group">
                   <TableCell className="p-4">
                     <div className="flex items-center gap-3">
@@ -168,16 +258,7 @@ export default function AdminDepartmentsPage() {
                     <span className="text-sm font-black text-secondary">{dept.code}</span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-sm font-bold text-muted-foreground">{dept.studentsCount}</span>
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-sm font-bold text-muted-foreground">{dept.subjectsCount}</span>
-                      <BookOpen className="w-4 h-4 text-muted-foreground" />
-                    </div>
+                    <span className="text-sm font-bold text-muted-foreground">{dept.collegeName}</span>
                   </TableCell>
                   <TableCell className="text-center">
                     <DropdownMenu>
@@ -188,11 +269,6 @@ export default function AdminDepartmentsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right shadow-xl" dir="rtl">
                         <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات المدير</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                          تعديل البيانات
-                          <Edit2 className="w-4 h-4 text-secondary" />
-                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           onClick={() => handleDelete(dept.id)}
@@ -207,7 +283,7 @@ export default function AdminDepartmentsPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">
+                  <TableCell colSpan={4} className="h-40 text-center text-muted-foreground font-bold">
                     لا توجد أقسام مطابقة للبحث
                   </TableCell>
                 </TableRow>

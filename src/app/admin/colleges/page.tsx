@@ -13,10 +13,9 @@ import {
   Trash2, 
   Building2,
   Users,
-  PlusCircle,
   FileText,
   ShieldCheck,
-  LayoutGrid
+  Loader2
 } from "lucide-react";
 import {
   Table,
@@ -47,31 +46,80 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
-const INITIAL_COLLEGES = [
-  { id: '1', name: 'كلية تقنية المعلومات', code: 'CIT', departmentsCount: 4, studentsCount: 2200, status: 'active' },
-  { id: '2', name: 'كلية الهندسة', code: 'ENG', departmentsCount: 6, studentsCount: 1800, status: 'active' },
-  { id: '3', name: 'كلية الاقتصاد', code: 'ECO', departmentsCount: 3, studentsCount: 1500, status: 'active' },
-];
+// Firebase
+import { useFirestore, useCollection } from "@/firebase";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function AdminCollegesPage() {
-  const [colleges, setColleges] = useState(INITIAL_COLLEGES);
+  const firestore = useFirestore();
+  const collegesQuery = useMemo(() => firestore ? collection(firestore, "colleges") : null, [firestore]);
+  const { data: colleges = [], loading } = useCollection(collegesQuery);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [newCollege, setNewCollege] = useState({ name: '', code: '' });
+  
   const { toast } = useToast();
 
   const filteredColleges = useMemo(() => {
-    return colleges.filter(college => 
-      college.name.includes(searchTerm) || college.code.includes(searchTerm.toUpperCase())
+    return (colleges as any[]).filter(college => 
+      college.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      college.code?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [colleges, searchTerm]);
 
+  const handleAddCollege = () => {
+    if (!firestore || !newCollege.name || !newCollege.code) {
+      toast({ variant: "destructive", title: "بيانات ناقصة" });
+      return;
+    }
+
+    setSubmitting(true);
+    const collegesRef = collection(firestore, "colleges");
+    const data = {
+      ...newCollege,
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(collegesRef, data)
+      .then(() => {
+        setIsAddDialogOpen(false);
+        setNewCollege({ name: '', code: '' });
+        toast({ title: "تم التفعيل", description: "تم إنشاء الكلية وتفعيلها في النظام بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: collegesRef.path,
+          operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
   const handleDelete = (id: string) => {
-    setColleges(prev => prev.filter(c => c.id !== id));
-    toast({
-      variant: "destructive",
-      title: "تم حذف الكلية",
-      description: "تمت إزالة الكلية من السجلات الإدارية المركزية.",
-    });
+    if (!firestore) return;
+    const docRef = doc(firestore, "colleges", id);
+
+    deleteDoc(docRef)
+      .then(() => {
+        toast({
+          variant: "destructive",
+          title: "تم حذف الكلية",
+          description: "تمت إزالة الكلية من السجلات الإدارية المركزية.",
+        });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   return (
@@ -107,18 +155,34 @@ export default function AdminCollegesPage() {
                     <School className="w-4 h-4 text-secondary" />
                     الاسم الرسمي للكلية
                   </Label>
-                  <Input placeholder="مثال: كلية الطب البشري" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" />
+                  <Input 
+                    value={newCollege.name}
+                    onChange={(e) => setNewCollege({...newCollege, name: e.target.value})}
+                    placeholder="مثال: كلية الطب البشري" 
+                    className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
+                  />
                 </div>
                 <div className="space-y-2 text-right">
                   <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                     <FileText className="w-4 h-4 text-secondary" />
                     رمز الكلية المختصر
                   </Label>
-                  <Input placeholder="مثال: MED" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" />
+                  <Input 
+                    value={newCollege.code}
+                    onChange={(e) => setNewCollege({...newCollege, code: e.target.value})}
+                    placeholder="مثال: MED" 
+                    className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" 
+                  />
                 </div>
               </div>
               <DialogFooter className="flex-row gap-3 pt-8">
-                <Button type="submit" onClick={() => { setIsAddDialogOpen(false); toast({ title: "تم التفعيل", description: "تم إنشاء الكلية وتفعيلها في النظام." }); }} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">تفعيل الكلية</Button>
+                <Button 
+                  disabled={submitting} 
+                  onClick={handleAddCollege}
+                  className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "تفعيل الكلية"}
+                </Button>
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
               </DialogFooter>
             </div>
@@ -141,8 +205,8 @@ export default function AdminCollegesPage() {
             <Building2 className="w-6 h-6" />
           </div>
           <div className="text-right">
-            <p className="text-xs font-bold text-muted-foreground">إجمالي الأقسام</p>
-            <h4 className="text-2xl font-black text-primary">13</h4>
+            <p className="text-xs font-bold text-muted-foreground">نظام العمل</p>
+            <h4 className="text-2xl font-black text-primary">سحابي</h4>
           </div>
         </Card>
         <Card className="p-6 border-none shadow-lg rounded-3xl bg-white flex items-center gap-4">
@@ -150,8 +214,8 @@ export default function AdminCollegesPage() {
             <Users className="w-6 h-6" />
           </div>
           <div className="text-right">
-            <p className="text-xs font-bold text-muted-foreground">إجمالي الطلاب</p>
-            <h4 className="text-2xl font-black text-primary">5,500</h4>
+            <p className="text-xs font-bold text-muted-foreground">الحالة</p>
+            <h4 className="text-2xl font-black text-primary">متصل</h4>
           </div>
         </Card>
       </div>
@@ -176,13 +240,13 @@ export default function AdminCollegesPage() {
               <TableRow className="hover:bg-transparent border-b">
                 <TableHead className="text-right font-bold text-primary">الكلية</TableHead>
                 <TableHead className="text-right font-bold text-primary">الرمز</TableHead>
-                <TableHead className="text-right font-bold text-primary">عدد الأقسام</TableHead>
-                <TableHead className="text-right font-bold text-primary">الطلاب المسجلين</TableHead>
                 <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredColleges.length > 0 ? filteredColleges.map((college) => (
+              {loading ? (
+                <TableRow><TableCell colSpan={3} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+              ) : filteredColleges.length > 0 ? filteredColleges.map((college) => (
                 <TableRow key={college.id} className="hover:bg-muted/20 border-b group">
                   <TableCell className="p-4">
                     <div className="flex items-center gap-3">
@@ -195,18 +259,6 @@ export default function AdminCollegesPage() {
                   <TableCell>
                     <span className="text-sm font-black text-secondary">{college.code}</span>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-sm font-bold text-muted-foreground">{college.departmentsCount}</span>
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-sm font-bold text-muted-foreground">{college.studentsCount}</span>
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </TableCell>
                   <TableCell className="text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -216,11 +268,6 @@ export default function AdminCollegesPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right shadow-xl" dir="rtl">
                         <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات المدير</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                          تعديل البيانات
-                          <Edit2 className="w-4 h-4 text-secondary" />
-                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           onClick={() => handleDelete(college.id)}
@@ -235,8 +282,8 @@ export default function AdminCollegesPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">
-                    لا توجد كليات مطابقة لبحثك
+                  <TableCell colSpan={3} className="h-40 text-center text-muted-foreground font-bold">
+                    لا توجد كليات مسجلة حالياً
                   </TableCell>
                 </TableRow>
               )}

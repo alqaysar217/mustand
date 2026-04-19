@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -49,6 +50,8 @@ import { useToast } from "@/hooks/use-toast";
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
 import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function SubjectsPage() {
   const firestore = useFirestore();
@@ -82,42 +85,57 @@ export default function SubjectsPage() {
     });
   }, [subjects, searchTerm, selectedDept, selectedLevel]);
 
-  const handleAddSubject = async () => {
+  const handleAddSubject = () => {
     if (!firestore || !newSubject.name || !newSubject.departmentId) {
       toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى ملء كافة الحقول واختيار التخصص." });
       return;
     }
     
     setSubmitting(true);
-    try {
-      const selectedDeptObj = (departments as any[]).find(d => d.id === newSubject.departmentId);
-      await addDoc(collection(firestore, "subjects"), {
-        ...newSubject,
-        departmentName: selectedDeptObj?.name || "",
-        createdAt: serverTimestamp()
-      });
-      setIsAddDialogOpen(false);
-      setNewSubject({ name: "", departmentId: "", level: "المستوى الأول" });
-      toast({ title: "تم الحفظ", description: "تمت إضافة المادة بنجاح إلى النظام." });
-    } catch (e) {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل في حفظ المادة." });
-    } finally {
-      setSubmitting(false);
-    }
+    const selectedDeptObj = (departments as any[]).find(d => d.id === newSubject.departmentId);
+    const subjectsRef = collection(firestore, "subjects");
+    const data = {
+      ...newSubject,
+      departmentName: selectedDeptObj?.name || "",
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(subjectsRef, data)
+      .then(() => {
+        setIsAddDialogOpen(false);
+        setNewSubject({ name: "", departmentId: "", level: "المستوى الأول" });
+        toast({ title: "تم الحفظ", description: "تمت إضافة المادة بنجاح إلى النظام." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: subjectsRef.path,
+          operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!firestore) return;
-    try {
-      await deleteDoc(doc(firestore, "subjects", id));
-      toast({
-        variant: "destructive",
-        title: "تم الحذف",
-        description: "تم حذف المادة بنجاح من النظام.",
+    const docRef = doc(firestore, "subjects", id);
+
+    deleteDoc(docRef)
+      .then(() => {
+        toast({
+          variant: "destructive",
+          title: "تم الحذف",
+          description: "تم حذف المادة بنجاح من النظام.",
+        });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
-    } catch (e) {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل حذف المادة." });
-    }
   };
 
   const resetFilters = () => {
@@ -277,11 +295,7 @@ export default function SubjectsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-40 text-center">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" />
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={4} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
               ) : filteredSubjects.length > 0 ? filteredSubjects.map((subject) => (
                 <TableRow key={subject.id} className="hover:bg-muted/20 border-b group">
                   <TableCell className="p-4">
@@ -313,11 +327,6 @@ export default function SubjectsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right shadow-xl" dir="rtl">
                         <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات المادة</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                          تعديل المادة
-                          <Edit2 className="w-4 h-4 text-secondary" />
-                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           onClick={() => handleDelete(subject.id)}
