@@ -44,7 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
@@ -58,6 +58,7 @@ export default function AdminDepartmentsPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingDept, setEditingDept] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [newDept, setNewDept] = useState({ name: '', code: '', collegeId: '' });
   
@@ -96,6 +97,36 @@ export default function AdminDepartmentsPage() {
         const permissionError = new FirestorePermissionError({
           path: deptsRef.path,
           operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
+  const handleUpdateDept = () => {
+    if (!firestore || !editingDept?.name || !editingDept?.code || !editingDept?.collegeId) return;
+
+    setSubmitting(true);
+    const selectedCollege = (colleges as any[]).find(c => c.id === editingDept.collegeId);
+    const docRef = doc(firestore, "departments", editingDept.id);
+    const data = {
+      name: editingDept.name,
+      code: editingDept.code,
+      collegeId: editingDept.collegeId,
+      collegeName: selectedCollege?.name || "",
+      updatedAt: serverTimestamp()
+    };
+
+    updateDoc(docRef, data)
+      .then(() => {
+        setEditingDept(null);
+        toast({ title: "تم التحديث", description: "تم تحديث بيانات القسم بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'update',
           requestResourceData: data,
         });
         errorEmitter.emit('permission-error', permissionError);
@@ -255,6 +286,7 @@ export default function AdminDepartmentsPage() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
+                        onClick={() => setEditingDept(dept)}
                         className="rounded-xl hover:bg-primary/5 text-secondary"
                         title="تعديل"
                       >
@@ -283,6 +315,70 @@ export default function AdminDepartmentsPage() {
           </Table>
         </div>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingDept} onOpenChange={(open) => !open && setEditingDept(null)}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-8">
+            <DialogHeader className="text-right items-start space-y-2 mb-8">
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                <Edit2 className="w-6 h-6 text-secondary" />
+                تعديل بيانات القسم
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="grid gap-6 py-4">
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <School className="w-4 h-4 text-secondary" />
+                  الكلية التابع لها
+                </Label>
+                <Select value={editingDept?.collegeId || ""} onValueChange={(v) => setEditingDept({...editingDept, collegeId: v})}>
+                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                    <SelectValue placeholder="اختر الكلية" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    {colleges.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <Building2 className="w-4 h-4 text-secondary" />
+                  اسم القسم العلمي
+                </Label>
+                <Input 
+                  value={editingDept?.name || ""}
+                  onChange={(e) => setEditingDept({...editingDept, name: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold" 
+                />
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <FileText className="w-4 h-4 text-secondary" />
+                  رمز القسم المختصر
+                </Label>
+                <Input 
+                  value={editingDept?.code || ""}
+                  onChange={(e) => setEditingDept({...editingDept, code: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold uppercase" 
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex-row gap-3 pt-8">
+              <Button 
+                disabled={submitting}
+                onClick={handleUpdateDept}
+                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ التعديلات"}
+              </Button>
+              <Button variant="outline" onClick={() => setEditingDept(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

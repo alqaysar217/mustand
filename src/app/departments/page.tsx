@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -10,14 +9,12 @@ import {
   Building2, 
   Plus, 
   Search, 
-  MoreVertical, 
   Edit2, 
   Trash2, 
   PlusCircle,
   FileText,
   School,
-  Loader2,
-  BookOpen
+  Loader2
 } from "lucide-react";
 import {
   Table,
@@ -27,14 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -59,7 +48,7 @@ import { cn } from "@/lib/utils";
 
 // Firebase Imports
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
@@ -75,6 +64,7 @@ export default function DepartmentsManagementPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingDept, setEditingDept] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [newDept, setNewDept] = useState({ name: "", code: "", collegeId: "" });
 
@@ -114,6 +104,36 @@ export default function DepartmentsManagementPage() {
         const permissionError = new FirestorePermissionError({
           path: deptsRef.path,
           operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
+  const handleUpdateDept = () => {
+    if (!firestore || !editingDept?.name || !editingDept?.code || !editingDept?.collegeId) return;
+
+    setSubmitting(true);
+    const selectedCollege = (colleges as any[]).find(c => c.id === editingDept.collegeId);
+    const docRef = doc(firestore, "departments", editingDept.id);
+    const data = {
+      name: editingDept.name,
+      code: editingDept.code,
+      collegeId: editingDept.collegeId,
+      collegeName: selectedCollege?.name || "",
+      updatedAt: serverTimestamp()
+    };
+
+    updateDoc(docRef, data)
+      .then(() => {
+        setEditingDept(null);
+        toast({ title: "تم التحديث", description: "تم تحديث بيانات القسم بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'update',
           requestResourceData: data,
         });
         errorEmitter.emit('permission-error', permissionError);
@@ -171,9 +191,6 @@ export default function DepartmentsManagementPage() {
                     <PlusCircle className="w-6 h-6 text-secondary" />
                     تخصص جديد
                   </DialogTitle>
-                  <DialogDescription className="font-bold text-muted-foreground text-sm">
-                    أدخل بيانات التخصص الجديد وحدد الكلية التابع لها.
-                  </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-6 py-4">
@@ -192,7 +209,6 @@ export default function DepartmentsManagementPage() {
                         ) : colleges.map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
-                        {colleges.length === 0 && !loadingColleges && <div className="p-2 text-center text-xs text-destructive">لا توجد كليات مسجلة</div>}
                       </SelectContent>
                     </Select>
                   </div>
@@ -227,8 +243,7 @@ export default function DepartmentsManagementPage() {
                     onClick={handleAddDept}
                     className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
                   >
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
-                    حفظ التخصص
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : "حفظ التخصص"}
                   </Button>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
                 </DialogFooter>
@@ -258,7 +273,7 @@ export default function DepartmentsManagementPage() {
                   <TableHead className="text-right font-bold text-primary">التخصص</TableHead>
                   <TableHead className="text-right font-bold text-primary">الكلية</TableHead>
                   <TableHead className="text-right font-bold text-primary">الرمز</TableHead>
-                  <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
+                  <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -285,22 +300,26 @@ export default function DepartmentsManagementPage() {
                       <span className="text-sm font-black text-secondary">{dept.code}</span>
                     </TableCell>
                     <TableCell className="text-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-primary/5">
-                            <MoreVertical className="w-4 h-4 text-primary" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right shadow-xl" dir="rtl">
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(dept.id)}
-                            className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive"
-                          >
-                            حذف القسم
-                            <Trash2 className="w-4 h-4" />
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setEditingDept(dept)}
+                          className="rounded-xl hover:bg-primary/5 text-secondary"
+                          title="تعديل"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDelete(dept.id)}
+                          className="rounded-xl hover:bg-destructive/10 text-destructive"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )) : (
@@ -315,6 +334,71 @@ export default function DepartmentsManagementPage() {
           </div>
         </Card>
       </main>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingDept} onOpenChange={(open) => !open && setEditingDept(null)}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-8">
+            <DialogHeader className="text-right items-start space-y-2 mb-8 relative">
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                <Edit2 className="w-6 h-6 text-secondary" />
+                تعديل بيانات القسم
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="grid gap-6 py-4">
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <School className="w-4 h-4 text-secondary" />
+                  الكلية التابع لها
+                </Label>
+                <Select value={editingDept?.collegeId || ""} onValueChange={(v) => setEditingDept({...editingDept, collegeId: v})}>
+                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                    <SelectValue placeholder="اختر الكلية" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    {colleges.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <Building2 className="w-4 h-4 text-secondary" />
+                  اسم التخصص
+                </Label>
+                <Input 
+                  value={editingDept?.name || ""}
+                  onChange={(e) => setEditingDept({...editingDept, name: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold" 
+                />
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <FileText className="w-4 h-4 text-secondary" />
+                  رمز التخصص
+                </Label>
+                <Input 
+                  value={editingDept?.code || ""}
+                  onChange={(e) => setEditingDept({...editingDept, code: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-right font-bold uppercase" 
+                />
+              </div>
+            </div>
+            <DialogFooter className="flex-row gap-3 pt-8">
+              <Button 
+                disabled={submitting} 
+                onClick={handleUpdateDept}
+                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ التعديلات"}
+              </Button>
+              <Button variant="outline" onClick={() => setEditingDept(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
