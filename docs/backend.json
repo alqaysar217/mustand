@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "College": {
@@ -33,10 +32,12 @@
         "regId": { "type": "string", "description": "رقم القيد الجامعي" },
         "name": { "type": "string", "description": "الاسم الرباعي للطالب" },
         "departmentId": { "type": "string", "description": "معرف القسم" },
+        "departmentName": { "type": "string" },
         "level": { "type": "string", "description": "المستوى الدراسي الحالي" },
         "admissionType": { "type": "string", "enum": ["عام", "موازي", "نفقة خاصة"] },
         "status": { "type": "string", "enum": ["active", "suspended"] },
-        "joinDate": { "type": "string" }
+        "joinDate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["regId", "name", "departmentId", "level"]
     },
@@ -47,6 +48,7 @@
       "properties": {
         "name": { "type": "string", "description": "اسم المادة" },
         "departmentId": { "type": "string", "description": "معرف القسم التابع له" },
+        "departmentName": { "type": "string" },
         "level": { "type": "string", "description": "المستوى المخصصة له المادة" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
