@@ -17,13 +17,80 @@ import {
   Sparkles,
   Save,
   UserCog,
-  Loader2
+  Loader2,
+  CloudDownload,
+  CheckCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+// Firebase
+import { useFirestore } from "@/firebase";
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+
+const CS_CURRICULUM = [
+  // المستوى الأول - الترم الأول
+  { l: "المستوى الأول", t: "الفصل الأول", ar: "مقدمة في الحاسوب", en: "Introduction to Computer" },
+  { l: "المستوى الأول", t: "الفصل الأول", ar: "رياضيات (1)", en: "Mathematics (1)" },
+  { l: "المستوى الأول", t: "الفصل الأول", ar: "لغة إنجليزية (1)", en: "English Language (1)" },
+  { l: "المستوى الأول", t: "الفصل الأول", ar: "لغة عربية (1)", en: "Arabic Language (1)" },
+  { l: "المستوى الأول", t: "الفصل الأول", ar: "مهارات الحاسوب", en: "Computer Skills" },
+  { l: "المستوى الأول", t: "الفصل الأول", ar: "ثقافة إسلامية (1)", en: "Islamic Culture (1)" },
+  // المستوى الأول - الترم الثاني
+  { l: "المستوى الأول", t: "الفصل الثاني", ar: "برمجة (1)", en: "Programming (1)" },
+  { l: "المستوى الأول", t: "الفصل الثاني", ar: "رياضيات (2)", en: "Mathematics (2)" },
+  { l: "المستوى الأول", t: "الفصل الثاني", ar: "لغة إنجليزية (2)", en: "English Language (2)" },
+  { l: "المستوى الأول", t: "الفصل الثاني", ar: "لغة عربية (2)", en: "Arabic Language (2)" },
+  { l: "المستوى الأول", t: "الفصل الثاني", ar: "فيزياء إلكترونية", en: "Electronic Physics" },
+  { l: "المستوى الأول", t: "الفصل الثاني", ar: "ثقافة إسلامية (2)", en: "Islamic Culture (2)" },
+  // المستوى الثاني - الترم الأول
+  { l: "المستوى الثاني", t: "الفصل الأول", ar: "تكنولوجيا الويب", en: "Web Technology" },
+  { l: "المستوى الثاني", t: "الفصل الأول", ar: "هياكل بيانات", en: "Data Structures" },
+  { l: "المستوى الثاني", t: "الفصل الأول", ar: "لغة إنجليزية (3)", en: "English Language (3)" },
+  { l: "المستوى الثاني", t: "الفصل الأول", ar: "لغة التجميع", en: "Assembly Language" },
+  { l: "المستوى الثاني", t: "الفصل الأول", ar: "رياضيات (3)", en: "Mathematics (3)" },
+  { l: "المستوى الثاني", t: "الفصل الأول", ar: "تصميم منطقي", en: "Logic Design" },
+  // المستوى الثاني - الترم الثاني
+  { l: "المستوى الثاني", t: "الفصل الثاني", ar: "برمجة كائنية (1)", en: "Object Oriented Programming (1)" },
+  { l: "المستوى الثاني", t: "الفصل الثاني", ar: "قواعد بيانات (1)", en: "Database (1)" },
+  { l: "المستوى الثاني", t: "الفصل الثاني", ar: "لغة إنجليزية (4)", en: "English Language (4)" },
+  { l: "المستوى الثاني", t: "الفصل الثاني", ar: "عمارة حاسوب", en: "Computer Architecture" },
+  { l: "المستوى الثاني", t: "الفصل الثاني", ar: "احتمالات وإحصاء", en: "Probability and Statistics" },
+  { l: "المستوى الثاني", t: "الفصل الثاني", ar: "تراكيب محددة", en: "Discrete Structures" },
+  // المستوى الثالث - الترم الأول
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "هندسة برمجيات (1)", en: "Software Engineering (1)" },
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "نظم تشغيل", en: "Operating Systems" },
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "ذكاء اصطناعي", en: "Artificial Intelligence" },
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "رسوم حاسوب", en: "Computer Graphics" },
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "اتصالات وبيانات", en: "Data Communications" },
+  { l: "المستوى الثالث", t: "الفصل الأول", ar: "بحوث عمليات", en: "Operations Research" },
+  // المستوى الثالث - الترم الثاني
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "هندسة برمجيات (2)", en: "Software Engineering (2)" },
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "شبكات الحاسوب", en: "Computer Networks" },
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "تحليل وتصميم خوارزميات", en: "Analysis and Design of Algorithms" },
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "نظرية احتسابية", en: "Theory of Computation" },
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "لغات برمجة", en: "Programming Languages" },
+  { l: "المستوى الثالث", t: "الفصل الثاني", ar: "تفاعل إنسان وحاسوب", en: "Human-Computer Interaction" },
+  // المستوى الرابع - الترم الأول
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "معالجة صور", en: "Image Processing" },
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "أمن حاسوب", en: "Computer Security" },
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "حوسبة سحابية", en: "Cloud Computing" },
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "تنقيب بيانات", en: "Data Mining" },
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "جودة برمجيات", en: "Software Quality" },
+  { l: "المستوى الرابع", t: "الفصل الأول", ar: "ندوة", en: "Seminar" },
+  // المستوى الرابع - الترم الثاني
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "نظم موزعة", en: "Distributed Systems" },
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "شبكات لاسلكية", en: "Wireless Networks" },
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "واقع افتراضي", en: "Virtual Reality" },
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "نظم خبيرة", en: "Expert Systems" },
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "مواضيع مختارة", en: "Selected Topics" },
+  { l: "المستوى الرابع", t: "الفصل الثاني", ar: "مشروع التخرج (1)", en: "Graduation Project (1)" },
+];
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const firestore = useFirestore();
 
   const handleSave = (section: string) => {
     setLoading(true);
@@ -34,6 +101,60 @@ export default function AdminSettingsPage() {
         description: `تم تحديث إعدادات ${section} بنجاح.`,
       });
     }, 1000);
+  };
+
+  const handleImportCurriculum = async () => {
+    if (!firestore) return;
+    setImporting(true);
+    try {
+      // 1. التأكد من وجود تخصص علوم الحاسوب أو إنشاؤه
+      const deptsRef = collection(firestore, "departments");
+      const deptQuery = query(deptsRef, where("name", "==", "علوم الحاسوب"));
+      const deptSnap = await getDocs(deptQuery);
+      
+      let deptId = "";
+      if (deptSnap.empty) {
+        // إنشاء التخصص إذا لم يكن موجوداً
+        const newDept = await addDoc(deptsRef, {
+          name: "علوم الحاسوب",
+          code: "CS",
+          collegeName: "كلية تقنية المعلومات",
+          collegeId: "manual_import",
+          createdAt: serverTimestamp()
+        });
+        deptId = newDept.id;
+      } else {
+        deptId = deptSnap.docs[0].id;
+      }
+
+      // 2. إضافة المواد
+      const subjectsRef = collection(firestore, "subjects");
+      let count = 0;
+      
+      for (const item of CS_CURRICULUM) {
+        // فحص بسيط لمنع التكرار (اختياري)
+        await addDoc(subjectsRef, {
+          nameAr: item.ar,
+          nameEn: item.en,
+          level: item.l,
+          term: item.t,
+          departmentId: deptId,
+          departmentName: "علوم الحاسوب",
+          createdAt: serverTimestamp()
+        });
+        count++;
+      }
+
+      toast({
+        title: "تم الاستيراد بنجاح",
+        description: `تمت إضافة ${count} مادة دراسية إلى تخصص علوم الحاسوب.`,
+      });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "خطأ في الاستيراد", description: "فشل إرسال البيانات إلى السحابة." });
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -85,39 +206,31 @@ export default function AdminSettingsPage() {
             </div>
           </Card>
 
-          {/* Security */}
-          <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
+          {/* Data Management Section */}
+          <Card className="p-8 border-none shadow-xl rounded-3xl bg-white border-r-4 border-secondary">
             <div className="flex items-center gap-3 mb-8 border-b pb-4">
-              <div className="p-2 bg-primary/5 rounded-xl">
-                <Lock className="w-6 h-6 text-primary" />
+              <div className="p-2 bg-secondary/10 rounded-xl">
+                <Database className="w-6 h-6 text-secondary" />
               </div>
-              <h2 className="text-xl font-bold text-primary">الأمان وكلمة المرور</h2>
+              <h2 className="text-xl font-bold text-primary">إدارة البيانات والمنهج</h2>
             </div>
             
-            <div className="space-y-6 max-w-md">
-              <div className="space-y-2">
-                <Label className="text-primary font-bold mr-1">كلمة المرور الحالية</Label>
-                <Input type="password" placeholder="••••••••" className="rounded-xl h-12 border-muted bg-muted/20" />
+            <div className="space-y-4">
+              <p className="text-sm font-bold text-muted-foreground">يمكنك استيراد البيانات الأساسية للنظام دفعة واحدة لتهيئة التخصصات والمواد الدراسية.</p>
+              <div className="p-6 bg-muted/20 rounded-2xl border border-dashed border-secondary/30 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="text-right">
+                  <h4 className="font-bold text-primary">منهج قسم علوم الحاسوب</h4>
+                  <p className="text-[10px] text-muted-foreground font-bold">استيراد 48 مادة (المستوى 1 إلى 4)</p>
+                </div>
+                <Button 
+                  disabled={importing || !firestore}
+                  onClick={handleImportCurriculum}
+                  className="rounded-xl h-12 font-bold bg-secondary hover:bg-secondary/90 shadow-lg gap-2"
+                >
+                  {importing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CloudDownload className="w-5 h-5" />}
+                  استيراد المنهج الدراسي (CS)
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label className="text-primary font-bold mr-1">كلمة المرور الجديدة</Label>
-                <Input type="password" placeholder="••••••••" className="rounded-xl h-12 border-muted bg-muted/20" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-primary font-bold mr-1">تأكيد كلمة المرور</Label>
-                <Input type="password" placeholder="••••••••" className="rounded-xl h-12 border-muted bg-muted/20" />
-              </div>
-            </div>
-            
-            <div className="flex justify-end mt-8">
-              <Button 
-                onClick={() => handleSave('الأمان')}
-                disabled={loading}
-                className="rounded-xl px-8 h-12 font-bold gradient-blue shadow-lg gap-2"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-                تحديث كلمة المرور
-              </Button>
             </div>
           </Card>
         </div>
@@ -158,32 +271,6 @@ export default function AdminSettingsPage() {
                 </div>
                 <Switch defaultChecked />
               </div>
-
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/10 border border-transparent hover:border-primary/10 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
-                    <Bell className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-primary text-sm">التنبيهات البريدية</p>
-                    <p className="text-[10px] text-muted-foreground font-bold">تقارير العمليات اليومية</p>
-                  </div>
-                </div>
-                <Switch />
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/10 border border-transparent hover:border-primary/10 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg text-green-600">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-primary text-sm">التحقق بخطوتين</p>
-                    <p className="text-[10px] text-muted-foreground font-bold">حماية إضافية للحساب</p>
-                  </div>
-                </div>
-                <Switch />
-              </div>
             </div>
           </Card>
 
@@ -197,17 +284,13 @@ export default function AdminSettingsPage() {
                   <span>v2.4.0 (مستقر)</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>آخر تحديث</span>
-                  <span>منذ 3 أيام</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>المساحة المستخدمة</span>
-                  <span>14.2 GB / 50 GB</span>
+                  <span>حالة الاتصال</span>
+                  <span className="flex items-center gap-1">
+                    {firestore ? <CheckCircle className="w-3 h-3 text-green-400" /> : <Loader2 className="w-3 h-3 animate-spin" />}
+                    {firestore ? "متصل بالسحابة" : "جاري الاتصال..."}
+                  </span>
                 </div>
               </div>
-              <Button variant="outline" className="w-full mt-6 bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl font-bold h-10">
-                تحقق من التحديثات
-              </Button>
             </div>
             <div className="absolute -bottom-6 -left-6 opacity-10">
               <Settings className="w-32 h-32" />
