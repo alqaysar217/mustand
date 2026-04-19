@@ -17,7 +17,8 @@ import {
   GraduationCap,
   Building2,
   X,
-  PlusCircle
+  PlusCircle,
+  Loader2
 } from "lucide-react";
 import {
   Table,
@@ -51,40 +52,92 @@ import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 import { cn } from "@/lib/utils";
 
-const INITIAL_SUBJECTS = [
-  { id: '1', name: 'برمجة 1', department: 'تقنية المعلومات', level: 'المستوى الأول', studentsCount: 145 },
-  { id: '2', name: 'رياضيات متقدمة', department: 'علوم الحاسوب', level: 'المستوى الثاني', studentsCount: 98 },
-  { id: '3', name: 'هندسة برمجيات', department: 'هندسة البرمجيات', level: 'المستوى الثالث', studentsCount: 72 },
-  { id: '4', name: 'قواعد بيانات', department: 'تقنية المعلومات', level: 'المستوى الثاني', studentsCount: 110 },
-  { id: '5', name: 'ذكاء اصطناعي', department: 'علوم الحاسوب', level: 'المستوى الرابع', studentsCount: 45 },
-];
+// Firebase Imports
+import { useFirestore, useCollection } from "@/firebase";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function SubjectsManagementPage() {
-  const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
+  const firestore = useFirestore();
+  const { data: subjects = [], loading: loadingSubjects } = useCollection(
+    firestore ? collection(firestore, "subjects") : null
+  );
+  const { data: departments = [] } = useCollection(
+    firestore ? collection(firestore, "departments") : null
+  );
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  
+  const [newSubject, setNewSubject] = useState({
+    name: "",
+    departmentId: "",
+    level: "المستوى الأول"
+  });
+
   const { isOpen } = useSidebarToggle();
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
   const { toast } = useToast();
 
   const filteredSubjects = useMemo(() => {
-    return subjects.filter(subject => {
-      const matchesSearch = subject.name.includes(searchTerm) || subject.department.includes(searchTerm);
-      const matchesDept = selectedDept === "all" || subject.department === selectedDept;
+    return (subjects as any[]).filter(subject => {
+      const matchesSearch = subject.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesDept = selectedDept === "all" || subject.departmentId === selectedDept;
       const matchesLevel = selectedLevel === "all" || subject.level === selectedLevel;
       return matchesSearch && matchesDept && matchesLevel;
     });
   }, [subjects, searchTerm, selectedDept, selectedLevel]);
 
+  const handleAddSubject = () => {
+    if (!firestore || !newSubject.name || !newSubject.departmentId) {
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى ملء كافة الحقول." });
+      return;
+    }
+    
+    setSubmitting(true);
+    const selectedDeptObj = departments.find((d: any) => d.id === newSubject.departmentId) as any;
+    const subjectsRef = collection(firestore, "subjects");
+    const data = {
+      ...newSubject,
+      departmentName: selectedDeptObj?.name || "",
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(subjectsRef, data)
+      .then(() => {
+        setIsAddDialogOpen(false);
+        setNewSubject({ name: "", departmentId: "", level: "المستوى الأول" });
+        toast({ title: "تم الحفظ", description: "تمت إضافة المادة بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: subjectsRef.path,
+          operation: 'create',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setSubmitting(false));
+  };
+
   const handleDelete = (id: string) => {
-    setSubjects(prev => prev.filter(s => s.id !== id));
-    toast({
-      variant: "destructive",
-      title: "تم الحذف",
-      description: "تم حذف المادة بنجاح من النظام.",
-    });
+    if (!firestore) return;
+    const docRef = doc(firestore, "subjects", id);
+    deleteDoc(docRef)
+      .then(() => {
+        toast({ variant: "destructive", title: "تم الحذف", description: "تم حذف المادة بنجاح." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   return (
@@ -99,7 +152,7 @@ export default function SubjectsManagementPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة المواد الدراسية</h1>
-            <p className="text-muted-foreground font-bold">تحديث سجلات المواد والأقسام لتسهيل الفرز والأرشفة</p>
+            <p className="text-muted-foreground font-bold">تحديث سجلات المواد المتاحة للأرشفة في Firestore</p>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -111,13 +164,13 @@ export default function SubjectsManagementPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
               <div className="p-8">
-                <DialogHeader className="text-right items-start space-y-2 mb-8">
+                <DialogHeader className="text-right items-start space-y-2 mb-8 relative">
                   <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
                     <PlusCircle className="w-6 h-6 text-secondary" />
-                    إضافة مادة جديدة
+                    مادة جديدة
                   </DialogTitle>
                   <DialogDescription className="font-bold text-muted-foreground text-sm">
-                    أدخل تفاصيل المادة الدراسية الجديدة لضمها للسجلات الأكاديمية.
+                    أدخل بيانات المادة الدراسية الجديدة.
                   </DialogDescription>
                 </DialogHeader>
 
@@ -127,21 +180,26 @@ export default function SubjectsManagementPage() {
                       <BookOpen className="w-4 h-4 text-secondary" />
                       اسم المادة
                     </Label>
-                    <Input placeholder="مثال: هياكل بيانات" className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" />
+                    <Input 
+                      value={newSubject.name}
+                      onChange={(e) => setNewSubject({...newSubject, name: e.target.value})}
+                      placeholder="مثال: هياكل بيانات" 
+                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
+                    />
                   </div>
                   <div className="space-y-2 text-right">
                     <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                       <Building2 className="w-4 h-4 text-secondary" />
                       التخصص (القسم)
                     </Label>
-                    <Select>
+                    <Select onValueChange={(v) => setNewSubject({...newSubject, departmentId: v})}>
                       <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
                         <SelectValue placeholder="اختر التخصص" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
-                        <SelectItem value="it">تقنية المعلومات</SelectItem>
-                        <SelectItem value="cs">علوم الحاسوب</SelectItem>
-                        <SelectItem value="se">هندسة البرمجيات</SelectItem>
+                        {departments.map((d: any) => (
+                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -150,21 +208,28 @@ export default function SubjectsManagementPage() {
                       <GraduationCap className="w-4 h-4 text-secondary" />
                       المستوى
                     </Label>
-                    <Select>
+                    <Select value={newSubject.level} onValueChange={(v) => setNewSubject({...newSubject, level: v})}>
                       <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
                         <SelectValue placeholder="اختر المستوى" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
-                        <SelectItem value="1">المستوى الأول</SelectItem>
-                        <SelectItem value="2">المستوى الثاني</SelectItem>
-                        <SelectItem value="3">المستوى الثالث</SelectItem>
-                        <SelectItem value="4">المستوى الرابع</SelectItem>
+                        <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                        <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                        <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                        <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <DialogFooter className="flex-row gap-3 pt-8">
-                  <Button type="submit" onClick={() => { setIsAddDialogOpen(false); toast({ title: "تم الحفظ", description: "تمت إضافة المادة بنجاح." }); }} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">حفظ المادة</Button>
+                  <Button 
+                    disabled={submitting}
+                    onClick={handleAddSubject}
+                    className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+                    حفظ المادة
+                  </Button>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
                 </DialogFooter>
               </div>
@@ -172,13 +237,13 @@ export default function SubjectsManagementPage() {
           </Dialog>
         </div>
 
-        <Card className="p-6 border-none shadow-xl rounded-3xl bg-white">
+        <Card className="p-6 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <div className="flex-1 relative">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input 
                 type="text"
-                placeholder="البحث باسم المادة أو التخصص..."
+                placeholder="البحث باسم المادة..."
                 className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all text-right"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -197,24 +262,24 @@ export default function SubjectsManagementPage() {
           {showFilters && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-6 bg-muted/20 rounded-2xl animate-slide-up">
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold mr-1 text-xs">التخصص الدراسي</Label>
+                <Label className="text-primary font-bold mr-1 text-xs">حسب التخصص</Label>
                 <Select value={selectedDept} onValueChange={setSelectedDept}>
                   <SelectTrigger className="rounded-xl h-11 border-muted bg-white font-bold">
-                    <SelectValue placeholder="تصفية حسب التخصص" />
+                    <SelectValue placeholder="الكل" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
                     <SelectItem value="all">جميع التخصصات</SelectItem>
-                    <SelectItem value="تقنية المعلومات">تقنية المعلومات</SelectItem>
-                    <SelectItem value="علوم الحاسوب">علوم الحاسوب</SelectItem>
-                    <SelectItem value="هندسة البرمجيات">هندسة البرمجيات</SelectItem>
+                    {departments.map((d: any) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold mr-1 text-xs">المستوى الدراسي</Label>
+                <Label className="text-primary font-bold mr-1 text-xs">حسب المستوى</Label>
                 <Select value={selectedLevel} onValueChange={setSelectedLevel}>
                   <SelectTrigger className="rounded-xl h-11 border-muted bg-white font-bold">
-                    <SelectValue placeholder="تصفية حسب المستوى" />
+                    <SelectValue placeholder="الكل" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
                     <SelectItem value="all">جميع المستويات</SelectItem>
@@ -231,7 +296,7 @@ export default function SubjectsManagementPage() {
                   onClick={() => { setSelectedDept("all"); setSelectedLevel("all"); setSearchTerm(""); }}
                   className="w-full h-11 rounded-xl font-bold text-muted-foreground hover:text-primary"
                 >
-                  إعادة ضبط المرشحات
+                  إعادة ضبط
                 </Button>
               </div>
             </div>
@@ -242,14 +307,19 @@ export default function SubjectsManagementPage() {
               <TableHeader className="bg-muted/50">
                 <TableRow className="hover:bg-transparent border-b">
                   <TableHead className="text-right font-bold text-primary">المادة</TableHead>
-                  <TableHead className="text-right font-bold text-primary">التخصص</TableHead>
+                  <TableHead className="text-right font-bold text-primary">القسم</TableHead>
                   <TableHead className="text-right font-bold text-primary">المستوى</TableHead>
-                  <TableHead className="text-right font-bold text-primary">عدد الطلاب المسجلين</TableHead>
                   <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSubjects.length > 0 ? filteredSubjects.map((subject) => (
+                {loadingSubjects ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-40 text-center">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary opacity-20" />
+                    </TableCell>
+                  </TableRow>
+                ) : filteredSubjects.length > 0 ? filteredSubjects.map((subject) => (
                   <TableRow key={subject.id} className="hover:bg-muted/20 border-b group">
                     <TableCell className="p-4">
                       <div className="flex items-center gap-3">
@@ -260,21 +330,10 @@ export default function SubjectsManagementPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2 justify-end">
-                        <span className="text-sm font-bold text-muted-foreground">{subject.department}</span>
-                        <Building2 className="w-4 h-4 text-muted-foreground" />
-                      </div>
+                      <span className="text-sm font-bold text-muted-foreground">{subject.departmentName}</span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2 justify-end">
-                        <span className="text-sm font-bold text-muted-foreground">{subject.level}</span>
-                        <GraduationCap className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center justify-center bg-secondary/10 text-secondary font-black px-3 py-1 rounded-lg text-xs">
-                        {subject.studentsCount} طالب
-                      </span>
+                      <span className="text-sm font-bold text-muted-foreground">{subject.level}</span>
                     </TableCell>
                     <TableCell className="text-center">
                       <DropdownMenu>
@@ -284,18 +343,15 @@ export default function SubjectsManagementPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right shadow-xl" dir="rtl">
-                          <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات الموظف</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                            تعديل المادة
+                            تعديل
                             <Edit2 className="w-4 h-4 text-secondary" />
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             onClick={() => handleDelete(subject.id)}
                             className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive"
                           >
-                            حذف المادة
+                            حذف
                             <Trash2 className="w-4 h-4" />
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -304,8 +360,8 @@ export default function SubjectsManagementPage() {
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">
-                      لا توجد مواد دراسية مطابقة للبحث
+                    <TableCell colSpan={4} className="h-40 text-center text-muted-foreground font-bold">
+                      لا توجد مواد دراسية مسجلة حالياً
                     </TableCell>
                   </TableRow>
                 )}
