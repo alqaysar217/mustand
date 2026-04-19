@@ -19,7 +19,9 @@ import {
   Banknote,
   Loader2,
   Trash2,
-  Filter
+  Filter,
+  CheckCircle,
+  Type
 } from "lucide-react";
 import {
   Table,
@@ -215,41 +217,47 @@ export default function StudentsManagementPage() {
                     <UserPlus className="w-6 h-6 text-secondary" />
                     طالب جديد
                   </DialogTitle>
-                  <DialogDescription className="sr-only">أدخل بيانات الطالب الجديد</DialogDescription>
+                  <DialogDescription className="font-bold text-muted-foreground">أدخل بيانات الطالب الرباعية ورقم القيد الجامعي.</DialogDescription>
                 </DialogHeader>
                 
                 <div className="grid grid-cols-2 gap-6 py-4">
                   <div className="space-y-2 col-span-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                      <User className="w-4 h-4 text-secondary" />
-                      الاسم الكامل
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                      <Type className="w-4 h-4 text-secondary" />
+                      الاسم الكامل للطالب
                     </Label>
-                    <Input 
-                      value={newStudent.name}
-                      onChange={(e) => setNewStudent({...newStudent, name: e.target.value})}
-                      placeholder="مثال: أحمد محمد علي" 
-                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
-                    />
+                    <div className="relative">
+                      <Input 
+                        value={newStudent.name}
+                        onChange={(e) => setNewStudent({...newStudent, name: e.target.value})}
+                        placeholder="مثال: أحمد محمد علي حسن" 
+                        className="rounded-xl h-12 border-muted text-right font-bold pr-10" 
+                      />
+                      <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                    </div>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
                       <Fingerprint className="w-4 h-4 text-secondary" />
-                      رقم القيد
+                      رقم القيد الجامعي
                     </Label>
-                    <Input 
-                      value={newStudent.regId}
-                      onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})}
-                      placeholder="20240000" 
-                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
-                    />
+                    <div className="relative">
+                      <Input 
+                        value={newStudent.regId}
+                        onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})}
+                        placeholder="20240000" 
+                        className="rounded-xl h-12 border-muted text-right font-bold pr-10" 
+                      />
+                      <Fingerprint className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                    </div>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
                       <Building2 className="w-4 h-4 text-secondary" />
-                      التخصص
+                      التخصص الدراسي
                     </Label>
                     <Select onValueChange={(v) => setNewStudent({...newStudent, departmentId: v})}>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                      <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                         <SelectValue placeholder="اختر التخصص" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
@@ -262,12 +270,12 @@ export default function StudentsManagementPage() {
                     </Select>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
                       <GraduationCap className="w-4 h-4 text-secondary" />
-                      المستوى
+                      المستوى الحالي
                     </Label>
                     <Select value={newStudent.level} onValueChange={(v) => setNewStudent({...newStudent, level: v})}>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                      <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                         <SelectValue placeholder="اختر المستوى" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
@@ -279,12 +287,12 @@ export default function StudentsManagementPage() {
                     </Select>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
                       <Banknote className="w-4 h-4 text-secondary" />
-                      نوع القبول
+                      نظام القبول
                     </Label>
                     <Select value={newStudent.admissionType} onValueChange={(v) => setNewStudent({...newStudent, admissionType: v})}>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                      <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                         <SelectValue placeholder="نوع القبول" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
@@ -300,10 +308,10 @@ export default function StudentsManagementPage() {
                   <Button 
                     disabled={submitting}
                     onClick={handleAddStudent}
-                    className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                    className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2"
                   >
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
-                    حفظ البيانات
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    {submitting ? "جاري الحفظ..." : "تسجيل الطالب"}
                   </Button>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
                 </DialogFooter>
@@ -433,39 +441,45 @@ export default function StudentsManagementPage() {
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات الطالب
               </DialogTitle>
-              <DialogDescription className="sr-only">تحديث معلومات الطالب المختار</DialogDescription>
+              <DialogDescription className="font-bold text-muted-foreground">تحديث بيانات الطالب المختار في السجلات المركزية.</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-2 gap-6 py-4">
               <div className="space-y-2 col-span-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                  <User className="w-4 h-4 text-secondary" />
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                  <Type className="w-4 h-4 text-secondary" />
                   الاسم الكامل
                 </Label>
-                <Input 
-                  value={editingStudent?.name || ""}
-                  onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
-                  className="rounded-xl h-11 border-muted text-right font-bold" 
-                />
+                <div className="relative">
+                  <Input 
+                    value={editingStudent?.name || ""}
+                    onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
+                    className="rounded-xl h-12 border-muted text-right font-bold pr-10" 
+                  />
+                  <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                </div>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
                   <Fingerprint className="w-4 h-4 text-secondary" />
                   رقم القيد
                 </Label>
-                <Input 
-                  value={editingStudent?.regId || ""}
-                  onChange={(e) => setEditingStudent({...editingStudent, regId: e.target.value})}
-                  className="rounded-xl h-11 border-muted text-right font-bold" 
-                />
+                <div className="relative">
+                  <Input 
+                    value={editingStudent?.regId || ""}
+                    onChange={(e) => setEditingStudent({...editingStudent, regId: e.target.value})}
+                    className="rounded-xl h-12 border-muted text-right font-bold pr-10" 
+                  />
+                  <Fingerprint className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                </div>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
                   <Building2 className="w-4 h-4 text-secondary" />
                   التخصص
                 </Label>
                 <Select value={editingStudent?.departmentId || ""} onValueChange={(v) => setEditingStudent({...editingStudent, departmentId: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                  <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                     <SelectValue placeholder="اختر التخصص" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
@@ -476,12 +490,12 @@ export default function StudentsManagementPage() {
                 </Select>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
                   <GraduationCap className="w-4 h-4 text-secondary" />
                   المستوى
                 </Label>
                 <Select value={editingStudent?.level || ""} onValueChange={(v) => setEditingStudent({...editingStudent, level: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                  <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                     <SelectValue placeholder="اختر المستوى" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
@@ -493,12 +507,12 @@ export default function StudentsManagementPage() {
                 </Select>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
                   <Banknote className="w-4 h-4 text-secondary" />
                   نوع القبول
                 </Label>
                 <Select value={editingStudent?.admissionType || ""} onValueChange={(v) => setEditingStudent({...editingStudent, admissionType: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                  <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                     <SelectValue placeholder="نوع القبول" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
@@ -513,9 +527,10 @@ export default function StudentsManagementPage() {
               <Button 
                 disabled={submitting} 
                 onClick={handleUpdateStudent}
-                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2"
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : "حفظ التعديلات"}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit2 className="w-4 h-4" />}
+                {submitting ? "جاري الحفظ..." : "حفظ التعديلات"}
               </Button>
               <Button variant="outline" onClick={() => setEditingStudent(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
             </DialogFooter>

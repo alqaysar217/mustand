@@ -16,7 +16,10 @@ import {
   FileText,
   School,
   Loader2,
-  Filter
+  Filter,
+  CheckCircle,
+  Type,
+  Hash
 } from "lucide-react";
 import {
   Table,
@@ -178,7 +181,7 @@ export default function DepartmentsManagementPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة التخصصات</h1>
-            <p className="text-muted-foreground font-bold">إدارة الأقسام العلمية وتوزيعها على الكليات</p>
+            <p className="text-muted-foreground font-bold">إدارة الأقسام العلمية وتوزيعها على الكليات الجامعية</p>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -195,16 +198,17 @@ export default function DepartmentsManagementPage() {
                     <PlusCircle className="w-6 h-6 text-secondary" />
                     تخصص جديد
                   </DialogTitle>
+                  <DialogDescription className="font-bold text-muted-foreground">إنشاء قسم علمي جديد في السجلات المركزية.</DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-6 py-4">
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
                       <School className="w-4 h-4 text-secondary" />
                       الكلية التابع لها
                     </Label>
                     <Select onValueChange={(v) => setNewDept({...newDept, collegeId: v})}>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                      <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                         <SelectValue placeholder="اختر الكلية" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
@@ -217,37 +221,44 @@ export default function DepartmentsManagementPage() {
                     </Select>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                      <Building2 className="w-4 h-4 text-secondary" />
-                      اسم التخصص
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                      <Type className="w-4 h-4 text-secondary" />
+                      اسم التخصص العلمي
                     </Label>
-                    <Input 
-                      value={newDept.name}
-                      onChange={(e) => setNewDept({...newDept, name: e.target.value})}
-                      placeholder="مثال: هندسة البرمجيات" 
-                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
-                    />
+                    <div className="relative">
+                      <Input 
+                        value={newDept.name}
+                        onChange={(e) => setNewDept({...newDept, name: e.target.value})}
+                        placeholder="مثال: هندسة البرمجيات" 
+                        className="rounded-xl h-12 border-muted text-right font-bold pr-10" 
+                      />
+                      <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                    </div>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                      <FileText className="w-4 h-4 text-secondary" />
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                      <Hash className="w-4 h-4 text-secondary" />
                       رمز التخصص (Code)
                     </Label>
-                    <Input 
-                      value={newDept.code}
-                      onChange={(e) => setNewDept({...newDept, code: e.target.value})}
-                      placeholder="SE" 
-                      className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" 
-                    />
+                    <div className="relative">
+                      <Input 
+                        value={newDept.code}
+                        onChange={(e) => setNewDept({...newDept, code: e.target.value})}
+                        placeholder="SE" 
+                        className="rounded-xl h-12 border-muted text-right font-bold uppercase pr-10" 
+                      />
+                      <FileText className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter className="flex-row gap-3 pt-8">
                   <Button 
                     disabled={submitting}
                     onClick={handleAddDept}
-                    className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                    className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2"
                   >
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : "حفظ التخصص"}
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    {submitting ? "جاري الحفظ..." : "تفعيل التخصص"}
                   </Button>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
                 </DialogFooter>
@@ -360,17 +371,17 @@ export default function DepartmentsManagementPage() {
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات القسم
               </DialogTitle>
-              <DialogDescription className="sr-only">تحديث معلومات القسم المختار</DialogDescription>
+              <DialogDescription className="font-bold text-muted-foreground">تحديث معلومات القسم المختار في قاعدة البيانات.</DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-6 py-4">
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
                   <School className="w-4 h-4 text-secondary" />
                   الكلية التابع لها
                 </Label>
                 <Select value={editingDept?.collegeId || ""} onValueChange={(v) => setEditingDept({...editingDept, collegeId: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                  <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                     <SelectValue placeholder="اختر الكلية" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
@@ -381,35 +392,42 @@ export default function DepartmentsManagementPage() {
                 </Select>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                  <Building2 className="w-4 h-4 text-secondary" />
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                  <Type className="w-4 h-4 text-secondary" />
                   اسم التخصص
                 </Label>
-                <Input 
-                  value={editingDept?.name || ""}
-                  onChange={(e) => setEditingDept({...editingDept, name: e.target.value})}
-                  className="rounded-xl h-11 border-muted text-right font-bold" 
-                />
+                <div className="relative">
+                  <Input 
+                    value={editingDept?.name || ""}
+                    onChange={(e) => setEditingDept({...editingDept, name: e.target.value})}
+                    className="rounded-xl h-12 border-muted text-right font-bold pr-10" 
+                  />
+                  <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                </div>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                  <FileText className="w-4 h-4 text-secondary" />
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                  <Hash className="w-4 h-4 text-secondary" />
                   رمز التخصص
                 </Label>
-                <Input 
-                  value={editingDept?.code || ""}
-                  onChange={(e) => setEditingDept({...editingDept, code: e.target.value})}
-                  className="rounded-xl h-11 border-muted text-right font-bold uppercase" 
-                />
+                <div className="relative">
+                  <Input 
+                    value={editingDept?.code || ""}
+                    onChange={(e) => setEditingDept({...editingDept, code: e.target.value})}
+                    className="rounded-xl h-12 border-muted text-right font-bold uppercase pr-10" 
+                  />
+                  <FileText className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                </div>
               </div>
             </div>
             <DialogFooter className="flex-row gap-3 pt-8">
               <Button 
                 disabled={submitting} 
                 onClick={handleUpdateDept}
-                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2"
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : "حفظ التعديلات"}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit2 className="w-4 h-4" />}
+                {submitting ? "جاري الحفظ..." : "حفظ التعديلات"}
               </Button>
               <Button variant="outline" onClick={() => setEditingDept(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
             </DialogFooter>

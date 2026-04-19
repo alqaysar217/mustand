@@ -16,7 +16,11 @@ import {
   Building2,
   Loader2,
   Clock,
-  Filter
+  Filter,
+  CheckCircle,
+  Type,
+  Globe,
+  GraduationCap
 } from "lucide-react";
 import {
   Table,
@@ -177,7 +181,7 @@ export default function SubjectsManagementPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة المواد الدراسية</h1>
-            <p className="text-muted-foreground font-bold">إضافة وتحديث المناهج الدراسية</p>
+            <p className="text-muted-foreground font-bold">إضافة وتحديث المناهج والمواد التعليمية في النظام</p>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -194,21 +198,47 @@ export default function SubjectsManagementPage() {
                     <PlusCircle className="w-6 h-6 text-secondary" />
                     مادة دراسية جديدة
                   </DialogTitle>
+                  <DialogDescription className="font-bold text-muted-foreground">أدخل تفاصيل المادة التعليمية الجديدة لدمجها في الخطة الدراسية.</DialogDescription>
                 </DialogHeader>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">اسم المادة (عربي)</Label>
-                    <Input value={newSubject.nameAr} onChange={(e) => setNewSubject({...newSubject, nameAr: e.target.value})} placeholder="مثال: ذكاء اصطناعي" className="rounded-xl h-11 border-muted text-right font-bold" />
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                      <Type className="w-4 h-4 text-secondary" />
+                      اسم المادة (عربي)
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        value={newSubject.nameAr} 
+                        onChange={(e) => setNewSubject({...newSubject, nameAr: e.target.value})} 
+                        placeholder="مثال: ذكاء اصطناعي" 
+                        className="rounded-xl h-12 border-muted text-right font-bold pr-10" 
+                      />
+                      <BookOpen className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                    </div>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">اسم المادة (English)</Label>
-                    <Input value={newSubject.nameEn} onChange={(e) => setNewSubject({...newSubject, nameEn: e.target.value})} placeholder="AI Fundamentals" className="rounded-xl h-11 border-muted text-left font-mono" />
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                      <Globe className="w-4 h-4 text-secondary" />
+                      اسم المادة (English)
+                    </Label>
+                    <div className="relative">
+                      <Input 
+                        value={newSubject.nameEn} 
+                        onChange={(e) => setNewSubject({...newSubject, nameEn: e.target.value})} 
+                        placeholder="AI Fundamentals" 
+                        className="rounded-xl h-12 border-muted text-left font-mono pr-10" 
+                      />
+                      <Globe className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                    </div>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">التخصص</Label>
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                      <Building2 className="w-4 h-4 text-secondary" />
+                      التخصص التابع له
+                    </Label>
                     <Select onValueChange={(v) => setNewSubject({...newSubject, departmentId: v})}>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                      <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                         <SelectValue placeholder="اختر التخصص" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
@@ -217,9 +247,12 @@ export default function SubjectsManagementPage() {
                     </Select>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">المستوى</Label>
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                      <GraduationCap className="w-4 h-4 text-secondary" />
+                      المستوى الدراسي
+                    </Label>
                     <Select value={newSubject.level} onValueChange={(v) => setNewSubject({...newSubject, level: v})}>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                      <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                         <SelectValue placeholder="اختر المستوى" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
@@ -231,9 +264,12 @@ export default function SubjectsManagementPage() {
                     </Select>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">الترم</Label>
+                    <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                      <Clock className="w-4 h-4 text-secondary" />
+                      الفصل الدراسي (الترم)
+                    </Label>
                     <Select value={newSubject.term} onValueChange={(v) => setNewSubject({...newSubject, term: v})}>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                      <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                         <SelectValue placeholder="اختر الترم" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
@@ -245,8 +281,13 @@ export default function SubjectsManagementPage() {
                   </div>
                 </div>
                 <DialogFooter className="flex-row gap-3 pt-8">
-                  <Button disabled={submitting} onClick={handleAddSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ المادة"}
+                  <Button 
+                    disabled={submitting} 
+                    onClick={handleAddSubject} 
+                    className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    {submitting ? "جاري الحفظ..." : "حفظ المادة"}
                   </Button>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
                 </DialogFooter>
@@ -307,7 +348,7 @@ export default function SubjectsManagementPage() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={4} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary opacity-20" /></TableCell></TableRow>
                 ) : filteredSubjects.length > 0 ? filteredSubjects.map((s) => (
                   <TableRow key={s.id} className="hover:bg-muted/20 border-b group">
                     <TableCell className="p-4">
@@ -317,7 +358,7 @@ export default function SubjectsManagementPage() {
                         </div>
                         <div className="flex flex-col text-right">
                           <span className="font-bold text-primary">{s.nameAr}</span>
-                          <span className="text-[10px] text-muted-foreground font-mono">{s.nameEn}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono uppercase">{s.nameEn}</span>
                         </div>
                       </div>
                     </TableCell>
@@ -374,22 +415,45 @@ export default function SubjectsManagementPage() {
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات المادة
               </DialogTitle>
-              <DialogDescription className="sr-only">تحديث معلومات المادة المختارة</DialogDescription>
+              <DialogDescription className="font-bold text-muted-foreground">تحديث المعلومات التفصيلية للمادة الدراسية المسجلة.</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold">اسم المادة (عربي)</Label>
-                <Input value={editingSubject?.nameAr || ""} onChange={(e) => setEditingSubject({...editingSubject, nameAr: e.target.value})} className="rounded-xl h-11 border-muted" />
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                  <Type className="w-4 h-4 text-secondary" />
+                  اسم المادة (عربي)
+                </Label>
+                <div className="relative">
+                  <Input 
+                    value={editingSubject?.nameAr || ""} 
+                    onChange={(e) => setEditingSubject({...editingSubject, nameAr: e.target.value})} 
+                    className="rounded-xl h-12 border-muted text-right font-bold pr-10" 
+                  />
+                  <BookOpen className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                </div>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold">اسم المادة (English)</Label>
-                <Input value={editingSubject?.nameEn || ""} onChange={(e) => setEditingSubject({...editingSubject, nameEn: e.target.value})} className="rounded-xl h-11 border-muted text-left font-mono" />
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                  <Globe className="w-4 h-4 text-secondary" />
+                  اسم المادة (English)
+                </Label>
+                <div className="relative">
+                  <Input 
+                    value={editingSubject?.nameEn || ""} 
+                    onChange={(e) => setEditingSubject({...editingSubject, nameEn: e.target.value})} 
+                    className="rounded-xl h-12 border-muted text-left font-mono pr-10" 
+                  />
+                  <Globe className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/50" />
+                </div>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold">التخصص</Label>
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                  <Building2 className="w-4 h-4 text-secondary" />
+                  التخصص التابع له
+                </Label>
                 <Select value={editingSubject?.departmentId || ""} onValueChange={(v) => setEditingSubject({...editingSubject, departmentId: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted">
+                  <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                     <SelectValue placeholder="اختر التخصص" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
@@ -398,9 +462,12 @@ export default function SubjectsManagementPage() {
                 </Select>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold">المستوى</Label>
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                  <GraduationCap className="w-4 h-4 text-secondary" />
+                  المستوى الدراسي
+                </Label>
                 <Select value={editingSubject?.level || ""} onValueChange={(v) => setEditingSubject({...editingSubject, level: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted">
+                  <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                     <SelectValue placeholder="اختر المستوى" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
@@ -412,9 +479,12 @@ export default function SubjectsManagementPage() {
                 </Select>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold">الترم الدراسي</Label>
+                <Label className="text-primary font-bold flex items-center gap-2 mb-1">
+                  <Clock className="w-4 h-4 text-secondary" />
+                  الترم الدراسي
+                </Label>
                 <Select value={editingSubject?.term || ""} onValueChange={(v) => setEditingSubject({...editingSubject, term: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted">
+                  <SelectTrigger className="rounded-xl h-12 border-muted text-right font-bold bg-muted/20">
                     <SelectValue placeholder="اختر الترم" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
@@ -426,8 +496,13 @@ export default function SubjectsManagementPage() {
               </div>
             </div>
             <DialogFooter className="flex-row gap-3 pt-8">
-              <Button disabled={submitting} onClick={handleUpdateSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : "حفظ التعديلات"}
+              <Button 
+                disabled={submitting} 
+                onClick={handleUpdateSubject} 
+                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit2 className="w-4 h-4" />}
+                {submitting ? "جاري الحفظ..." : "حفظ التعديلات"}
               </Button>
               <Button variant="outline" onClick={() => setEditingSubject(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
             </DialogFooter>
