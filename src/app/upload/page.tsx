@@ -7,6 +7,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FileUp, 
   Trash2, 
@@ -28,7 +29,9 @@ import {
   User,
   Search,
   CheckCircle2,
-  CloudUpload
+  CloudUpload,
+  Keyboard,
+  Cpu
 } from "lucide-react";
 import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 import Image from "next/image";
@@ -44,6 +47,7 @@ import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function UploadPage() {
+  const [mode, setMode] = useState<'ai' | 'manual'>('ai');
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("جاري المعالجة...");
@@ -82,8 +86,23 @@ export default function UploadPage() {
     );
   }, [subjects, formData.deptId, formData.level]);
 
-  const nextStep = () => setStep(prev => Math.min(prev + 1, 5));
-  const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
+  const nextStep = () => {
+    // If manual mode, skip Analysis (Step 4) and go to Confirmation (Step 5)
+    if (mode === 'manual' && step === 3) {
+      setStep(5);
+    } else {
+      setStep(prev => Math.min(prev + 1, 5));
+    }
+  };
+
+  const prevStep = () => {
+    // If manual mode, go back from Confirmation (Step 5) to Preview (Step 3)
+    if (mode === 'manual' && step === 5) {
+      setStep(3);
+    } else {
+      setStep(prev => Math.max(prev - 1, 1));
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
@@ -198,7 +217,6 @@ export default function UploadPage() {
       const fileName = `archives/${folderName}/${currentForm.subjectName}/${currentData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       
-      // 1. Start upload but move UI forward ASAP
       uploadString(storageRef, currentFiles[0], 'data_url').then(async () => {
         const downloadUrl = await getDownloadURL(storageRef);
         const archiveData = {
@@ -215,17 +233,9 @@ export default function UploadPage() {
         };
 
         const archivesCollection = collection(firestore, "archives");
-        addDoc(archivesCollection, archiveData).catch(async (err) => {
-          const permissionError = new FirestorePermissionError({
-            path: archivesCollection.path,
-            operation: 'create',
-            requestResourceData: archiveData,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        });
+        addDoc(archivesCollection, archiveData);
       });
 
-      // 2. Clear UI immediately for the next upload to ensure speed
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false, originalName: '' });
       setStep(2);
@@ -233,12 +243,12 @@ export default function UploadPage() {
       
       toast({ 
         title: "تمت الأرشفة بنجاح", 
-        description: "تم نقل الملف للسحابة وتصفير النموذج للعملية التالية." 
+        description: "تم نقل الملف للسحابة ومواصلة العمل في الخلفية." 
       });
       
     } catch (error: any) {
       setLoading(false);
-      toast({ variant: "destructive", title: "فشل الرفع", description: "حدث خطأ أثناء محاولة الحفظ السريع." });
+      toast({ variant: "destructive", title: "فشل الرفع", description: "حدث خطأ غير متوقع." });
     }
   };
 
@@ -253,28 +263,69 @@ export default function UploadPage() {
       )} dir="rtl">
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-black text-primary mb-2">أرشفة رقمية ذكية</h1>
-          <p className="text-muted-foreground font-bold text-lg">استخدم الذكاء الاصطناعي للمطابقة مع سجلات الطلاب الرسمية</p>
+          <p className="text-muted-foreground font-bold text-lg">نظام أتمتة الاختبارات الجامعية</p>
         </div>
 
+        {/* Mode Filter */}
+        <div className="max-w-md mx-auto mb-12">
+          <Tabs value={mode} onValueChange={(v) => {
+            setMode(v as any);
+            setStep(1); // Reset step when changing mode
+          }} className="w-full">
+            <TabsList className="bg-white p-1 rounded-2xl h-14 shadow-lg border w-full">
+              <TabsTrigger 
+                value="ai" 
+                className={cn(
+                  "flex-1 rounded-xl font-black transition-all gap-2",
+                  mode === 'ai' ? "gradient-blue text-white shadow-md" : "text-muted-foreground"
+                )}
+              >
+                <Cpu className="w-4 h-4" />
+                أرشفة ذكية (تحليل AI)
+              </TabsTrigger>
+              <TabsTrigger 
+                value="manual" 
+                className={cn(
+                  "flex-1 rounded-xl font-black transition-all gap-2",
+                  mode === 'manual' ? "gradient-blue text-white shadow-md" : "text-muted-foreground"
+                )}
+              >
+                <Keyboard className="w-4 h-4" />
+                أرشفة يدوية (سريع)
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Progress Tracker */}
         <div className="flex items-center justify-between mb-16 relative px-4 max-w-3xl mx-auto">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -translate-y-1/2 z-0"></div>
-          {[1, 2, 3, 4, 5].map((s) => (
-            <div 
-              key={s} 
-              className={cn(
-                "relative z-10 w-11 h-11 rounded-full flex items-center justify-center font-bold transition-all border-4",
-                step >= s ? "bg-primary text-white border-primary shadow-xl scale-110" : "bg-white text-muted-foreground border-muted"
-              )}
-            >
-              {step > s ? <CheckCircle className="w-6 h-6" /> : s}
-              <span className={cn(
-                "absolute -bottom-10 whitespace-nowrap text-[11px] font-black transition-colors", 
-                step >= s ? "text-primary" : "text-muted-foreground"
-              )}>
-                {s === 1 && 'السياق'} {s === 2 && 'الرفع'} {s === 3 && 'المعاينة'} {s === 4 && 'التحليل'} {s === 5 && 'التأكيد'}
-              </span>
-            </div>
-          ))}
+          {[1, 2, 3, 4, 5].map((s) => {
+            // Skip Step 4 dot in manual mode
+            if (mode === 'manual' && s === 4) return null;
+            
+            return (
+              <div 
+                key={s} 
+                className={cn(
+                  "relative z-10 w-11 h-11 rounded-full flex items-center justify-center font-bold transition-all border-4",
+                  step >= s ? "bg-primary text-white border-primary shadow-xl scale-110" : "bg-white text-muted-foreground border-muted"
+                )}
+              >
+                {step > s ? <CheckCircle className="w-6 h-6" /> : (mode === 'manual' && s === 5 ? 4 : s)}
+                <span className={cn(
+                  "absolute -bottom-10 whitespace-nowrap text-[11px] font-black transition-colors", 
+                  step >= s ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {s === 1 && 'السياق'} 
+                  {s === 2 && 'الرفع'} 
+                  {s === 3 && 'المعاينة'} 
+                  {s === 4 && 'التحليل'} 
+                  {s === 5 && (mode === 'manual' ? 'التعريف' : 'التأكيد')}
+                </span>
+              </div>
+            )
+          })}
         </div>
 
         <Card className="p-8 md:p-12 border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[40px] bg-white min-h-[520px] flex flex-col relative overflow-hidden">
@@ -291,7 +342,7 @@ export default function UploadPage() {
             </div>
           )}
           
-          <input type="file" path="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleFileUpload} />
+          <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleFileUpload} />
 
           {step === 1 && (
             <div className="space-y-10 animate-slide-up flex-1">
@@ -398,7 +449,7 @@ export default function UploadPage() {
                <div className="flex items-center justify-between mb-10 border-b pb-6">
                  <div>
                   <h2 className="text-2xl font-black text-primary">معاينة صفحات الاختبار</h2>
-                  <p className="text-muted-foreground font-bold text-sm">تأكد من وضوح كافة الصفحات قبل التحليل</p>
+                  <p className="text-muted-foreground font-bold text-sm">تأكد من وضوح كافة الصفحات قبل الحفظ</p>
                  </div>
                  <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="rounded-2xl h-12 px-6 font-black text-secondary border-2 gap-2 hover:bg-secondary/5 transition-all">
                     <Plus className="w-5 h-5" />
@@ -421,7 +472,7 @@ export default function UploadPage() {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 4 && mode === 'ai' && (
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-12">
               <div className="relative">
                 <div className="w-48 h-48 bg-secondary/5 rounded-full flex items-center justify-center shadow-inner relative z-10 overflow-hidden">
@@ -434,9 +485,9 @@ export default function UploadPage() {
               </div>
               <div className="max-w-lg">
                 <h2 className="text-4xl font-black text-primary mb-4">التحليل والمطابقة الذكية</h2>
-                <p className="text-muted-foreground font-bold text-lg leading-relaxed">سيقوم محرك الذكاء الاصطناعي بمطابقة رقم القيد المستخرج من الورقة مع سجلات الطلاب الرسمية في النظام.</p>
+                <p className="text-muted-foreground font-bold text-lg leading-relaxed">سيقوم محرك الذكاء الاصطناعي بمطابقة رقم القيد المستخرج من الورقة مع سجلات الطلاب الرسمية.</p>
               </div>
-              <Button onClick={handleOCR} disabled={loading} className="h-20 px-16 rounded-[2rem] text-2xl font-black gradient-blue shadow-[0_20px_40px_rgba(11,60,93,0.3)] hover:scale-105 transition-all group">
+              <Button onClick={handleOCR} disabled={loading} className="h-20 px-16 rounded-[2rem] text-2xl font-black gradient-blue shadow-lg hover:scale-105 transition-all group">
                 {loading ? <Loader2 className="w-8 h-8 animate-spin ml-4" /> : <Scan className="w-8 h-8 ml-4 group-hover:rotate-90 transition-transform" />}
                 بدء المطابقة الآن
               </Button>
@@ -505,7 +556,7 @@ export default function UploadPage() {
                           "w-full h-16 pr-14 pl-6 rounded-3xl border-2 bg-muted/10 font-black text-lg text-right outline-none transition-all shadow-inner",
                           extractedData.found ? "bg-green-50/50 border-green-200 text-green-800" : "bg-white border-muted focus:border-primary"
                         )}
-                        placeholder={extractedData.found ? "" : "أدخل الاسم يدوياً في حال عدم المطابقة..."}
+                        placeholder={extractedData.found ? "" : "أدخل الاسم يدوياً..."}
                       />
                       <div className="absolute right-4 top-1/2 -translate-y-1/2">
                         {extractedData.found ? <UserCheck className="w-6 h-6 text-green-500" /> : <User className="w-6 h-6 text-muted-foreground" />}
@@ -521,13 +572,13 @@ export default function UploadPage() {
               variant="outline" 
               onClick={prevStep} 
               disabled={step === 1 || loading} 
-              className="h-16 px-10 rounded-[1.5rem] border-2 border-muted font-black gap-4 shadow-sm hover:bg-muted/10 transition-all"
+              className="h-16 px-10 rounded-[1.5rem] border-2 border-muted font-black gap-4 shadow-sm hover:bg-muted/10 transition-all flex-row-reverse"
             >
               السابق
               <ChevronRight className="w-6 h-6" /> 
             </Button>
             
-            {step < 5 ? (
+            {(step < 5 && !(step === 3 && mode === 'manual')) ? (
               <Button 
                 onClick={nextStep} 
                 disabled={
@@ -535,25 +586,32 @@ export default function UploadPage() {
                   (step === 1 && (!formData.subjectId || !formData.level)) ||
                   (step === 3 && files.length === 0)
                 } 
-                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-[0_15px_30px_rgba(11,60,93,0.2)] hover:scale-105 transition-all"
+                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex-row-reverse"
               >
                 <ChevronLeft className="w-6 h-6" />
                 التالي 
               </Button>
-            ) : (
+            ) : step === 3 && mode === 'manual' ? (
+              <Button 
+                onClick={nextStep} 
+                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex-row-reverse"
+              >
+                <ChevronLeft className="w-6 h-6" />
+                تحديد الطالب 
+              </Button>
+            ) : step === 5 ? (
               <Button 
                 onClick={handleSaveToArchive} 
                 disabled={loading || !extractedData.id || isSearching} 
-                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 bg-green-600 text-white shadow-[0_15px_30px_rgba(22,163,74,0.2)] hover:bg-green-700 hover:scale-105 transition-all"
+                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 bg-green-600 text-white shadow-lg hover:bg-green-700 hover:scale-105 transition-all"
               >
                 {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <CloudUpload className="w-6 h-6" />} 
                 حفظ نهائي في الأرشيف
               </Button>
-            )}
+            ) : null}
           </div>
         </Card>
       </main>
     </div>
   );
 }
-
