@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -10,8 +11,14 @@ export function initializeFirebase(): {
   firestore: Firestore;
   auth: Auth;
 } {
+  // Ensure config is valid before initializing
+  const isValidConfig = firebaseConfig && firebaseConfig.projectId && firebaseConfig.projectId !== "PLACEHOLDER";
+  
   const firebaseApp =
-    getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    getApps().length === 0 
+      ? initializeApp(isValidConfig ? firebaseConfig : { projectId: 'archiva-smart-dummy' }) 
+      : getApp();
+      
   const firestore = getFirestore(firebaseApp);
   const auth = getAuth(firebaseApp);
 

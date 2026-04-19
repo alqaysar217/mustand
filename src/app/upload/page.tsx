@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
@@ -44,7 +44,8 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const firestore = useFirestore();
-  const { data: subjects = [] } = useCollection(firestore ? collection(firestore, "subjects") : null);
+  const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
+  const { data: subjects = [] } = useCollection(subjectsQuery);
 
   useEffect(() => {
     const currentYear = new Date().getFullYear();
@@ -96,7 +97,6 @@ export default function UploadPage() {
       });
       nextStep();
     } catch (err: any) {
-      console.error(err);
       toast({
         variant: "destructive",
         title: "خطأ في التحليل",
@@ -122,7 +122,7 @@ export default function UploadPage() {
       subjectName: formData.subjectName,
       year: formData.year,
       term: formData.term,
-      fileUrl: files[0] || PlaceHolderImages[1].imageUrl, // In real app, upload to Storage first
+      fileUrl: files[0] || PlaceHolderImages[1].imageUrl,
       pages: files.length,
       uploadedAt: serverTimestamp()
     };
@@ -150,7 +150,7 @@ export default function UploadPage() {
       <Navbar />
       
       <main className={cn(
-        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-4xl mx-auto",
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-4xl mx-auto text-right",
         isOpen ? "mr-0 md:mr-64" : "mr-0"
       )} dir="rtl">
         <div className="mb-10 text-center">
@@ -180,7 +180,7 @@ export default function UploadPage() {
           ))}
         </div>
 
-        <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white overflow-hidden min-h-[450px] flex flex-col text-right">
+        <Card className="p-8 border-none shadow-2xl rounded-3xl bg-white overflow-hidden min-h-[450px] flex flex-col">
           <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleFileUpload} />
 
           {step === 1 && (
@@ -229,7 +229,6 @@ export default function UploadPage() {
                       <option key={s.id} value={s.id}>{s.name} ({s.departmentName})</option>
                     ))}
                   </select>
-                  {subjects.length === 0 && <p className="text-[10px] text-orange-600 font-bold">تنبيه: لا توجد مواد مسجلة حالياً. يرجى إضافة مواد أولاً.</p>}
                 </div>
               </div>
             </div>
@@ -246,7 +245,7 @@ export default function UploadPage() {
                 </div>
                 <div className="text-center px-4">
                   <p className="text-lg font-bold text-primary">اضغط لرفع صور ورقة الاختبار</p>
-                  <p className="text-sm text-muted-foreground">يمكنك اختيار ملفات متعددة</p>
+                  <p className="text-sm text-muted-foreground font-bold">يمكنك اختيار ملفات متعددة</p>
                 </div>
               </div>
             </div>
@@ -284,7 +283,7 @@ export default function UploadPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-primary mb-2">استخراج البيانات الذكي</h2>
-                <p className="text-muted-foreground max-w-sm mx-auto">سيقوم الذكاء الاصطناعي الآن بقراءة رقم القيد واسم الطالب من الصفحة الأولى.</p>
+                <p className="text-muted-foreground max-w-sm mx-auto font-bold">سيقوم الذكاء الاصطناعي الآن بقراءة رقم القيد واسم الطالب من الصفحة الأولى.</p>
               </div>
               <Button onClick={handleOCR} disabled={loading} className="h-14 px-10 rounded-2xl text-lg font-bold gradient-blue shadow-xl">
                 {loading ? <Loader2 className="w-6 h-6 animate-spin ml-2" /> : null}
@@ -299,23 +298,23 @@ export default function UploadPage() {
                   <CheckCircle className="w-12 h-12 text-green-500" />
                   <div className="text-right">
                     <h2 className="text-xl font-bold text-green-700">تم استخراج البيانات</h2>
-                    <p className="text-green-600 text-sm">يرجى التأكد من صحة البيانات قبل الحفظ النهائي.</p>
+                    <p className="text-green-600 text-sm font-bold">يرجى التأكد من صحة البيانات قبل الحفظ النهائي.</p>
                   </div>
                </div>
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2 text-right">
-                    <label className="text-sm font-bold text-primary">رقم قيد الطالب</label>
+                    <Label className="text-primary font-bold">رقم قيد الطالب</Label>
                     <input 
                       type="text" 
                       value={extractedData.id}
                       onChange={(e) => setExtractedData({...extractedData, id: e.target.value})}
-                      placeholder="مثال: 20210045"
+                      placeholder="20210045"
                       className="w-full h-14 px-4 rounded-xl border focus:ring-2 focus:ring-primary outline-none font-bold text-right"
                     />
                   </div>
                   <div className="space-y-2 text-right">
-                    <label className="text-sm font-bold text-primary">اسم الطالب الرباعي</label>
+                    <Label className="text-primary font-bold">اسم الطالب الرباعي</Label>
                     <input 
                       type="text" 
                       value={extractedData.name}

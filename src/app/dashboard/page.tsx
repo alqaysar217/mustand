@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
@@ -9,7 +9,6 @@ import {
   FileText, 
   Users, 
   History, 
-  ArrowUpRight, 
   CheckCircle2,
   Clock,
   TrendingUp,
@@ -31,14 +30,17 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [seeding, setSeeding] = useState(false);
 
-  // Fetch real stats
-  const { data: students = [] } = useCollection(firestore ? collection(firestore, "students") : null);
-  const { data: archives = [] } = useCollection(firestore ? collection(firestore, "archives") : null);
-  const { data: colleges = [] } = useCollection(firestore ? collection(firestore, "colleges") : null);
+  // Memoize Queries to prevent infinite loops
+  const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
+  const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
+  const collegesQuery = useMemo(() => firestore ? collection(firestore, "colleges") : null, [firestore]);
+  const recentQuery = useMemo(() => firestore ? query(collection(firestore, "archives"), orderBy("uploadedAt", "desc"), limit(5)) : null, [firestore]);
 
-  const { data: recentActivity = [] } = useCollection(
-    firestore ? query(collection(firestore, "archives"), orderBy("uploadedAt", "desc"), limit(5)) : null
-  );
+  // Fetch real stats
+  const { data: students = [] } = useCollection(studentsQuery);
+  const { data: archives = [] } = useCollection(archivesQuery);
+  const { data: colleges = [] } = useCollection(collegesQuery);
+  const { data: recentActivity = [] } = useCollection(recentQuery);
 
   useEffect(() => {
     setFormattedDate(new Date().toLocaleDateString('ar-EG', { 
@@ -103,9 +105,9 @@ export default function Dashboard() {
       <Navbar />
       
       <main className={cn(
-        "transition-all duration-300 p-6 md:p-10 animate-fade-in",
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in text-right",
         isOpen ? "mr-0 md:mr-64" : "mr-0"
-      )}>
+      )} dir="rtl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-primary mb-1">الرئيسية</h1>
@@ -167,16 +169,11 @@ export default function Dashboard() {
                     <p className="text-primary font-bold">{item.subjectName}: <span className="text-secondary">{item.studentName}</span></p>
                     <p className="text-xs text-muted-foreground">رقم القيد: {item.studentRegId}</p>
                   </div>
-                  <div className="text-left shrink-0">
-                    <p className="text-xs text-muted-foreground font-medium">
-                      {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG') : 'حديثاً'}
-                    </p>
-                  </div>
                 </div>
               )) : (
                 <div className="py-10 text-center text-muted-foreground font-bold">
                   <FileText className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                  لا توجد نشاطات مسجلة حالياً في قاعدة البيانات
+                  لا توجد نشاطات مسجلة حالياً
                 </div>
               )}
             </div>
@@ -190,13 +187,12 @@ export default function Dashboard() {
                 <p className="text-white/90 font-bold">متصل بـ Firebase Firestore</p>
               </div>
               <p className="text-white/80 text-sm leading-relaxed mb-6">
-                قاعدة البيانات الحالية تعمل بنظام المزامنة الفورية. أي تغيير تقوم به سيظهر لجميع المستخدمين فوراً.
+                قاعدة البيانات تعمل بنظام المزامنة الفورية.
               </p>
               <button className="bg-white text-primary px-6 py-2.5 rounded-xl text-sm font-bold shadow-xl hover:scale-105 transition-transform" onClick={() => window.location.href='/upload'}>
                 رفع ملف الآن
               </button>
              </div>
-             <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
              <div className="absolute top-0 right-0 p-4 opacity-20">
               <Database className="w-24 h-24" />
              </div>

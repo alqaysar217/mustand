@@ -11,14 +11,11 @@ import {
   Plus, 
   Search, 
   MoreVertical, 
-  Edit2, 
   Trash2, 
-  Filter,
-  GraduationCap,
   Building2,
-  X,
   PlusCircle,
-  Loader2
+  Loader2,
+  GraduationCap
 } from "lucide-react";
 import {
   Table,
@@ -60,16 +57,16 @@ import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function SubjectsManagementPage() {
   const firestore = useFirestore();
-  const { data: subjects = [], loading: loadingSubjects } = useCollection(
-    firestore ? collection(firestore, "subjects") : null
-  );
-  const { data: departments = [] } = useCollection(
-    firestore ? collection(firestore, "departments") : null
-  );
+  
+  // Memoize queries
+  const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
+  const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
+
+  const { data: subjects = [], loading: loadingSubjects } = useCollection(subjectsQuery);
+  const { data: departments = [] } = useCollection(deptsQuery);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
   const [newSubject, setNewSubject] = useState({
@@ -79,22 +76,18 @@ export default function SubjectsManagementPage() {
   });
 
   const { isOpen } = useSidebarToggle();
-  const [selectedDept, setSelectedDept] = useState("all");
-  const [selectedLevel, setSelectedLevel] = useState("all");
   const { toast } = useToast();
 
   const filteredSubjects = useMemo(() => {
-    return (subjects as any[]).filter(subject => {
-      const matchesSearch = subject.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesDept = selectedDept === "all" || subject.departmentId === selectedDept;
-      const matchesLevel = selectedLevel === "all" || subject.level === selectedLevel;
-      return matchesSearch && matchesDept && matchesLevel;
-    });
-  }, [subjects, searchTerm, selectedDept, selectedLevel]);
+    return (subjects as any[]).filter(subject => 
+      subject.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      subject.departmentName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [subjects, searchTerm]);
 
   const handleAddSubject = () => {
     if (!firestore || !newSubject.name || !newSubject.departmentId) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى ملء كافة الحقول." });
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى ملء كافة الحقول واختيار التخصص." });
       return;
     }
     
@@ -152,7 +145,7 @@ export default function SubjectsManagementPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة المواد الدراسية</h1>
-            <p className="text-muted-foreground font-bold">تحديث سجلات المواد المتاحة للأرشفة في Firestore</p>
+            <p className="text-muted-foreground font-bold">إدارة المواد المتاحة للأرشفة في النظام</p>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -169,9 +162,6 @@ export default function SubjectsManagementPage() {
                     <PlusCircle className="w-6 h-6 text-secondary" />
                     مادة جديدة
                   </DialogTitle>
-                  <DialogDescription className="font-bold text-muted-foreground text-sm">
-                    أدخل بيانات المادة الدراسية الجديدة.
-                  </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-6 py-4">
@@ -249,58 +239,7 @@ export default function SubjectsManagementPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button 
-              variant={showFilters ? "default" : "outline"} 
-              onClick={() => setShowFilters(!showFilters)}
-              className="h-12 rounded-2xl border-2 px-6 gap-2 font-bold transition-all"
-            >
-              <Filter className="w-5 h-5" />
-              تصفية
-            </Button>
           </div>
-
-          {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-6 bg-muted/20 rounded-2xl animate-slide-up">
-              <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold mr-1 text-xs">حسب التخصص</Label>
-                <Select value={selectedDept} onValueChange={setSelectedDept}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted bg-white font-bold">
-                    <SelectValue placeholder="الكل" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl font-bold">
-                    <SelectItem value="all">جميع التخصصات</SelectItem>
-                    {departments.map((d: any) => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold mr-1 text-xs">حسب المستوى</Label>
-                <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted bg-white font-bold">
-                    <SelectValue placeholder="الكل" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl font-bold">
-                    <SelectItem value="all">جميع المستويات</SelectItem>
-                    <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
-                    <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
-                    <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
-                    <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => { setSelectedDept("all"); setSelectedLevel("all"); setSearchTerm(""); }}
-                  className="w-full h-11 rounded-xl font-bold text-muted-foreground hover:text-primary"
-                >
-                  إعادة ضبط
-                </Button>
-              </div>
-            </div>
-          )}
 
           <div className="rounded-2xl border overflow-hidden">
             <Table className="text-right">
@@ -343,15 +282,11 @@ export default function SubjectsManagementPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right shadow-xl" dir="rtl">
-                          <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                            تعديل
-                            <Edit2 className="w-4 h-4 text-secondary" />
-                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleDelete(subject.id)}
                             className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive"
                           >
-                            حذف
+                            حذف المادة
                             <Trash2 className="w-4 h-4" />
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -361,7 +296,7 @@ export default function SubjectsManagementPage() {
                 )) : (
                   <TableRow>
                     <TableCell colSpan={4} className="h-40 text-center text-muted-foreground font-bold">
-                      لا توجد مواد دراسية مسجلة حالياً
+                      لا توجد مواد مسجلة حالياً
                     </TableCell>
                   </TableRow>
                 )}

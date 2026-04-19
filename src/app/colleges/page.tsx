@@ -13,8 +13,6 @@ import {
   MoreVertical, 
   Edit2, 
   Trash2, 
-  Building2,
-  Users,
   PlusCircle,
   FileText,
   Loader2
@@ -58,9 +56,14 @@ import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function CollegesManagementPage() {
   const firestore = useFirestore();
-  const { data: colleges = [], loading } = useCollection(
-    firestore ? collection(firestore, "colleges") : null
-  );
+  
+  // Memoize the collection reference to prevent infinite render loops
+  const collegesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, "colleges");
+  }, [firestore]);
+
+  const { data: colleges = [], loading } = useCollection(collegesQuery);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -72,8 +75,8 @@ export default function CollegesManagementPage() {
 
   const filteredColleges = useMemo(() => {
     return (colleges as any[]).filter(college => 
-      college.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      college.code.toLowerCase().includes(searchTerm.toLowerCase())
+      college.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      college.code?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [colleges, searchTerm]);
 
@@ -180,7 +183,7 @@ export default function CollegesManagementPage() {
                     <Input 
                       value={newCollege.code}
                       onChange={(e) => setNewCollege({...newCollege, code: e.target.value})}
-                      placeholder="مثال: CAS" 
+                      placeholder="CAS" 
                       className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" 
                     />
                   </div>
@@ -253,11 +256,6 @@ export default function CollegesManagementPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right shadow-xl" dir="rtl">
                           <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات الكلية</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                            تعديل البيانات
-                            <Edit2 className="w-4 h-4 text-secondary" />
-                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             onClick={() => handleDelete(college.id)}

@@ -65,12 +65,13 @@ import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function DepartmentsManagementPage() {
   const firestore = useFirestore();
-  const { data: departments = [], loading: loadingDepts } = useCollection(
-    firestore ? collection(firestore, "departments") : null
-  );
-  const { data: colleges = [], loading: loadingColleges } = useCollection(
-    firestore ? collection(firestore, "colleges") : null
-  );
+  
+  // Memoize queries to prevent infinite loops
+  const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
+  const collegesQuery = useMemo(() => firestore ? collection(firestore, "colleges") : null, [firestore]);
+
+  const { data: departments = [], loading: loadingDepts } = useCollection(deptsQuery);
+  const { data: colleges = [], loading: loadingColleges } = useCollection(collegesQuery);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -82,15 +83,15 @@ export default function DepartmentsManagementPage() {
 
   const filteredDepartments = useMemo(() => {
     return (departments as any[]).filter(dept => 
-      dept.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      dept.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      dept.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      dept.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (dept.collegeName && dept.collegeName.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [departments, searchTerm]);
 
   const handleAddDept = () => {
     if (!firestore || !newDept.name || !newDept.code || !newDept.collegeId) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى ملء كافة الحقول." });
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى ملء كافة الحقول واختيار الكلية." });
       return;
     }
     
@@ -153,7 +154,7 @@ export default function DepartmentsManagementPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة التخصصات</h1>
-            <p className="text-muted-foreground font-bold">إدارة الأقسام العلمية وتوزيعها على الكليات في Firestore</p>
+            <p className="text-muted-foreground font-bold">إدارة الأقسام العلمية وتوزيعها على الكليات</p>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -191,6 +192,7 @@ export default function DepartmentsManagementPage() {
                         ) : colleges.map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
+                        {colleges.length === 0 && !loadingColleges && <div className="p-2 text-center text-xs text-destructive">لا توجد كليات مسجلة</div>}
                       </SelectContent>
                     </Select>
                   </div>
@@ -202,7 +204,7 @@ export default function DepartmentsManagementPage() {
                     <Input 
                       value={newDept.name}
                       onChange={(e) => setNewDept({...newDept, name: e.target.value})}
-                      placeholder="مثال: الذكاء الاصطناعي" 
+                      placeholder="مثال: هندسة البرمجيات" 
                       className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
                     />
                   </div>
@@ -214,7 +216,7 @@ export default function DepartmentsManagementPage() {
                     <Input 
                       value={newDept.code}
                       onChange={(e) => setNewDept({...newDept, code: e.target.value})}
-                      placeholder="مثال: AI" 
+                      placeholder="SE" 
                       className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" 
                     />
                   </div>
@@ -290,13 +292,6 @@ export default function DepartmentsManagementPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right shadow-xl" dir="rtl">
-                          <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات القسم</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                            تعديل القسم
-                            <Edit2 className="w-4 h-4 text-secondary" />
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             onClick={() => handleDelete(dept.id)}
                             className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive"
