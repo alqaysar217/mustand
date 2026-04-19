@@ -89,36 +89,35 @@ export default function UploadPage() {
     if (files.length === 0) return;
     setLoading(true);
     try {
-      // محاولة استخراج البيانات باستخدام الذكاء الاصطناعي
+      // Trying to extract details using Gemini AI (v1 Stable)
       const result = await extractExamDetails({ examImageDataUri: files[0] });
       
-      // تحديث البيانات المستخرجة في حالة النجاح
       setExtractedData({
         id: result.studentRegistrationId || '',
         name: result.studentName || ''
       });
       
-      // الانتقال للخطوة التالية (التأكيد)
+      // Moving to confirmation step
       nextStep();
     } catch (err: any) {
-      // في حالة الفشل، نظهر رسالة لطيفة ونسمح للمستخدم بالإكمال يدوياً
+      // Robust Fallback: If AI fails (404, 500, Key error), allow manual entry
       toast({
         variant: "destructive",
         title: "تنبيه النظام",
-        description: "سنقوم بالإكمال يدوياً الآن لضمان سرعة العمل.",
+        description: "تعذر التحليل التلقائي حالياً (خطأ في الخدمة). يرجى إدخال البيانات يدوياً.",
       });
       
-      // ننتقل للخطوة الأخيرة (خطوة 5) للسماح بالإدخال اليدوي فوراً
-      setStep(5);
+      // Clear any partial data to ensure clean manual entry
+      setExtractedData({ id: '', name: '' });
+      setStep(5); // Jump to Confirmation/Manual Entry step
     } finally {
-      // إيقاف مؤشر التحميل دائماً
       setLoading(false);
     }
   };
 
   const handleSaveToArchive = async () => {
     if (!firestore || !storage || !extractedData.id || !formData.subjectName || files.length === 0) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التأكد من إدخال اسم الطالب والمادة ورفع الملفات." });
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التأكد من إدخال رقم القيد واسم الطالب ورفع الصور." });
       return;
     }
 
@@ -143,11 +142,11 @@ export default function UploadPage() {
 
       await addDoc(collection(firestore, "archives"), archiveData);
       
-      toast({ title: "تمت الأرشفة بنجاح", description: "تم رفع الملف وحفظ البيانات في السجل المركزي." });
+      toast({ title: "تمت الأرشفة بنجاح", description: "تم حفظ السجل في قاعدة البيانات السحابية." });
       window.location.href = '/dashboard';
     } catch (error: any) {
       console.error("Archive error:", error);
-      toast({ variant: "destructive", title: "فشل الأرشفة", description: "حدث خطأ أثناء محاولة رفع الملف." });
+      toast({ variant: "destructive", title: "فشل الحفظ", description: "حدث خطأ أثناء محاولة مزامنة البيانات مع السحابة." });
     } finally {
       setLoading(false);
     }

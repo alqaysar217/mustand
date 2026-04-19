@@ -35,9 +35,6 @@ export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSc
 
 /**
  * Wrapper function to call the Genkit flow for extracting exam details.
- *
- * @param input - The input containing the exam image data URI.
- * @returns The extracted student registration ID and name.
  */
 export async function extractExamDetails(
   input: ExtractExamDetailsInput
@@ -47,7 +44,7 @@ export async function extractExamDetails(
 
 /**
  * Defines the Genkit prompt for extracting student details from an exam image.
- * Uses the stable gemini-1.5-flash model.
+ * Explicitly using gemini-1.5-flash which is standard for v1.
  */
 const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
@@ -73,23 +70,23 @@ const extractExamDetailsFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      // التحقق من وجود مفتاح API
       if (!process.env.GOOGLE_GENAI_API_KEY) {
         throw new Error('API_KEY_MISSING');
       }
 
+      // Call the prompt and return output
       const {output} = await extractExamDetailsPrompt(input);
       
       if (!output) {
-        throw new Error('FAILED_TO_EXTRACT');
+        return { studentRegistrationId: '', studentName: '' };
       }
       
       return output;
     } catch (error: any) {
       console.error('OCR Flow Error:', error);
       
-      // إرسال رسالة خطأ مفهومة للواجهة لتفعيل الإدخال اليدوي
-      throw new Error('عذراً، تعذر التحليل التلقائي حالياً. يرجى إدخال البيانات يدوياً.');
+      // We throw a generic error to trigger the UI fallback to manual input
+      throw new Error('FAILED_TO_ANALYZE');
     }
   }
 );
