@@ -1,3 +1,1 @@
-export function StudentSidebar() {
-  return null;
-}
+export const StudentSidebar = () => null;

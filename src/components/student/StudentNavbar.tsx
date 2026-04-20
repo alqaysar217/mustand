@@ -1,3 +1,1 @@
-export function StudentNavbar() {
-  return null;
-}
+export const StudentNavbar = () => null;

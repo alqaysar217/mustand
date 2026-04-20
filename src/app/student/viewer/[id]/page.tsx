@@ -1,6 +1,2 @@
 import { redirect } from 'next/navigation';
-
-export default function ExamViewerPage() {
-  redirect('/');
-  return null;
-}
+export default function Page() { redirect('/'); return null; }
