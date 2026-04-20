@@ -202,64 +202,57 @@ export default function UploadPage() {
       return;
     }
 
-    setLoadingText("جاري رفع الملف للسحابة...");
-    setLoading(true);
+    // --- الاستراتيجية المتفائلة: تحديث الواجهة فوراً ---
+    const capturedFiles = [...files];
+    const capturedData = { ...extractedData };
+    const capturedForm = { ...formData };
+
+    // 1. تصفية الواجهة فوراً لضمان السرعة
+    setFiles([]);
+    setExtractedData({ id: '', name: '', found: false, originalName: '' });
+    setStep(2); // العودة لخطوة الرفع لمواصلة العمل فوراً
     
+    toast({ 
+      title: "بدأت الأرشفة", 
+      description: `يتم الآن معالجة اختبار الطالب ${capturedData.name} في الخلفية.` 
+    });
+
+    // 2. التنفيذ في الخلفية (Parallel Background Processing)
     try {
-      const folderName = (formData.year || "unknown").replace(/\s/g, '').replace(/\//g, '-');
-      const fileName = `archives/${folderName}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
+      const folderName = (capturedForm.year || "unknown").replace(/\s/g, '').replace(/\//g, '-');
+      const fileName = `archives/${folderName}/${capturedForm.subjectName}/${capturedData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       
-      // 1. رفع الصورة للسحابة (العملية الوحيدة التي يجب انتظارها للحصول على الرابط)
-      const uploadResult = await uploadString(storageRef, files[0], 'data_url');
-      const downloadUrl = await getDownloadURL(uploadResult.ref);
+      // الرفع للسحابة
+      uploadString(storageRef, capturedFiles[0], 'data_url').then(async (uploadResult) => {
+        const downloadUrl = await getDownloadURL(uploadResult.ref);
 
-      // 2. تجهيز بيانات الأرشفة
-      const archiveData = {
-        studentRegId: extractedData.id,
-        studentName: extractedData.name || "طالب غير معروف",
-        subjectId: formData.subjectId,
-        subjectName: formData.subjectName,
-        year: formData.year,
-        term: formData.term,
-        departmentId: formData.deptId,
-        fileUrl: downloadUrl,
-        pages: files.length,
-        uploadedAt: serverTimestamp()
-      };
+        // تجهيز بيانات الأرشفة
+        const archiveData = {
+          studentRegId: capturedData.id,
+          studentName: capturedData.name || "طالب غير معروف",
+          subjectId: capturedForm.subjectId,
+          subjectName: capturedForm.subjectName,
+          year: capturedForm.year,
+          term: capturedForm.term,
+          departmentId: capturedForm.deptId,
+          fileUrl: downloadUrl,
+          pages: capturedFiles.length,
+          uploadedAt: serverTimestamp()
+        };
 
-      // 3. الحفظ في Firestore (اتباع مبدأ الأرشفة المتفائلة - غير معطلة للواجهة)
-      const archivesCollection = collection(firestore, "archives");
-      addDoc(archivesCollection, archiveData)
-        .catch(async (error) => {
-          // التعامل مع خطأ الصلاحيات في Firestore فقط إذا حدث فعلياً
+        // الحفظ في Firestore
+        addDoc(collection(firestore, "archives"), archiveData).catch(async (error) => {
           const permissionError = new FirestorePermissionError({
-            path: archivesCollection.path,
+            path: "archives",
             operation: 'create',
             requestResourceData: archiveData,
           });
           errorEmitter.emit('permission-error', permissionError);
         });
-
-      // 4. تصفية الواجهة فوراً لضمان السرعة الفائقة
-      toast({ 
-        title: "تمت الأرشفة بنجاح", 
-        description: `تم حفظ اختبار الطالب ${extractedData.name} بنجاح.` 
       });
-
-      setFiles([]);
-      setExtractedData({ id: '', name: '', found: false, originalName: '' });
-      setLoading(false);
-      setStep(2); // العودة لخطوة الرفع لمواصلة العمل فوراً
-      
     } catch (error: any) {
-      console.error("Save/Storage Error:", error);
-      setLoading(false);
-      toast({ 
-        variant: "destructive", 
-        title: "خطأ في الاتصال", 
-        description: "تعذر رفع الملف للسحابة، يرجى التأكد من استقرار الإنترنت." 
-      });
+      console.error("Background Archiving Error:", error);
     }
   };
 
@@ -346,7 +339,7 @@ export default function UploadPage() {
               </div>
               <div>
                 <p className="font-black text-3xl text-primary mb-2">{loadingText}</p>
-                <p className="text-muted-foreground font-bold">يتم التخزين سحابياً، لن يستغرق ذلك طويلاً...</p>
+                <p className="text-muted-foreground font-bold">يتم الآن معالجة طلبك، يرجى الانتظار...</p>
               </div>
             </div>
           )}
@@ -490,7 +483,6 @@ export default function UploadPage() {
                 <div className="absolute -top-6 -right-6 w-16 h-16 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-primary/5 z-20">
                   <Sparkles className="w-8 h-8 text-primary animate-bounce" />
                 </div>
-                <div className="absolute inset-0 bg-secondary/10 rounded-full blur-3xl opacity-20 animate-pulse"></div>
               </div>
               <div className="max-w-lg">
                 <h2 className="text-4xl font-black text-primary mb-4">التحليل والمطابقة الذكية</h2>
@@ -554,7 +546,7 @@ export default function UploadPage() {
                   <div className="space-y-3 text-right">
                     <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2">
                       <User className="w-4 h-4 text-secondary" />
-                      اسم الطالب الكامل (آلي)
+                      اسم الطالب الكامل
                     </Label>
                     <div className="relative">
                       <input 
@@ -577,47 +569,52 @@ export default function UploadPage() {
           )}
 
           <div className="mt-auto pt-10 flex items-center justify-between border-t-2 border-muted/50">
-            <Button 
-              variant="outline" 
-              onClick={prevStep} 
-              disabled={step === 1 || loading} 
-              className="h-16 px-10 rounded-[1.5rem] border-2 border-muted font-black gap-4 shadow-sm hover:bg-muted/10 transition-all flex items-center"
-            >
-              <ChevronRight className="w-6 h-6" />
-              السابق
-            </Button>
-            
-            {(step < 5 && !(step === 3 && mode === 'manual')) ? (
+             {/* أزرار التنقل مع مراعاة اللغة العربية: السابق في اليمين، التالي في اليسار */}
+            <div className="flex gap-4">
               <Button 
-                onClick={nextStep} 
-                disabled={
-                  (step === 2 && files.length === 0) || 
-                  (step === 1 && (!formData.subjectId || !formData.level)) ||
-                  (step === 3 && files.length === 0)
-                } 
-                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"
+                variant="outline" 
+                onClick={prevStep} 
+                disabled={step === 1 || loading} 
+                className="h-16 px-10 rounded-[1.5rem] border-2 border-muted font-black gap-4 shadow-sm hover:bg-muted/10 transition-all flex items-center"
               >
-                التالي 
-                <ChevronLeft className="w-6 h-6" />
+                السابق
+                <ChevronRight className="w-6 h-6" />
               </Button>
-            ) : step === 3 && mode === 'manual' ? (
-              <Button 
-                onClick={nextStep} 
-                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"
-              >
-                تحديد الطالب 
-                <ChevronLeft className="w-6 h-6" />
-              </Button>
-            ) : step === 5 ? (
-              <Button 
-                onClick={handleSaveToArchive} 
-                disabled={loading || !extractedData.id || isSearching} 
-                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 bg-green-600 text-white shadow-lg hover:bg-green-700 hover:scale-105 transition-all"
-              >
-                {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <CloudUpload className="w-6 h-6" />} 
-                حفظ نهائي في الأرشيف
-              </Button>
-            ) : null}
+            </div>
+
+            <div className="flex gap-4">
+              {(step < 5 && !(step === 3 && mode === 'manual')) ? (
+                <Button 
+                  onClick={nextStep} 
+                  disabled={
+                    (step === 2 && files.length === 0) || 
+                    (step === 1 && (!formData.subjectId || !formData.level)) ||
+                    (step === 3 && files.length === 0)
+                  } 
+                  className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                  التالي 
+                </Button>
+              ) : step === 3 && mode === 'manual' ? (
+                <Button 
+                  onClick={nextStep} 
+                  className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                  تحديد الطالب 
+                </Button>
+              ) : step === 5 ? (
+                <Button 
+                  onClick={handleSaveToArchive} 
+                  disabled={loading || !extractedData.id || isSearching} 
+                  className="h-16 px-16 rounded-[1.5rem] font-black gap-4 bg-green-600 text-white shadow-lg hover:bg-green-700 hover:scale-105 transition-all"
+                >
+                  <CloudUpload className="w-6 h-6" /> 
+                  حفظ نهائي في الأرشيف
+                </Button>
+              ) : null}
+            </div>
           </div>
         </Card>
       </main>

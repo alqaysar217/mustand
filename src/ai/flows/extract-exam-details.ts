@@ -1,8 +1,8 @@
+
 'use server';
 /**
  * @fileOverview This flow extracts student registration ID and name from an uploaded exam image using AI-powered OCR.
- *
- * - extractExamDetails - A function that handles the extraction process.
+ * Optimized for speed and precision.
  */
 
 import {ai} from '@/ai/genkit';
@@ -12,7 +12,7 @@ const ExtractExamDetailsInputSchema = z.object({
   examImageDataUri: z
     .string()
     .describe(
-      "A photo of a plant, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A photo of an exam paper, as a data URI that must include a MIME type and use Base64 encoding."
     ),
 });
 export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSchema>;
@@ -20,15 +20,11 @@ export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSche
 const ExtractExamDetailsOutputSchema = z.object({
   studentRegistrationId: z
     .string()
-    .describe('The extracted student registration ID (رقم القيد).'),
-  studentName: z.string().describe('The extracted full name of the student (اسم الطالب).'),
+    .describe('The extracted student registration ID (numbers only).'),
+  studentName: z.string().describe('The extracted full name of the student (Arabic).'),
 });
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
-/**
- * Defines the Genkit prompt for extracting student details from an exam image.
- * Updated with strict instructions to return only clean data.
- */
 const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
   input: {schema: ExtractExamDetailsInputSchema},
@@ -39,23 +35,20 @@ const extractExamDetailsPrompt = ai.definePrompt({
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
     ],
   },
-  prompt: `أنت خبير في قراءة وتحليل أوراق الامتحانات الجامعية العربية.
-قم بتحليل الصورة المرفقة واستخرج البيانات التالية بدقة متناهية:
+  prompt: `أنت خبير في قراءة بيانات أوراق الامتحانات الجامعية العربية.
+استخرج البيانات التالية بدقة قصوى:
 
-1. رقم القيد (Registration ID): ابحث عن خانة "رقم القيد" أو "رقم الجلوس". استخرج الأرقام فقط (مثلاً: 20210045). لا تضف أي نص عربي قبل أو بعد الرقم.
-2. اسم الطالب الكامل (Student Name): استخرج الاسم الرباعي المكتوب في خانة الاسم.
+1. رقم القيد (Registration ID): ابحث عن خانة "رقم القيد" أو أي رقم تسلسلي يمثل هوية الطالب. استخرج الأرقام فقط (مثال: 2024001).
+2. اسم الطالب الكامل (Student Name): استخرج الاسم الرباعي المكتوب في أعلى الورقة.
 
 قواعد صارمة:
-- أعد البيانات بصيغة JSON نظيفة كما هو محدد في الـ Output Schema.
-- إذا لم تجد رقم القيد، حاول البحث عن أي رقم تسلسلي في أعلى الورقة.
-- ركز على الجزء العلوي (Header) من ورقة الامتحان.
+- أعد البيانات بصيغة JSON نظيفة.
+- في خانة الرقم، احذف أي نصوص عربية، ضع الأرقام فقط.
+- ركز على الترويسة (Header) الخاصة بالورقة.
 
 Image: {{media url=examImageDataUri}}`,
 });
 
-/**
- * Defines the Genkit flow with robust error catching to prevent UI freezing.
- */
 const extractExamDetailsFlow = ai.defineFlow(
   {
     name: 'extractExamDetailsFlow',
@@ -64,13 +57,9 @@ const extractExamDetailsFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      if (!process.env.GOOGLE_GENAI_API_KEY) {
-        throw new Error('API_KEY_MISSING');
-      }
-
       const {output} = await extractExamDetailsPrompt(input);
       
-      // Clean up the output before returning: Remove all non-digits from Registration ID
+      // برمجياً: تنظيف رقم القيد من أي حروف غير رقمية
       const cleanRegId = output?.studentRegistrationId?.replace(/\D/g, '') || '';
       
       return {
@@ -78,7 +67,7 @@ const extractExamDetailsFlow = ai.defineFlow(
         studentName: output?.studentName?.trim() || ''
       };
     } catch (error: any) {
-      console.warn('OCR Extraction Error:', error.message);
+      console.warn('OCR Analysis Failed:', error.message);
       throw new Error('AI_ANALYSIS_FAILED');
     }
   }

@@ -56,7 +56,7 @@ export default function ArchivePage() {
   const firestore = useFirestore();
   const archivesQuery = useMemo(() => {
     if (!firestore) return null;
-    // جلب كافة السجلات دون ترتيب سحابي لتجنب مشاكل الفهرسة (Indexing) في البداية
+    // جلب كافة السجلات دون ترتيب سحابي لتجنب مشاكل الفهرسة (Indexing)
     return collection(firestore, "archives");
   }, [firestore]);
 
@@ -301,7 +301,7 @@ export default function ArchivePage() {
                   <Search className="w-12 h-12 text-muted-foreground opacity-30" />
                 </div>
                 <h3 className="text-3xl font-black text-primary mb-2">الأرشيف فارغ</h3>
-                <p className="text-muted-foreground font-bold">لم يتم العثور على أي ملفات مطابقة لخيارات البحث الحالية</p>
+                <p className="text-muted-foreground font-bold">لم يتم العثور على أي ملفات مؤرشفة حالياً</p>
                 <Button variant="link" onClick={() => { setSearchTerm(""); setSelectedYear("all"); setSelectedTerm("all"); }} className="mt-4 font-bold text-secondary">إعادة ضبط البحث</Button>
               </div>
             )}
