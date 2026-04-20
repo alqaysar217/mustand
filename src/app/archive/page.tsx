@@ -205,7 +205,7 @@ export default function ArchivePage() {
             ) : (
               <div className="py-20 text-center bg-white rounded-3xl shadow-lg border border-dashed">
                 <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-20" />
-                <p className="font-bold text-muted-foreground">لا توجد نتائج في الأرشيف السحابي</p>
+                <p className="font-bold text-muted-foreground">الارشيف فارغ</p>
               </div>
             )}
           </div>
