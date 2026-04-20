@@ -187,8 +187,8 @@ export default function UploadPage() {
     } catch (err: any) {
       toast({ 
         variant: "destructive", 
-        title: "خطأ في التحليل", 
-        description: "تعذر قراءة البيانات آلياً، يرجى إدخالها يدوياً." 
+        title: "فشل التحليل الذكي", 
+        description: "تعذر قراءة البيانات آلياً، سننتقل للإدخال اليدوي." 
       });
       setStep(5);
     } finally {
@@ -202,7 +202,7 @@ export default function UploadPage() {
       return;
     }
 
-    setLoadingText("جاري تأمين الحفظ في السحابة...");
+    setLoadingText("جاري رفع الملف للسحابة...");
     setLoading(true);
     
     try {
@@ -210,7 +210,7 @@ export default function UploadPage() {
       const fileName = `archives/${folderName}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       
-      // 1. رفع الصورة أولاً (يجب الانتظار لضمان وجود الرابط)
+      // 1. رفع الصورة للسحابة (العملية الوحيدة التي يجب انتظارها للحصول على الرابط)
       const uploadResult = await uploadString(storageRef, files[0], 'data_url');
       const downloadUrl = await getDownloadURL(uploadResult.ref);
 
@@ -228,11 +228,20 @@ export default function UploadPage() {
         uploadedAt: serverTimestamp()
       };
 
-      // 3. الحفظ في Firestore
+      // 3. الحفظ في Firestore (اتباع مبدأ الأرشفة المتفائلة - غير معطلة للواجهة)
       const archivesCollection = collection(firestore, "archives");
-      await addDoc(archivesCollection, archiveData);
+      addDoc(archivesCollection, archiveData)
+        .catch(async (error) => {
+          // التعامل مع خطأ الصلاحيات في Firestore فقط إذا حدث فعلياً
+          const permissionError = new FirestorePermissionError({
+            path: archivesCollection.path,
+            operation: 'create',
+            requestResourceData: archiveData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
 
-      // 4. تصفية الواجهة بعد النجاح الكامل
+      // 4. تصفية الواجهة فوراً لضمان السرعة الفائقة
       toast({ 
         title: "تمت الأرشفة بنجاح", 
         description: `تم حفظ اختبار الطالب ${extractedData.name} بنجاح.` 
@@ -240,24 +249,17 @@ export default function UploadPage() {
 
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false, originalName: '' });
-      setStep(2); // العودة لخطوة الرفع لمواصلة العمل
+      setLoading(false);
+      setStep(2); // العودة لخطوة الرفع لمواصلة العمل فوراً
       
     } catch (error: any) {
-      console.error("Save Error:", error);
+      console.error("Save/Storage Error:", error);
+      setLoading(false);
       toast({ 
         variant: "destructive", 
-        title: "فشل الحفظ", 
-        description: "حدث خطأ أثناء محاولة الأرشفة، يرجى التحقق من جودة الاتصال." 
+        title: "خطأ في الاتصال", 
+        description: "تعذر رفع الملف للسحابة، يرجى التأكد من استقرار الإنترنت." 
       });
-      
-      // إرسال الخطأ لنظام تتبع الصلاحيات إذا لزم الأمر
-      const pErr = new FirestorePermissionError({
-        path: "archives",
-        operation: 'create'
-      });
-      errorEmitter.emit('permission-error', pErr);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -290,7 +292,7 @@ export default function UploadPage() {
                 )}
               >
                 <Cpu className="w-4 h-4" />
-                أرشفة ذكية (تحليل AI)
+                أرشفة ذكية (AI)
               </TabsTrigger>
               <TabsTrigger 
                 value="manual" 
@@ -344,7 +346,7 @@ export default function UploadPage() {
               </div>
               <div>
                 <p className="font-black text-3xl text-primary mb-2">{loadingText}</p>
-                <p className="text-muted-foreground font-bold">يرجى عدم إغلاق الصفحة لضمان سلامة الأرشفة...</p>
+                <p className="text-muted-foreground font-bold">يتم التخزين سحابياً، لن يستغرق ذلك طويلاً...</p>
               </div>
             </div>
           )}

@@ -56,7 +56,7 @@ export default function ArchivePage() {
   const firestore = useFirestore();
   const archivesQuery = useMemo(() => {
     if (!firestore) return null;
-    // جلب كافة السجلات دون ترتيب سحابي لتجنب مشاكل الفهرسة (Indexing)
+    // جلب كافة السجلات دون ترتيب سحابي لتجنب مشاكل الفهرسة (Indexing) في البداية
     return collection(firestore, "archives");
   }, [firestore]);
 
@@ -67,16 +67,16 @@ export default function ArchivePage() {
   const [selectedYear, setSelectedYear] = useState("all");
   const [selectedTerm, setSelectedTerm] = useState("all");
 
-  // معالجة البيانات: الترتيب والفلترة برمجياً لضمان السرعة والدقة
+  // معالجة البيانات: الترتيب والفلترة برمجياً لضمان السرعة والدقة المطلقة
   const processedResults = useMemo(() => {
-    // 1. الترتيب (الأحدث أولاً)
+    // 1. الترتيب (الأحدث أولاً) - برمجياً لتجاوز قيود الفهرسة في Firestore
     const sorted = [...archives].sort((a: any, b: any) => {
       const timeA = a.uploadedAt?.seconds || 0;
       const timeB = b.uploadedAt?.seconds || 0;
       return timeB - timeA;
     });
 
-    // 2. الفلترة
+    // 2. الفلترة الآمنة
     return sorted.filter((item: any) => {
       const sName = (item.studentName || "").toLowerCase();
       const sId = (item.studentRegId || "").toLowerCase();
