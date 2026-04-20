@@ -465,6 +465,10 @@ export default function AdminArchivePage() {
       {/* Viewing Dialog */}
       <Dialog open={!!viewingArchive} onOpenChange={(o) => !o && setViewingArchive(null)}>
         <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl rounded-3xl md:rounded-[2.5rem] bg-background">
+          <DialogHeader className="sr-only">
+            <DialogTitle>معاينة المستند الموثق</DialogTitle>
+            <DialogDescription>عرض تفاصيل الطالب وصورة ورقة الامتحان</DialogDescription>
+          </DialogHeader>
           {viewingArchive && (
             <div className="flex flex-col md:flex-row h-full w-full relative">
               <button 

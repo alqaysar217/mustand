@@ -32,6 +32,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -305,6 +306,10 @@ export default function ArchivePage() {
 
       <Dialog open={!!viewingExam} onOpenChange={(o) => !o && setViewingExam(null)}>
         <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl rounded-3xl md:rounded-[2.5rem] bg-background">
+          <DialogHeader className="sr-only">
+            <DialogTitle>معاينة الاختبار</DialogTitle>
+            <DialogDescription>عرض تفاصيل الطالب وصورة المستند الموثق</DialogDescription>
+          </DialogHeader>
           {viewingExam && (
             <div className="flex flex-col md:flex-row h-full w-full relative">
               <button 
