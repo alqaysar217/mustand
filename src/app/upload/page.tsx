@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useRef } from "react";
@@ -115,7 +116,6 @@ export default function UploadPage() {
           const reader = new FileReader();
           reader.onload = async (event) => {
             if (event.target?.result) {
-              // ضغط الصورة فوراً قبل حفظها في الذاكرة أو رفعها
               const compressed = await compressImage(event.target.result as string);
               resolve(compressed);
             }
@@ -208,59 +208,64 @@ export default function UploadPage() {
     }
   };
 
-  const handleSaveToArchive = () => {
+  const handleSaveToArchive = async () => {
     if (!firestore || !storage || !extractedData.id || !formData.subjectName || files.length === 0) {
-      toast({ variant: "destructive", title: "بيانات ناقصة" });
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التحقق من إكمال كافة البيانات ورفع الصور." });
       return;
     }
 
-    const capturedFiles = [...files];
-    const capturedData = { ...extractedData };
-    const capturedForm = { ...formData };
+    setLoadingText("جاري حفظ الاختبار في الأرشيف...");
+    setLoading(true);
 
-    // تحديث الواجهة فوراً
-    setFiles([]);
-    setExtractedData({ id: '', name: '', found: false, originalName: '' });
-    setStep(2); 
-    
-    toast({ 
-      title: "بدأت الأرشفة", 
-      description: `يتم الآن حفظ ملف الطالب ${capturedData.name} في الخلفية لضمان سرعتك.` 
-    });
+    try {
+      // 1. Prepare Storage Reference
+      const folderName = (formData.year || "unknown").replace(/\s/g, '').replace(/\//g, '-');
+      const fileName = `archives/${folderName}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
+      const storageRef = ref(storage, fileName);
+      
+      // 2. Upload to Storage
+      const uploadResult = await uploadString(storageRef, files[0], 'data_url');
+      const downloadUrl = await getDownloadURL(uploadResult.ref);
+      
+      // 3. Save to Firestore
+      const archiveData = {
+        studentRegId: extractedData.id,
+        studentName: extractedData.name || "طالب غير معروف",
+        subjectId: formData.subjectId,
+        subjectName: formData.subjectName,
+        year: formData.year,
+        term: formData.term,
+        departmentId: formData.deptId,
+        departmentName: formData.deptName,
+        collegeName: formData.collegeName,
+        level: formData.level, 
+        fileUrl: downloadUrl,
+        pages: files.length,
+        uploadedAt: serverTimestamp()
+      };
 
-    const folderName = (capturedForm.year || "unknown").replace(/\s/g, '').replace(/\//g, '-');
-    const fileName = `archives/${folderName}/${capturedForm.subjectName}/${capturedData.id}_${Date.now()}.jpg`;
-    const storageRef = ref(storage, fileName);
-    
-    uploadString(storageRef, capturedFiles[0], 'data_url')
-      .then(async (uploadResult) => {
-        const downloadUrl = await getDownloadURL(uploadResult.ref);
-        const archiveData = {
-          studentRegId: capturedData.id,
-          studentName: capturedData.name || "طالب غير معروف",
-          subjectId: capturedForm.subjectId,
-          subjectName: capturedForm.subjectName,
-          year: capturedForm.year,
-          term: capturedForm.term,
-          departmentId: capturedForm.deptId,
-          departmentName: capturedForm.deptName,
-          collegeName: capturedForm.collegeName,
-          level: capturedForm.level, 
-          fileUrl: downloadUrl,
-          pages: capturedFiles.length,
-          uploadedAt: serverTimestamp()
-        };
+      await addDoc(collection(firestore, "archives"), archiveData);
 
-        addDoc(collection(firestore, "archives"), archiveData);
-      })
-      .catch((err) => {
-        console.error("Storage Error:", err);
-        toast({
-          variant: "destructive",
-          title: "فشلت الأرشفة الخلفية",
-          description: "حدث خطأ أثناء رفع الملف للسحابة. يرجى المحاولة مرة أخرى لاحقاً."
-        });
+      toast({ 
+        title: "تمت الأرشفة بنجاح", 
+        description: `تم حفظ ملف الطالب ${extractedData.name} في الأرشيف المركزي بنجاح.` 
       });
+
+      // 4. Reset UI
+      setFiles([]);
+      setExtractedData({ id: '', name: '', found: false, originalName: '' });
+      setStep(2); // Go back to upload step for next exam
+
+    } catch (error: any) {
+      console.error("Save Operation Error:", error);
+      toast({
+        variant: "destructive",
+        title: "حدث خطأ أثناء الحفظ",
+        description: "يرجى التحقق من الاتصال بالموقع والمحاولة مرة أخرى."
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -277,7 +282,6 @@ export default function UploadPage() {
           <p className="text-muted-foreground font-bold text-lg">نظام أتمتة وتخزين الاختبارات الجامعية</p>
         </div>
 
-        {/* Mode Filter */}
         <div className="max-w-md mx-auto mb-12">
           <Tabs value={mode} onValueChange={(v) => {
             setMode(v as any);
@@ -290,7 +294,6 @@ export default function UploadPage() {
           </Tabs>
         </div>
 
-        {/* Progress Tracker */}
         <div className="flex items-center justify-between mb-16 relative px-4 max-w-3xl mx-auto">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -translate-y-1/2 z-0"></div>
           {[1, 2, 3, 4, 5].map((s) => {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useMemo } from "react";
@@ -125,11 +126,20 @@ export default function AdminArchivePage() {
       setIsSubmitting(true);
       const reader = new FileReader();
       reader.onload = async (event) => {
-        if (event.target?.result) {
-          const compressed = await compressImage(event.target.result as string);
-          setNewArchive(prev => ({ ...prev, file: compressed }));
+        try {
+          if (event.target?.result) {
+            const compressed = await compressImage(event.target.result as string);
+            setNewArchive(prev => ({ ...prev, file: compressed }));
+          }
+        } catch (err) {
+          toast({ variant: "destructive", title: "خطأ", description: "فشل في معالجة الصورة المرفوعة." });
+        } finally {
+          setIsSubmitting(false);
         }
+      };
+      reader.onerror = () => {
         setIsSubmitting(false);
+        toast({ variant: "destructive", title: "خطأ", description: "تعذر قراءة الملف." });
       };
       reader.readAsDataURL(file);
     }
@@ -151,28 +161,26 @@ export default function AdminArchivePage() {
       const fileName = `archives/manual/${folderName}/${newArchive.regId}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       
-      // Fast Path: Upload then Save
-      uploadString(storageRef, newArchive.file, 'data_url').then(async () => {
-        const downloadUrl = await getDownloadURL(storageRef);
-        const archiveData = {
-          studentName: newArchive.name,
-          studentRegId: newArchive.regId,
-          subjectName: newArchive.subjectName,
-          subjectId: newArchive.subjectId,
-          year: newArchive.year,
-          term: newArchive.term,
-          departmentId: newArchive.department,
-          fileUrl: downloadUrl,
-          pages: 1,
-          uploadedAt: serverTimestamp()
-        };
-        addDoc(collection(firestore, "archives"), archiveData);
-      }).catch((err) => {
-        console.error("Storage upload error:", err);
-        toast({ variant: "destructive", title: "فشل الرفع", description: "تعذر رفع الملف للسحابة. يرجى المحاولة مرة أخرى." });
-      });
+      // Upload then Get URL
+      const uploadResult = await uploadString(storageRef, newArchive.file, 'data_url');
+      const downloadUrl = await getDownloadURL(uploadResult.ref);
       
-      // Close UI ASAP
+      const archiveData = {
+        studentName: newArchive.name,
+        studentRegId: newArchive.regId,
+        subjectName: newArchive.subjectName,
+        subjectId: newArchive.subjectId,
+        year: newArchive.year,
+        term: newArchive.term,
+        departmentId: newArchive.department,
+        fileUrl: downloadUrl,
+        pages: 1,
+        uploadedAt: serverTimestamp()
+      };
+      
+      await addDoc(collection(firestore, "archives"), archiveData);
+      
+      // Close UI on success
       setIsAddDialogOpen(false);
       setNewArchive({
         name: '', regId: '', subjectId: '', subjectName: '',
@@ -180,11 +188,17 @@ export default function AdminArchivePage() {
       });
 
       toast({
-        title: "تم إرسال الملف للحفظ",
-        description: "يتم الآن إكمال العملية في الخلفية لتسريع عملك.",
+        title: "تم الحفظ بنجاح",
+        description: "تمت إضافة الملف إلى الأرشيف السحابي بنجاح.",
       });
-    } catch (error) {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل بدء الحفظ السريع." });
+
+    } catch (error: any) {
+      console.error("Admin Manual Save Error:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "حدث خطأ أثناء الحفظ", 
+        description: "حدث خطأ أثناء الحفظ. يرجى التحقق من الاتصال والمحاولة مرة أخرى." 
+      });
     } finally {
       setIsSubmitting(false);
     }
