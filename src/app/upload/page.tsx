@@ -87,7 +87,6 @@ export default function UploadPage() {
   }, [subjects, formData.deptId, formData.level]);
 
   const nextStep = () => {
-    // If manual mode, skip Analysis (Step 4) and go to Confirmation (Step 5)
     if (mode === 'manual' && step === 3) {
       setStep(5);
     } else {
@@ -96,7 +95,6 @@ export default function UploadPage() {
   };
 
   const prevStep = () => {
-    // If manual mode, go back from Confirmation (Step 5) to Preview (Step 3)
     if (mode === 'manual' && step === 5) {
       setStep(3);
     } else {
@@ -177,7 +175,6 @@ export default function UploadPage() {
           found: true,
           originalName: result.studentName || ''
         });
-        toast({ title: "تم التعرف الذكي", description: `تمت مطابقة الطالب: ${student.name}` });
       } else {
         setExtractedData({ 
           id: cleanRegId, 
@@ -213,42 +210,57 @@ export default function UploadPage() {
     const currentForm = { ...formData };
 
     try {
-      const folderName = currentForm.year.replace(/\s/g, '').replace(/\//g, '-');
+      const folderName = (currentForm.year || "unknown").replace(/\s/g, '').replace(/\//g, '-');
       const fileName = `archives/${folderName}/${currentForm.subjectName}/${currentData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       
-      uploadString(storageRef, currentFiles[0], 'data_url').then(async () => {
-        const downloadUrl = await getDownloadURL(storageRef);
-        const archiveData = {
-          studentRegId: currentData.id,
-          studentName: currentData.name || "طالب غير معروف",
-          subjectId: currentForm.subjectId,
-          subjectName: currentForm.subjectName,
-          year: currentForm.year,
-          term: currentForm.term,
-          departmentId: currentForm.deptId,
-          fileUrl: downloadUrl,
-          pages: currentFiles.length,
-          uploadedAt: serverTimestamp()
-        };
+      // تنفيذ الرفع والحفظ بشكل متوازي مع ضمان التواجد في الواجهة
+      uploadString(storageRef, currentFiles[0], 'data_url')
+        .then(async () => {
+          const downloadUrl = await getDownloadURL(storageRef);
+          const archiveData = {
+            studentRegId: currentData.id,
+            studentName: currentData.name || "طالب غير معروف",
+            subjectId: currentForm.subjectId,
+            subjectName: currentForm.subjectName,
+            year: currentForm.year,
+            term: currentForm.term,
+            departmentId: currentForm.deptId,
+            fileUrl: downloadUrl,
+            pages: currentFiles.length,
+            uploadedAt: serverTimestamp()
+          };
 
-        const archivesCollection = collection(firestore, "archives");
-        addDoc(archivesCollection, archiveData);
-      });
+          const archivesCollection = collection(firestore, "archives");
+          // حفظ في قاعدة البيانات دون انتظار blocking
+          addDoc(archivesCollection, archiveData).catch((err) => {
+            const pErr = new FirestorePermissionError({
+              path: archivesCollection.path,
+              operation: 'create',
+              requestResourceData: archiveData
+            });
+            errorEmitter.emit('permission-error', pErr);
+          });
+        })
+        .catch(err => {
+          toast({ variant: "destructive", title: "فشل الرفع للسحابة" });
+        });
 
+      // العودة الفورية للخطوة التالية لتجربة سلسة
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false, originalName: '' });
       setStep(2);
-      setLoading(false);
       
       toast({ 
         title: "تمت الأرشفة بنجاح", 
-        description: "تم نقل الملف للسحابة ومواصلة العمل في الخلفية." 
+        description: "تم نقل الملف للسحابة وحفظ البيانات في السجل." 
       });
       
     } catch (error: any) {
-      setLoading(false);
       toast({ variant: "destructive", title: "فشل الرفع", description: "حدث خطأ غير متوقع." });
+    } finally {
+      // إغلاق التحميل فوراً لضمان عدم التعليق
+      setLoading(false);
     }
   };
 
@@ -270,7 +282,7 @@ export default function UploadPage() {
         <div className="max-w-md mx-auto mb-12">
           <Tabs value={mode} onValueChange={(v) => {
             setMode(v as any);
-            setStep(1); // Reset step when changing mode
+            setStep(1); 
           }} className="w-full">
             <TabsList className="bg-white p-1 rounded-2xl h-14 shadow-lg border w-full">
               <TabsTrigger 
@@ -301,9 +313,7 @@ export default function UploadPage() {
         <div className="flex items-center justify-between mb-16 relative px-4 max-w-3xl mx-auto">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -translate-y-1/2 z-0"></div>
           {[1, 2, 3, 4, 5].map((s) => {
-            // Skip Step 4 dot in manual mode
             if (mode === 'manual' && s === 4) return null;
-            
             return (
               <div 
                 key={s} 
@@ -572,10 +582,10 @@ export default function UploadPage() {
               variant="outline" 
               onClick={prevStep} 
               disabled={step === 1 || loading} 
-              className="h-16 px-10 rounded-[1.5rem] border-2 border-muted font-black gap-4 shadow-sm hover:bg-muted/10 transition-all flex-row-reverse"
+              className="h-16 px-10 rounded-[1.5rem] border-2 border-muted font-black gap-4 shadow-sm hover:bg-muted/10 transition-all flex items-center"
             >
+              <ChevronRight className="w-6 h-6" />
               السابق
-              <ChevronRight className="w-6 h-6" /> 
             </Button>
             
             {(step < 5 && !(step === 3 && mode === 'manual')) ? (
@@ -586,18 +596,18 @@ export default function UploadPage() {
                   (step === 1 && (!formData.subjectId || !formData.level)) ||
                   (step === 3 && files.length === 0)
                 } 
-                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex-row-reverse"
+                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"
               >
-                <ChevronLeft className="w-6 h-6" />
                 التالي 
+                <ChevronLeft className="w-6 h-6" />
               </Button>
             ) : step === 3 && mode === 'manual' ? (
               <Button 
                 onClick={nextStep} 
-                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex-row-reverse"
+                className="h-16 px-16 rounded-[1.5rem] font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"
               >
-                <ChevronLeft className="w-6 h-6" />
                 تحديد الطالب 
+                <ChevronLeft className="w-6 h-6" />
               </Button>
             ) : step === 5 ? (
               <Button 

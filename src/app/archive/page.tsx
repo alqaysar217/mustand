@@ -34,18 +34,22 @@ import { downloadFile } from "@/lib/storage-utils";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, deleteDoc, doc } from "firebase/firestore";
+import { collection, deleteDoc, doc, query, orderBy } from "firebase/firestore";
 
 export default function ArchivePage() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [showFilters, setShowFilters] = useState(false);
   const [viewingExam, setViewingExam] = useState<any>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const { toast } = useToast();
   const { isOpen } = useSidebarToggle();
   
   const firestore = useFirestore();
-  const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
+  // إضافة ترتيب تنازلي حسب تاريخ الرفع
+  const archivesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "archives"), orderBy("uploadedAt", "desc"));
+  }, [firestore]);
+
   const { data: archives = [], loading } = useCollection(archivesQuery);
 
   // Filtering states
@@ -55,11 +59,13 @@ export default function ArchivePage() {
 
   const filteredResults = useMemo(() => {
     return (archives as any[]).filter(item => {
-      const matchesSearch = 
-        item.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.studentRegId?.includes(searchTerm) ||
-        item.subjectName?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+      // حماية من القيم الفارغة لمنع تعليق الفلترة
+      const sName = (item.studentName || "").toLowerCase();
+      const sId = (item.studentRegId || "").toLowerCase();
+      const subName = (item.subjectName || "").toLowerCase();
+      const search = searchTerm.toLowerCase();
+
+      const matchesSearch = sName.includes(search) || sId.includes(search) || subName.includes(search);
       const matchesYear = selectedYear === "all" || item.year === selectedYear;
       const matchesTerm = selectedTerm === "all" || item.term === selectedTerm;
 
