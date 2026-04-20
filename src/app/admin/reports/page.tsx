@@ -43,6 +43,7 @@ import {
   Pie
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
@@ -54,6 +55,7 @@ export default function ReportsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState("students");
 
   useEffect(() => {
     setMounted(true);
@@ -100,7 +102,7 @@ export default function ReportsPage() {
   }, [archives]);
 
   const formatNumber = (num: number) => {
-    if (!mounted) return num.toString();
+    if (!mounted) return "0";
     return num.toLocaleString();
   };
 
@@ -206,23 +208,32 @@ export default function ReportsPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="students" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-2xl h-16 shadow-lg border mb-10 flex w-full max-w-2xl mx-auto overflow-hidden">
           <TabsTrigger 
             value="students" 
-            className="flex-1 rounded-xl font-black text-sm transition-all duration-300 data-[state=active]:bg-transparent data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className={cn(
+              "flex-1 rounded-xl font-black text-sm transition-all duration-300",
+              activeTab === "students" ? "gradient-blue text-white shadow-lg" : "text-muted-foreground hover:bg-muted/50"
+            )}
           >
             تحليل الطلاب
           </TabsTrigger>
           <TabsTrigger 
             value="staff" 
-            className="flex-1 rounded-xl font-black text-sm transition-all duration-300 data-[state=active]:bg-transparent data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className={cn(
+              "flex-1 rounded-xl font-black text-sm transition-all duration-300",
+              activeTab === "staff" ? "gradient-blue text-white shadow-lg" : "text-muted-foreground hover:bg-muted/50"
+            )}
           >
             تقارير العاملين
           </TabsTrigger>
           <TabsTrigger 
             value="archives" 
-            className="flex-1 rounded-xl font-black text-sm transition-all duration-300 data-[state=active]:bg-transparent data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className={cn(
+              "flex-1 rounded-xl font-black text-sm transition-all duration-300",
+              activeTab === "archives" ? "gradient-blue text-white shadow-lg" : "text-muted-foreground hover:bg-muted/50"
+            )}
           >
             إحصائيات الأرشيف
           </TabsTrigger>
