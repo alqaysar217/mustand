@@ -54,11 +54,8 @@ export default function ArchivePage() {
   const { isOpen } = useSidebarToggle();
   
   const firestore = useFirestore();
-  const archivesQuery = useMemo(() => {
-    if (!firestore) return null;
-    // جلب كافة السجلات دون ترتيب سحابي لتجنب مشاكل الفهرسة (Indexing)
-    return collection(firestore, "archives");
-  }, [firestore]);
+  // جلب كافة السجلات دون ترتيب سحابي لتجنب مشاكل الفهرسة (Indexing)
+  const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
 
   const { data: archives = [], loading } = useCollection(archivesQuery);
 
@@ -340,3 +337,4 @@ export default function ArchivePage() {
     </div>
   );
 }
+

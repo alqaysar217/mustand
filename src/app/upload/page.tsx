@@ -196,38 +196,36 @@ export default function UploadPage() {
     }
   };
 
-  const handleSaveToArchive = async () => {
+  const handleSaveToArchive = () => {
     if (!firestore || !storage || !extractedData.id || !formData.subjectName || files.length === 0) {
       toast({ variant: "destructive", title: "بيانات ناقصة" });
       return;
     }
 
-    // --- الاستراتيجية المتفائلة: تحديث الواجهة فوراً ---
+    // استراتيجية الأرشفة الفورية (Zero-Wait)
     const capturedFiles = [...files];
     const capturedData = { ...extractedData };
     const capturedForm = { ...formData };
 
-    // 1. تصفية الواجهة فوراً لضمان السرعة
+    // 1. تحديث الواجهة فوراً
     setFiles([]);
     setExtractedData({ id: '', name: '', found: false, originalName: '' });
-    setStep(2); // العودة لخطوة الرفع لمواصلة العمل فوراً
+    setStep(2); // العودة لخطوة الرفع لمواصلة العمل
     
     toast({ 
       title: "بدأت الأرشفة", 
-      description: `يتم الآن معالجة اختبار الطالب ${capturedData.name} في الخلفية.` 
+      description: `يتم الآن حفظ ملف الطالب ${capturedData.name} في الخلفية.` 
     });
 
-    // 2. التنفيذ في الخلفية (Parallel Background Processing)
-    try {
-      const folderName = (capturedForm.year || "unknown").replace(/\s/g, '').replace(/\//g, '-');
-      const fileName = `archives/${folderName}/${capturedForm.subjectName}/${capturedData.id}_${Date.now()}.jpg`;
-      const storageRef = ref(storage, fileName);
-      
-      // الرفع للسحابة
-      uploadString(storageRef, capturedFiles[0], 'data_url').then(async (uploadResult) => {
+    // 2. التنفيذ في الخلفية (Parallel Execution)
+    const folderName = (capturedForm.year || "unknown").replace(/\s/g, '').replace(/\//g, '-');
+    const fileName = `archives/${folderName}/${capturedForm.subjectName}/${capturedData.id}_${Date.now()}.jpg`;
+    const storageRef = ref(storage, fileName);
+    
+    // الرفع للسحابة ثم الحفظ في القاعدة
+    uploadString(storageRef, capturedFiles[0], 'data_url')
+      .then(async (uploadResult) => {
         const downloadUrl = await getDownloadURL(uploadResult.ref);
-
-        // تجهيز بيانات الأرشفة
         const archiveData = {
           studentRegId: capturedData.id,
           studentName: capturedData.name || "طالب غير معروف",
@@ -241,7 +239,6 @@ export default function UploadPage() {
           uploadedAt: serverTimestamp()
         };
 
-        // الحفظ في Firestore
         addDoc(collection(firestore, "archives"), archiveData).catch(async (error) => {
           const permissionError = new FirestorePermissionError({
             path: "archives",
@@ -250,10 +247,11 @@ export default function UploadPage() {
           });
           errorEmitter.emit('permission-error', permissionError);
         });
+      })
+      .catch((err) => {
+        console.error("Storage Error:", err);
+        toast({ variant: "destructive", title: "فشل الرفع للسحابة" });
       });
-    } catch (error: any) {
-      console.error("Background Archiving Error:", error);
-    }
   };
 
   return (
@@ -569,7 +567,6 @@ export default function UploadPage() {
           )}
 
           <div className="mt-auto pt-10 flex items-center justify-between border-t-2 border-muted/50">
-             {/* أزرار التنقل مع مراعاة اللغة العربية: السابق في اليمين، التالي في اليسار */}
             <div className="flex gap-4">
               <Button 
                 variant="outline" 
@@ -621,3 +618,4 @@ export default function UploadPage() {
     </div>
   );
 }
+
