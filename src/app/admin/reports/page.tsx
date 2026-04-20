@@ -102,7 +102,7 @@ export default function ReportsPage() {
 
   const formatNumber = (num: number) => {
     if (!mounted) return "0";
-    return num.toLocaleString();
+    return num.toLocaleString('en-US');
   };
 
   const handleExportCSV = (reportType: 'students' | 'staff' | 'archives') => {
@@ -147,15 +147,25 @@ export default function ReportsPage() {
     }
   };
 
+  // تأجيل الرندر لتجنب أخطاء Hydration المرتبطة بالـ Tabs و Recharts
+  if (!mounted) {
+    return (
+      <div className="flex flex-col items-center justify-center py-40 space-y-4">
+        <Loader2 className="w-12 h-12 animate-spin text-primary opacity-20" />
+        <p className="text-muted-foreground font-black animate-pulse">جاري تحضير المركز التحليلي المتقدم...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 text-right" dir="rtl">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
+        <div className="text-right">
           <h1 className="text-3xl font-black text-primary mb-1">المركز التحليلي المتقدم</h1>
           <p className="text-muted-foreground font-bold">تقارير شاملة عن الموارد البشرية والبيانات الأكاديمية</p>
         </div>
         
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 justify-end">
           <Button 
             variant="outline" 
             onClick={() => handleExportCSV('students')}
@@ -185,7 +195,7 @@ export default function ReportsPage() {
             <Badge className="bg-green-50 text-green-700 border-none font-black">قاعدة البيانات</Badge>
           </div>
           <p className="text-muted-foreground text-sm font-bold">إجمالي الطلاب</p>
-          <h4 className="text-3xl font-black text-primary">{mounted ? students.length.toLocaleString() : '0'}</h4>
+          <h4 className="text-3xl font-black text-primary">{formatNumber(students.length)}</h4>
         </Card>
         
         <Card className="p-6 border-none shadow-xl rounded-3xl bg-white border-r-8 border-secondary">
@@ -194,7 +204,7 @@ export default function ReportsPage() {
             <Badge className="bg-blue-50 text-blue-700 border-none font-black">القوى العاملة</Badge>
           </div>
           <p className="text-muted-foreground text-sm font-bold">إجمالي العاملين</p>
-          <h4 className="text-3xl font-black text-primary">{mounted ? staff.length.toLocaleString() : '0'}</h4>
+          <h4 className="text-3xl font-black text-primary">{formatNumber(staff.length)}</h4>
         </Card>
 
         <Card className="p-6 border-none shadow-xl rounded-3xl bg-white border-r-8 border-orange-500">
@@ -203,11 +213,11 @@ export default function ReportsPage() {
             <Badge className="bg-orange-50 text-orange-700 border-none font-black">الأرشفة السحابية</Badge>
           </div>
           <p className="text-muted-foreground text-sm font-bold">إجمالي الاختبارات</p>
-          <h4 className="text-3xl font-black text-primary">{mounted ? archives.length.toLocaleString() : '0'}</h4>
+          <h4 className="text-3xl font-black text-primary">{formatNumber(archives.length)}</h4>
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
         <TabsList className="bg-white p-1 rounded-[2rem] h-20 shadow-xl border mb-10 flex w-full max-w-2xl mx-auto overflow-hidden">
           <TabsTrigger 
             value="students" 
@@ -243,12 +253,12 @@ export default function ReportsPage() {
 
         <TabsContent value="students" className="space-y-6 animate-slide-up">
           <Card className="p-8 border-none shadow-xl rounded-3xl bg-white mb-6">
-            <div className="flex items-center gap-3 mb-8 border-b pb-4">
+            <div className="flex items-center gap-3 mb-8 border-b pb-4 justify-start">
               <div className="p-2 bg-secondary/10 rounded-xl text-secondary"><Filter className="w-6 h-6" /></div>
               <h3 className="text-xl font-black text-primary">تصفية نتائج البحث المتقدم</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="space-y-3">
+              <div className="space-y-3 text-right">
                 <Label className="font-black text-sm text-primary pr-1">الكلية الجامعية</Label>
                 <select 
                   value={filterCollege} 
@@ -260,7 +270,7 @@ export default function ReportsPage() {
                   {colleges.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3 text-right">
                 <Label className="font-black text-sm text-primary pr-1">التخصص العلمي</Label>
                 <select 
                   value={filterDept} 
@@ -272,7 +282,7 @@ export default function ReportsPage() {
                   {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3 text-right">
                 <Label className="font-black text-sm text-primary pr-1">المستوى الدراسي</Label>
                 <select 
                   value={filterLevel} 
@@ -380,7 +390,7 @@ export default function ReportsPage() {
         <TabsContent value="archives" className="space-y-8 animate-slide-up">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
-              <h3 className="text-lg font-black text-primary mb-8 flex items-center gap-2">
+              <h3 className="text-lg font-black text-primary mb-8 flex items-center gap-2 justify-start">
                 <TrendingUp className="w-6 h-6 text-secondary" />
                 توزيع الاختبارات المؤرشفة حسب التخصص
               </h3>
