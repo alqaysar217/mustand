@@ -202,64 +202,61 @@ export default function UploadPage() {
       return;
     }
 
-    setLoadingText("جاري الحفظ الفوري...");
+    setLoadingText("جاري تأمين الحفظ في السحابة...");
     setLoading(true);
     
-    const currentFiles = [...files];
-    const currentData = { ...extractedData };
-    const currentForm = { ...formData };
-
     try {
-      const folderName = (currentForm.year || "unknown").replace(/\s/g, '').replace(/\//g, '-');
-      const fileName = `archives/${folderName}/${currentForm.subjectName}/${currentData.id}_${Date.now()}.jpg`;
+      const folderName = (formData.year || "unknown").replace(/\s/g, '').replace(/\//g, '-');
+      const fileName = `archives/${folderName}/${formData.subjectName}/${extractedData.id}_${Date.now()}.jpg`;
       const storageRef = ref(storage, fileName);
       
-      // تنفيذ الرفع والحفظ بشكل متوازي مع ضمان التواجد في الواجهة
-      uploadString(storageRef, currentFiles[0], 'data_url')
-        .then(async () => {
-          const downloadUrl = await getDownloadURL(storageRef);
-          const archiveData = {
-            studentRegId: currentData.id,
-            studentName: currentData.name || "طالب غير معروف",
-            subjectId: currentForm.subjectId,
-            subjectName: currentForm.subjectName,
-            year: currentForm.year,
-            term: currentForm.term,
-            departmentId: currentForm.deptId,
-            fileUrl: downloadUrl,
-            pages: currentFiles.length,
-            uploadedAt: serverTimestamp()
-          };
+      // 1. رفع الصورة أولاً (يجب الانتظار لضمان وجود الرابط)
+      const uploadResult = await uploadString(storageRef, files[0], 'data_url');
+      const downloadUrl = await getDownloadURL(uploadResult.ref);
 
-          const archivesCollection = collection(firestore, "archives");
-          // حفظ في قاعدة البيانات دون انتظار blocking
-          addDoc(archivesCollection, archiveData).catch((err) => {
-            const pErr = new FirestorePermissionError({
-              path: archivesCollection.path,
-              operation: 'create',
-              requestResourceData: archiveData
-            });
-            errorEmitter.emit('permission-error', pErr);
-          });
-        })
-        .catch(err => {
-          toast({ variant: "destructive", title: "فشل الرفع للسحابة" });
-        });
+      // 2. تجهيز بيانات الأرشفة
+      const archiveData = {
+        studentRegId: extractedData.id,
+        studentName: extractedData.name || "طالب غير معروف",
+        subjectId: formData.subjectId,
+        subjectName: formData.subjectName,
+        year: formData.year,
+        term: formData.term,
+        departmentId: formData.deptId,
+        fileUrl: downloadUrl,
+        pages: files.length,
+        uploadedAt: serverTimestamp()
+      };
 
-      // العودة الفورية للخطوة التالية لتجربة سلسة
-      setFiles([]);
-      setExtractedData({ id: '', name: '', found: false, originalName: '' });
-      setStep(2);
-      
+      // 3. الحفظ في Firestore
+      const archivesCollection = collection(firestore, "archives");
+      await addDoc(archivesCollection, archiveData);
+
+      // 4. تصفية الواجهة بعد النجاح الكامل
       toast({ 
         title: "تمت الأرشفة بنجاح", 
-        description: "تم نقل الملف للسحابة وحفظ البيانات في السجل." 
+        description: `تم حفظ اختبار الطالب ${extractedData.name} بنجاح.` 
       });
+
+      setFiles([]);
+      setExtractedData({ id: '', name: '', found: false, originalName: '' });
+      setStep(2); // العودة لخطوة الرفع لمواصلة العمل
       
     } catch (error: any) {
-      toast({ variant: "destructive", title: "فشل الرفع", description: "حدث خطأ غير متوقع." });
+      console.error("Save Error:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "فشل الحفظ", 
+        description: "حدث خطأ أثناء محاولة الأرشفة، يرجى التحقق من جودة الاتصال." 
+      });
+      
+      // إرسال الخطأ لنظام تتبع الصلاحيات إذا لزم الأمر
+      const pErr = new FirestorePermissionError({
+        path: "archives",
+        operation: 'create'
+      });
+      errorEmitter.emit('permission-error', pErr);
     } finally {
-      // إغلاق التحميل فوراً لضمان عدم التعليق
       setLoading(false);
     }
   };
@@ -275,7 +272,7 @@ export default function UploadPage() {
       )} dir="rtl">
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-black text-primary mb-2">أرشفة رقمية ذكية</h1>
-          <p className="text-muted-foreground font-bold text-lg">نظام أتمتة الاختبارات الجامعية</p>
+          <p className="text-muted-foreground font-bold text-lg">نظام أتمتة وتخزين الاختبارات الجامعية</p>
         </div>
 
         {/* Mode Filter */}
@@ -340,14 +337,14 @@ export default function UploadPage() {
 
         <Card className="p-8 md:p-12 border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[40px] bg-white min-h-[520px] flex flex-col relative overflow-hidden">
           {loading && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-md z-50 flex flex-col items-center justify-center gap-6 text-center p-10 animate-fade-in">
+            <div className="absolute inset-0 bg-white/90 backdrop-blur-xl z-50 flex flex-col items-center justify-center gap-6 text-center p-10 animate-fade-in">
               <div className="relative">
                 <Loader2 className="w-20 h-20 animate-spin text-primary" />
-                <Sparkles className="w-8 h-8 text-secondary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                <div className="absolute inset-0 bg-primary/5 rounded-full animate-ping opacity-20"></div>
               </div>
               <div>
                 <p className="font-black text-3xl text-primary mb-2">{loadingText}</p>
-                <p className="text-muted-foreground font-bold">يتم التخزين الآن في السحابة بسرعات عالية...</p>
+                <p className="text-muted-foreground font-bold">يرجى عدم إغلاق الصفحة لضمان سلامة الأرشفة...</p>
               </div>
             </div>
           )}
