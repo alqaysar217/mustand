@@ -8,17 +8,19 @@ import {
   Users, 
   UserPlus, 
   Search, 
-  MoreVertical, 
   Edit2, 
   Trash2, 
   UserX, 
-  UserCheck,
-  Shield,
-  User as UserIcon,
-  Briefcase,
-  Loader2,
-  CheckCircle,
-  XCircle
+  UserCheck, 
+  Shield, 
+  User as UserIcon, 
+  Briefcase, 
+  Loader2, 
+  CheckCircle, 
+  XCircle,
+  Lock,
+  AtSign,
+  AlertTriangle
 } from "lucide-react";
 import {
   Table,
@@ -29,13 +31,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,7 +50,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -189,7 +193,7 @@ export default function UsersPage() {
                 <TableHead className="text-right font-bold text-primary">نوع الحساب</TableHead>
                 <TableHead className="text-right font-bold text-primary">الحالة</TableHead>
                 <TableHead className="text-right font-bold text-primary">تاريخ الإنشاء</TableHead>
-                <TableHead className="text-center font-bold text-primary w-20">إجراءات</TableHead>
+                <TableHead className="text-center font-bold text-primary w-40">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -214,30 +218,55 @@ export default function UsersPage() {
                     {user.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString('en-GB') : '---'}
                   </TableCell>
                   <TableCell className="text-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-xl hover:bg-primary/5">
-                          <MoreVertical className="w-4 h-4 text-primary" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right" dir="rtl">
-                        <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات الحساب</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setEditingUser(user)} className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                          تعديل البيانات
-                          <Edit2 className="w-4 h-4 text-secondary" />
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(user.id, user.status)} className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
-                          {user.status === 'active' ? 'تعطيل الحساب' : 'تفعيل الحساب'}
-                          {user.status === 'active' ? <UserX className="w-4 h-4 text-orange-500" /> : <UserCheck className="w-4 h-4 text-green-500" />}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleDelete(user.id)} className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive">
-                          حذف المستخدم نهائياً
-                          <Trash2 className="w-4 h-4" />
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setEditingUser(user)}
+                        className="rounded-xl hover:bg-blue-50 text-blue-600"
+                        title="تعديل"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleToggleStatus(user.id, user.status)}
+                        className={user.status === 'active' ? "rounded-xl hover:bg-orange-50 text-orange-500" : "rounded-xl hover:bg-green-50 text-green-600"}
+                        title={user.status === 'active' ? "تعطيل" : "تفعيل"}
+                      >
+                        {user.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                      </Button>
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="rounded-xl hover:bg-red-50 text-red-600"
+                            title="حذف"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="rounded-3xl border-none text-right" dir="rtl">
+                          <AlertDialogHeader className="text-right">
+                            <AlertDialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                              <AlertTriangle className="w-6 h-6 text-red-500" />
+                              هل أنت متأكد من الحذف؟
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="font-bold pt-2">
+                              سيتم حذف حساب المستخدم <span className="text-red-600">({user.name})</span> بشكل نهائي من النظام. لا يمكن التراجع عن هذا الإجراء.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="flex-row gap-3">
+                            <AlertDialogAction onClick={() => handleDelete(user.id)} className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 font-bold h-11">نعم، احذف المستخدم</AlertDialogAction>
+                            <AlertDialogCancel className="flex-1 rounded-xl font-bold border-2 h-11">تراجع</AlertDialogCancel>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               )) : (
@@ -257,22 +286,34 @@ export default function UsersPage() {
         <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
           <div className="p-8">
             <DialogHeader className="text-right items-start mb-6">
-              <DialogTitle className="text-2xl font-black text-primary">إضافة مستخدم</DialogTitle>
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                <UserPlus className="w-6 h-6 text-secondary" />
+                إضافة مستخدم جديد
+              </DialogTitle>
               <DialogDescription className="font-bold">أدخل بيانات الحساب الجديد وحدد نوع الصلاحية.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
               <div className="space-y-2">
-                <Label className="text-primary font-bold">الاسم الكامل</Label>
-                <Input value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11 border-muted" />
+                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                  <UserIcon className="w-4 h-4 text-secondary" />
+                  الاسم الكامل
+                </Label>
+                <Input value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} placeholder="مثال: محمد أحمد علي" className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20" />
               </div>
               <div className="space-y-2">
-                <Label className="text-primary font-bold">اسم المستخدم</Label>
-                <Input value={newUser.username} onChange={(e) => setNewUser({...newUser, username: e.target.value})} placeholder="مثال: m_ahmed" className="rounded-xl h-11 border-muted" />
+                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                  <AtSign className="w-4 h-4 text-secondary" />
+                  اسم المستخدم
+                </Label>
+                <Input value={newUser.username} onChange={(e) => setNewUser({...newUser, username: e.target.value})} placeholder="مثال: m_ahmed" className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20" />
               </div>
               <div className="space-y-2">
-                <Label className="text-primary font-bold">الدور (الصلاحية)</Label>
+                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                  <Shield className="w-4 h-4 text-secondary" />
+                  الدور (الصلاحية)
+                </Label>
                 <Select value={newUser.role} onValueChange={(v) => setNewUser({...newUser, role: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted">
+                  <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted">
                     <SelectValue placeholder="اختر نوع الحساب" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
@@ -282,15 +323,19 @@ export default function UsersPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-primary font-bold">كلمة المرور</Label>
-                <Input type="password" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} placeholder="••••••••" className="rounded-xl h-11 border-muted" />
+                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                  <Lock className="w-4 h-4 text-secondary" />
+                  كلمة المرور
+                </Label>
+                <Input type="password" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} placeholder="••••••••" className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20" />
               </div>
             </div>
             <DialogFooter className="flex-row gap-3 pt-6">
-              <Button disabled={submitting} onClick={handleAddUser} className="flex-1 rounded-xl h-11 font-bold gradient-blue shadow-lg">
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ المستخدم"}
+              <Button disabled={submitting} onClick={handleAddUser} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2">
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                حفظ المستخدم
               </Button>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
             </DialogFooter>
           </div>
         </DialogContent>
@@ -301,21 +346,34 @@ export default function UsersPage() {
         <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
           <div className="p-8">
             <DialogHeader className="text-right items-start mb-6">
-              <DialogTitle className="text-2xl font-black text-primary">تعديل بيانات الحساب</DialogTitle>
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                <Edit2 className="w-6 h-6 text-secondary" />
+                تعديل بيانات الحساب
+              </DialogTitle>
+              <DialogDescription className="font-bold">تحديث معلومات المستخدم المختار في قاعدة البيانات.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
               <div className="space-y-2">
-                <Label className="text-primary font-bold">الاسم</Label>
-                <Input value={editingUser?.name || ""} onChange={(e) => setEditingUser({...editingUser, name: e.target.value})} className="rounded-xl h-11" />
+                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                  <UserIcon className="w-4 h-4 text-secondary" />
+                  الاسم الكامل
+                </Label>
+                <Input value={editingUser?.name || ""} onChange={(e) => setEditingUser({...editingUser, name: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20" />
               </div>
               <div className="space-y-2">
-                <Label className="text-primary font-bold">اسم المستخدم</Label>
-                <Input value={editingUser?.username || ""} onChange={(e) => setEditingUser({...editingUser, username: e.target.value})} className="rounded-xl h-11" />
+                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                  <AtSign className="w-4 h-4 text-secondary" />
+                  اسم المستخدم
+                </Label>
+                <Input value={editingUser?.username || ""} onChange={(e) => setEditingUser({...editingUser, username: e.target.value})} className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20" />
               </div>
               <div className="space-y-2">
-                <Label className="text-primary font-bold">الدور</Label>
+                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                  <Shield className="w-4 h-4 text-secondary" />
+                  الدور (الصلاحية)
+                </Label>
                 <Select value={editingUser?.role || "employee"} onValueChange={(v) => setEditingUser({...editingUser, role: v})}>
-                  <SelectTrigger className="rounded-xl h-11">
+                  <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
@@ -326,8 +384,11 @@ export default function UsersPage() {
               </div>
             </div>
             <DialogFooter className="flex-row gap-3 pt-6">
-              <Button disabled={submitting} onClick={handleUpdateUser} className="flex-1 rounded-xl h-11 font-bold gradient-blue shadow-lg">حفظ التعديلات</Button>
-              <Button variant="outline" onClick={() => setEditingUser(null)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
+              <Button disabled={submitting} onClick={handleUpdateUser} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2">
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                حفظ التعديلات
+              </Button>
+              <Button variant="outline" onClick={() => setEditingUser(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
             </DialogFooter>
           </div>
         </DialogContent>
