@@ -108,7 +108,7 @@ export default function AdminSettingsPage() {
       let count = 0;
       for (let i = 1; i <= 10; i++) {
         const student = STUDENTS_IMPORT_LIST[(i - 1) % STUDENTS_IMPORT_LIST.length];
-        const subject = subs.length > 0 ? subs[(i - 1) % subs.length] : { nameAr: "مادة تجريبية " + i, id: "mock_" + i, level: "المستوى الأول", departmentId: "central_dept", departmentName: "تقنية المعلومات" };
+        const subject = subs.length > 0 ? subs[(i - 1) % subs.length] : { nameAr: "مادة تجريبية " + i, id: "mock_" + i, level: "المستوى الأول", departmentId: "central_dept", departmentName: "تقنية المعلومات", collegeName: "كلية الحاسبات" };
         
         await addDoc(archivesRef, {
           studentName: student.n,
@@ -118,6 +118,8 @@ export default function AdminSettingsPage() {
           year: "2023 / 2024",
           term: i % 2 === 0 ? "الفصل الأول" : "الفصل الثاني",
           departmentId: (subject as any).departmentId || "central_dept_id",
+          departmentName: (subject as any).departmentName || "تقنية المعلومات",
+          collegeName: (subject as any).collegeName || "كلية الحاسبات",
           level: (subject as any).level || "المستوى الأول",
           fileUrl: `/exam-${i}.png`, 
           pages: 1,
@@ -146,17 +148,19 @@ export default function AdminSettingsPage() {
       const deptSnap = await getDocs(deptQuery);
       
       let deptId = "";
+      let collegeName = "كلية الحاسبات وتكنولوجيا المعلومات";
       if (deptSnap.empty) {
         const newDept = await addDoc(deptsRef, {
           name: deptName,
           code: deptCode,
-          collegeName: "كلية الحاسبات وتكنولوجيا المعلومات",
+          collegeName: collegeName,
           collegeId: "central_college_id",
           createdAt: serverTimestamp()
         });
         deptId = newDept.id;
       } else {
         deptId = deptSnap.docs[0].id;
+        collegeName = deptSnap.docs[0].data().collegeName;
       }
 
       const subjectsRef = collection(firestore, "subjects");
@@ -172,6 +176,7 @@ export default function AdminSettingsPage() {
             term: item.t,
             departmentId: deptId,
             departmentName: deptName,
+            collegeName: collegeName,
             createdAt: serverTimestamp()
           });
           count++;

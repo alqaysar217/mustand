@@ -31,7 +31,8 @@ import {
   CheckCircle2,
   CloudUpload,
   Keyboard,
-  Cpu
+  Cpu,
+  School
 } from "lucide-react";
 import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 import Image from "next/image";
@@ -55,6 +56,8 @@ export default function UploadPage() {
   const [formData, setFormData] = useState({ 
     year: '', 
     deptId: '', 
+    deptName: '',
+    collegeName: '',
     subjectId: '', 
     subjectName: '', 
     level: '', 
@@ -231,7 +234,9 @@ export default function UploadPage() {
           year: capturedForm.year,
           term: capturedForm.term,
           departmentId: capturedForm.deptId,
-          level: capturedForm.level, // المستوى هام جداً للفلترة
+          departmentName: capturedForm.deptName,
+          collegeName: capturedForm.collegeName,
+          level: capturedForm.level, 
           fileUrl: downloadUrl,
           pages: capturedFiles.length,
           uploadedAt: serverTimestamp()
@@ -316,7 +321,10 @@ export default function UploadPage() {
                 </div>
                 <div className="space-y-3">
                   <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />التخصص (القسم)</Label>
-                  <select value={formData.deptId} onChange={(e) => setFormData({...formData, deptId: e.target.value, subjectId: '', subjectName: ''})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"><option value="">اختر التخصص...</option>{departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
+                  <select value={formData.deptId} onChange={(e) => {
+                    const sel = departments.find((d: any) => d.id === e.target.value) as any;
+                    setFormData({...formData, deptId: e.target.value, deptName: sel?.name || "", collegeName: sel?.collegeName || "", subjectId: '', subjectName: ''});
+                  }} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"><option value="">اختر التخصص...</option>{departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
                 </div>
                 <div className="space-y-3">
                   <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label>

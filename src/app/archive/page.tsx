@@ -19,7 +19,10 @@ import {
   BookOpen,
   X,
   Building2,
-  GraduationCap
+  GraduationCap,
+  Fingerprint,
+  Clock,
+  School
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -39,6 +42,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 import { downloadFile } from "@/lib/storage-utils";
@@ -327,19 +332,99 @@ export default function ArchivePage() {
       </main>
 
       <Dialog open={!!viewingExam} onOpenChange={(o) => !o && setViewingExam(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-none shadow-2xl rounded-[3rem]">
+        <DialogContent className="max-w-6xl max-h-[95vh] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-none shadow-2xl rounded-[3rem]">
           <DialogHeader className="sr-only"><DialogTitle>معاينة الاختبار</DialogTitle><DialogDescription>عرض تفاصيل ورقة الاختبار المؤرشفة</DialogDescription></DialogHeader>
           {viewingExam && (
-            <div className="relative w-full h-[85vh] flex flex-col">
-              <div className="absolute top-6 right-6 z-50"><Button variant="ghost" size="icon" onClick={() => setViewingExam(null)} className="rounded-full bg-black/10 hover:bg-black/20"><X className="w-6 h-6" /></Button></div>
-              <div className="flex-1 relative"><Image src={viewingExam.fileUrl || PlaceHolderImages[1].imageUrl} alt="Exam Full" fill className="object-contain" priority /></div>
-              <div className="p-8 bg-white/80 backdrop-blur-md border-t flex items-center justify-between">
-                <div className="text-right">
-                  <p className="text-lg font-black text-primary">{viewingExam.studentName}</p>
-                  <p className="text-sm font-bold text-secondary">{viewingExam.subjectName} - {viewingExam.year}</p>
-                  <p className="text-[10px] text-muted-foreground font-bold">{viewingExam.level} | {viewingExam.term}</p>
-                </div>
-                <Button onClick={() => handleDownload(viewingExam)} className="rounded-2xl h-12 px-8 font-black gradient-blue shadow-lg gap-2"><Download className="w-5 h-5" />تحميل المستند</Button>
+            <div className="flex flex-col md:flex-row h-full w-full">
+              {/* Right Side: Data (Arabic Side) */}
+              <div className="w-full md:w-2/5 p-8 border-l bg-white/50 backdrop-blur-md flex flex-col text-right overflow-y-auto">
+                 <div className="flex justify-between items-start mb-8">
+                   <div className="p-3 rounded-2xl gradient-blue text-white shadow-lg"><FileText className="w-6 h-6" /></div>
+                   <Button variant="ghost" size="icon" onClick={() => setViewingExam(null)} className="rounded-xl hover:bg-destructive/10 text-destructive"><X className="w-6 h-6" /></Button>
+                 </div>
+
+                 <div className="space-y-8 flex-1">
+                    <div className="space-y-2">
+                       <Label className="text-muted-foreground text-xs font-black">بيانات الطالب المركزية</Label>
+                       <h3 className="text-3xl font-black text-primary leading-tight">{viewingExam.studentName}</h3>
+                       <div className="flex items-center justify-end gap-2 text-secondary font-black bg-secondary/5 p-3 rounded-xl border border-secondary/10">
+                          <Fingerprint className="w-5 h-5" />
+                          <span>رقم القيد: {viewingExam.studentRegId}</span>
+                       </div>
+                    </div>
+                    
+                    <Separator className="bg-primary/5" />
+
+                    <div className="grid grid-cols-1 gap-6">
+                       <div className="p-4 rounded-2xl bg-muted/20 border-r-4 border-primary">
+                          <Label className="text-muted-foreground text-[10px] font-black block mb-1">المادة والمحتوى</Label>
+                          <div className="flex items-center justify-end gap-3 font-black text-primary text-xl">
+                             {viewingExam.subjectName}
+                             <BookOpen className="w-5 h-5 text-secondary" />
+                          </div>
+                       </div>
+
+                       <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 rounded-2xl bg-muted/20 border-r-4 border-secondary">
+                             <Label className="text-muted-foreground text-[10px] font-black block mb-1">السنة الدراسية</Label>
+                             <div className="flex items-center justify-end gap-2 font-black text-primary">
+                                {viewingExam.year}
+                                <Calendar className="w-4 h-4 text-secondary opacity-50" />
+                             </div>
+                          </div>
+                          <div className="p-4 rounded-2xl bg-muted/20 border-r-4 border-secondary">
+                             <Label className="text-muted-foreground text-[10px] font-black block mb-1">المستوى</Label>
+                             <div className="flex items-center justify-end gap-2 font-black text-primary">
+                                {viewingExam.level}
+                                <GraduationCap className="w-4 h-4 text-secondary opacity-50" />
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="p-4 rounded-2xl bg-muted/20 border-r-4 border-orange-500">
+                          <Label className="text-muted-foreground text-[10px] font-black block mb-1">القسم والكلية</Label>
+                          <div className="flex items-center justify-end gap-2 font-black text-primary mb-1">
+                             {viewingExam.departmentName || "تقنية المعلومات"}
+                             <Building2 className="w-4 h-4 text-orange-500" />
+                          </div>
+                          <div className="flex items-center justify-end gap-2 text-xs font-bold text-muted-foreground">
+                             {viewingExam.collegeName || "كلية الحاسبات"}
+                             <School className="w-3 h-3" />
+                          </div>
+                       </div>
+
+                       <div className="p-4 rounded-2xl bg-muted/20 border-r-4 border-blue-500">
+                          <Label className="text-muted-foreground text-[10px] font-black block mb-1">الفصل والتاريخ</Label>
+                          <div className="flex items-center justify-end gap-2 font-black text-primary">
+                             {viewingExam.term}
+                             <Clock className="w-4 h-4 text-blue-500" />
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="pt-10 flex flex-col gap-3">
+                    <Button onClick={() => handleDownload(viewingExam)} className="w-full h-14 rounded-2xl font-black gradient-blue shadow-xl gap-3 text-lg">
+                       <Download className="w-6 h-6" />
+                       تحميل المستند الرقمي
+                    </Button>
+                 </div>
+              </div>
+
+              {/* Left Side: Image Content */}
+              <div className="flex-1 relative bg-neutral-100 flex items-center justify-center p-6 md:p-12 overflow-hidden">
+                 <div className="relative w-full h-full bg-white shadow-2xl rounded-2xl overflow-hidden border-8 border-white group">
+                    <Image 
+                       src={viewingExam.fileUrl || PlaceHolderImages[1].imageUrl} 
+                       alt="Exam View" 
+                       fill 
+                       className="object-contain transition-transform duration-500 group-hover:scale-105" 
+                       priority 
+                    />
+                    <div className="absolute top-4 left-4 bg-primary/90 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">
+                       المعاينة الأصلية
+                    </div>
+                 </div>
               </div>
             </div>
           )}
