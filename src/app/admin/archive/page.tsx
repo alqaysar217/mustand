@@ -11,11 +11,8 @@ import {
   Trash2, 
   FileText, 
   Plus, 
-  ExternalLink, 
   Loader2, 
-  CheckCircle, 
-  Link as LinkIcon,
-  Image as ImageIcon,
+  ImageIcon,
   Scan,
   CloudUpload
 } from "lucide-react";
@@ -47,13 +44,12 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/storage-utils";
 import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, deleteDoc, doc, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { collection, deleteDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function AdminArchivePage() {
   const firestore = useFirestore();
@@ -125,13 +121,22 @@ export default function AdminArchivePage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleMoveToBin = async (item: any) => {
     if (!firestore) return;
     try {
+      const { id, ...originalData } = item;
+      await addDoc(collection(firestore, "recycleBin"), {
+        type: 'archive',
+        originalData,
+        originalId: id,
+        deletedAt: serverTimestamp(),
+        name: item.studentName,
+        identifier: item.subjectName
+      });
       await deleteDoc(doc(firestore, "archives", id));
-      toast({ title: "تم الحذف بنجاح" });
+      toast({ title: "تم نقل الملف لسلة المحذوفات" });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في الحذف" });
+      toast({ variant: "destructive", title: "خطأ في النقل" });
     }
   };
 
@@ -244,7 +249,7 @@ export default function AdminArchivePage() {
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-1">
                       <Button variant="ghost" size="icon" onClick={() => setViewingArchive(item)} className="rounded-xl hover:bg-primary/5 text-primary"><Eye className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="rounded-xl hover:bg-destructive/10 text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleMoveToBin(item)} className="rounded-xl hover:bg-destructive/10 text-destructive"><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>

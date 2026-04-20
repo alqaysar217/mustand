@@ -45,10 +45,8 @@ import { useToast } from "@/hooks/use-toast";
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
 
-export default function StudentsPage() {
+export default function AdminStudentsPage() {
   const firestore = useFirestore();
   const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
   const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
@@ -64,7 +62,6 @@ export default function StudentsPage() {
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   
-  // Form State
   const [newStudent, setNewStudent] = useState({
     name: "",
     regId: "",
@@ -133,24 +130,25 @@ export default function StudentsPage() {
         setEditingStudent(null);
         toast({ title: "تم التحديث", description: "تم تحديث بيانات الطالب بنجاح." });
       })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      })
       .finally(() => setSubmitting(false));
   };
 
-  const handleDelete = async (id: string) => {
+  const handleMoveToBin = async (student: any) => {
     if (!firestore) return;
     try {
+      const { id, ...originalData } = student;
+      await addDoc(collection(firestore, "recycleBin"), {
+        type: 'student',
+        originalData,
+        originalId: id,
+        deletedAt: serverTimestamp(),
+        name: student.name,
+        identifier: student.regId
+      });
       await deleteDoc(doc(firestore, "students", id));
-      toast({ title: "تم حذف سجل الطالب" });
+      toast({ title: "تم نقل الطالب لسلة المحذوفات" });
     } catch (error) {
-      toast({ variant: "destructive", title: "فشل الحذف" });
+      toast({ variant: "destructive", title: "فشل نقل البيانات" });
     }
   };
 
@@ -168,50 +166,48 @@ export default function StudentsPage() {
           <p className="text-muted-foreground font-bold">قاعدة بيانات الطلاب المسجلين سحابياً</p>
         </div>
         
-        <div className="flex flex-wrap gap-3">
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2">
-                <UserPlus className="w-5 h-5" />
-                إضافة طالب جديد
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
-              <div className="p-8">
-                <DialogHeader className="text-right items-start space-y-2 mb-8">
-                  <DialogTitle className="text-2xl font-black text-primary">إضافة طالب</DialogTitle>
-                  <DialogDescription className="font-bold text-muted-foreground">تسجيل طالب جديد في النظام وربطه بالتخصص الدراسي.</DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-2 gap-6 py-4">
-                  <div className="space-y-2 col-span-2 text-right">
-                    <Label className="text-primary font-bold">الاسم الكامل</Label>
-                    <Input value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11" />
-                  </div>
-                  <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">رقم القيد</Label>
-                    <Input value={newStudent.regId} onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})} placeholder="20240000" className="rounded-xl h-11" />
-                  </div>
-                  <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold">التخصص</Label>
-                    <Select onValueChange={(v) => setNewStudent({...newStudent, departmentId: v})}>
-                      <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2">
+              <UserPlus className="w-5 h-5" />
+              إضافة طالب جديد
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+            <div className="p-8">
+              <DialogHeader className="text-right items-start space-y-2 mb-8">
+                <DialogTitle className="text-2xl font-black text-primary">إضافة طالب</DialogTitle>
+                <DialogDescription className="font-bold text-muted-foreground">تسجيل طالب جديد في النظام وربطه بالتخصص الدراسي.</DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-6 py-4">
+                <div className="space-y-2 col-span-2 text-right">
+                  <Label className="text-primary font-bold">الاسم الكامل</Label>
+                  <Input value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11" />
                 </div>
-                <DialogFooter className="flex-row gap-3 pt-8">
-                  <Button disabled={submitting} onClick={handleAddStudent} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
-                    حفظ البيانات
-                  </Button>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
-                </DialogFooter>
+                <div className="space-y-2 text-right">
+                  <Label className="text-primary font-bold">رقم القيد</Label>
+                  <Input value={newStudent.regId} onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})} placeholder="20240000" className="rounded-xl h-11" />
+                </div>
+                <div className="space-y-2 text-right">
+                  <Label className="text-primary font-bold">التخصص</Label>
+                  <Select onValueChange={(v) => setNewStudent({...newStudent, departmentId: v})}>
+                    <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              <DialogFooter className="flex-row gap-3 pt-8">
+                <Button disabled={submitting} onClick={handleAddStudent} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
+                  حفظ البيانات
+                </Button>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card className="p-6 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
@@ -235,20 +231,6 @@ export default function StudentsPage() {
                <SelectContent className="rounded-xl font-bold">
                  <SelectItem value="all">جميع التخصصات</SelectItem>
                  {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-               </SelectContent>
-             </Select>
-          </div>
-          <div className="flex-1">
-             <Select value={filterLevel} onValueChange={setFilterLevel}>
-               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
-                 <SelectValue placeholder="كل المستويات" />
-               </SelectTrigger>
-               <SelectContent className="rounded-xl font-bold">
-                 <SelectItem value="all">جميع المستويات</SelectItem>
-                 <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
-                 <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
-                 <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
-                 <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
                </SelectContent>
              </Select>
           </div>
@@ -296,16 +278,14 @@ export default function StudentsPage() {
                         size="icon" 
                         onClick={() => setEditingStudent(student)}
                         className="rounded-xl hover:bg-primary/5 text-secondary"
-                        title="تعديل"
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => handleDelete(student.id)}
+                        onClick={() => handleMoveToBin(student)}
                         className="rounded-xl hover:bg-destructive/10 text-destructive"
-                        title="حذف"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -385,22 +365,6 @@ export default function StudentsPage() {
                     <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
                     <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
                     <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                  <Banknote className="w-4 h-4 text-secondary" />
-                  نوع القبول
-                </Label>
-                <Select value={editingStudent?.admissionType || ""} onValueChange={(v) => setEditingStudent({...editingStudent, admissionType: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
-                    <SelectValue placeholder="نوع القبول" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl font-bold">
-                    <SelectItem value="عام">عام</SelectItem>
-                    <SelectItem value="موازي">موازي</SelectItem>
-                    <SelectItem value="نفقة خاصة">نفقة خاصة</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -9,7 +10,6 @@ import {
   LayoutGrid, 
   List, 
   Eye, 
-  Download, 
   Filter, 
   Search,
   Calendar,
@@ -21,9 +21,6 @@ import {
   GraduationCap,
   Fingerprint,
   Clock,
-  School,
-  FileText,
-  Sparkles,
   ExternalLink
 } from "lucide-react";
 import Image from "next/image";
@@ -35,7 +32,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -51,7 +47,7 @@ import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, deleteDoc, doc } from "firebase/firestore";
+import { collection, deleteDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function ArchivePage() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -65,12 +61,10 @@ export default function ArchivePage() {
   // Queries
   const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
   const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
-  const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
   const yearsQuery = useMemo(() => firestore ? collection(firestore, "academicYears") : null, [firestore]);
 
   const { data: archives = [], loading } = useCollection(archivesQuery);
   const { data: departments = [] } = useCollection(deptsQuery);
-  const { data: subjects = [] } = useCollection(subjectsQuery);
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
   // Filters State
@@ -106,17 +100,25 @@ export default function ArchivePage() {
     window.open(url, '_blank');
   };
 
-  const handleDelete = async (id: string) => {
+  const handleMoveToBin = async (item: any) => {
     if (!firestore) return;
     try {
+      const { id, ...originalData } = item;
+      await addDoc(collection(firestore, "recycleBin"), {
+        type: 'archive',
+        originalData,
+        originalId: id,
+        deletedAt: serverTimestamp(),
+        name: item.studentName,
+        identifier: item.subjectName
+      });
       await deleteDoc(doc(firestore, "archives", id));
-      toast({ title: "تم الحذف بنجاح" });
+      toast({ title: "تم نقل الملف لسلة المحذوفات" });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في الحذف" });
+      toast({ variant: "destructive", title: "خطأ في النقل" });
     }
   };
 
-  // وظيفة للتحقق من صحة الرابط لمكون Image
   const isValidImageUrl = (url: string) => {
     return typeof url === 'string' && (url.startsWith('http') || url.startsWith('/'));
   };
@@ -221,7 +223,7 @@ export default function ArchivePage() {
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[1px]">
                           <Button size="icon" onClick={() => setViewingExam(item)} className="rounded-lg h-8 w-8 bg-white text-primary shadow-lg hover:bg-white/90"><Eye className="w-4 h-4" /></Button>
                           <Button size="icon" onClick={() => openLink(item.fileUrl)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90"><ExternalLink className="w-4 h-4" /></Button>
-                          <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4" /></Button>
+                          <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" onClick={() => handleMoveToBin(item)}><Trash2 className="w-4 h-4" /></Button>
                         </div>
                         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
                           <Badge className="bg-primary/80 backdrop-blur-md text-[8px] px-1.5 py-0 rounded-md font-bold">{item.term}</Badge>
@@ -268,7 +270,7 @@ export default function ArchivePage() {
                               <div className="flex justify-center gap-2">
                                 <Button size="icon" variant="ghost" className="rounded-xl hover:bg-primary/5 h-9 w-9" onClick={() => setViewingExam(item)}><Eye className="w-4 h-4 text-primary" /></Button>
                                 <Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5 h-9 w-9" onClick={() => openLink(item.fileUrl)}><ExternalLink className="w-4 h-4 text-secondary" /></Button>
-                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5 h-9 w-9" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5 h-9 w-9" onClick={() => handleMoveToBin(item)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                               </div>
                             </td>
                           </tr>
@@ -303,7 +305,6 @@ export default function ArchivePage() {
 
       <Dialog open={!!viewingExam} onOpenChange={(o) => !o && setViewingExam(null)}>
         <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl rounded-3xl md:rounded-[2.5rem] bg-background">
-          <DialogHeader className="sr-only"><DialogTitle>معاينة الاختبار</DialogTitle></DialogHeader>
           {viewingExam && (
             <div className="flex flex-col md:flex-row h-full w-full relative">
               <button 

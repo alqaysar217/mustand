@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -48,8 +49,6 @@ import { cn } from "@/lib/utils";
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function StudentsManagementPage() {
   const { isOpen } = useSidebarToggle();
@@ -136,24 +135,25 @@ export default function StudentsManagementPage() {
         setEditingStudent(null);
         toast({ title: "تم التحديث", description: "تم تحديث بيانات الطالب بنجاح." });
       })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      })
       .finally(() => setSubmitting(false));
   };
 
-  const handleDelete = async (id: string) => {
+  const handleMoveToBin = async (student: any) => {
     if (!firestore) return;
     try {
+      const { id, ...originalData } = student;
+      await addDoc(collection(firestore, "recycleBin"), {
+        type: 'student',
+        originalData,
+        originalId: id,
+        deletedAt: serverTimestamp(),
+        name: student.name,
+        identifier: student.regId
+      });
       await deleteDoc(doc(firestore, "students", id));
-      toast({ title: "تم حذف سجل الطالب" });
+      toast({ title: "تم نقل الطالب لسلة المحذوفات" });
     } catch (error) {
-      toast({ variant: "destructive", title: "فشل الحذف" });
+      toast({ variant: "destructive", title: "فشل نقل البيانات" });
     }
   };
 
@@ -296,7 +296,7 @@ export default function StudentsManagementPage() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => handleDelete(student.id)}
+                          onClick={() => handleMoveToBin(student)}
                           className="rounded-xl hover:bg-destructive/10 text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
