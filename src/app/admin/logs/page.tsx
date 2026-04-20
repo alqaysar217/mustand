@@ -133,21 +133,10 @@ export default function LogsPage() {
                       <h3 className="text-xl font-black text-primary">لا توجد سجلات بعد</h3>
                       <p className="text-muted-foreground font-bold text-sm">سيتم تسجيل كافة الأنشطة الإدارية هنا بمجرد حدوثها.</p>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </TableRow>
               )}
             </TableBody>
           </Table>
-        </div>
-      </Card>
-      
-      <Card className="p-6 border-none shadow-lg bg-primary/5 border-r-4 border-primary rounded-3xl">
-        <div className="flex gap-4">
-          <AlertCircle className="w-7 h-7 text-primary shrink-0" />
-          <div className="text-right">
-            <h4 className="font-black text-primary text-lg">ملاحظة التدقيق الأمني</h4>
-            <p className="text-sm text-muted-foreground font-bold leading-relaxed">هذا السجل محمي وغير قابل للحذف أو التعديل من قبل أي مستخدم. يتم الاحتفاظ بكافة العمليات لمدة عام كامل لضمان أعلى معايير الشفافية والمساءلة الإدارية.</p>
-          </div>
         </div>
       </Card>
     </div>
