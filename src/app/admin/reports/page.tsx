@@ -17,7 +17,8 @@ import {
   Building2,
   GraduationCap,
   School,
-  UserCheck
+  UserCheck,
+  Archive as ArchiveIcon
 } from "lucide-react";
 import {
   Table,
@@ -209,32 +210,35 @@ export default function ReportsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl h-16 shadow-lg border mb-10 flex w-full max-w-2xl mx-auto overflow-hidden">
+        <TabsList className="bg-white p-1 rounded-[2rem] h-20 shadow-xl border mb-10 flex w-full max-w-2xl mx-auto overflow-hidden">
           <TabsTrigger 
             value="students" 
             className={cn(
-              "flex-1 rounded-xl font-black text-sm transition-all duration-300",
-              activeTab === "students" ? "gradient-blue text-white shadow-lg" : "text-muted-foreground hover:bg-muted/50"
+              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center",
+              activeTab === "students" ? "gradient-blue text-white shadow-xl h-[calc(100%-8px)]" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
+            <GraduationCap className="w-5 h-5" />
             تحليل الطلاب
           </TabsTrigger>
           <TabsTrigger 
             value="staff" 
             className={cn(
-              "flex-1 rounded-xl font-black text-sm transition-all duration-300",
-              activeTab === "staff" ? "gradient-blue text-white shadow-lg" : "text-muted-foreground hover:bg-muted/50"
+              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center",
+              activeTab === "staff" ? "gradient-blue text-white shadow-xl h-[calc(100%-8px)]" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
+            <ShieldCheck className="w-5 h-5" />
             تقارير العاملين
           </TabsTrigger>
           <TabsTrigger 
             value="archives" 
             className={cn(
-              "flex-1 rounded-xl font-black text-sm transition-all duration-300",
-              activeTab === "archives" ? "gradient-blue text-white shadow-lg" : "text-muted-foreground hover:bg-muted/50"
+              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center",
+              activeTab === "archives" ? "gradient-blue text-white shadow-xl h-[calc(100%-8px)]" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
+            <ArchiveIcon className="w-5 h-5" />
             إحصائيات الأرشيف
           </TabsTrigger>
         </TabsList>
