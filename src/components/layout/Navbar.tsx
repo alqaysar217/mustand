@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bell, Menu, User, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, GraduationCap, BookOpen, LogOut, Building2, PanelRight, School } from "lucide-react";
+import { Menu, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, GraduationCap, BookOpen, LogOut, Building2, PanelRight, School } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Link from "next/link";
@@ -77,10 +77,6 @@ export function Navbar() {
                     <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/20">
                       <Image src="/profile.png" alt="Profile" fill className="object-cover" />
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-white">محمد علي</p>
-                      <p className="text-[10px] text-white/50 font-bold">موظف أرشيف</p>
-                    </div>
                   </div>
                   <Button 
                     variant="ghost" 
@@ -117,13 +113,6 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-muted group">
-          <Bell className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-white"></span>
-        </Button>
-        
-        <div className="h-10 w-px bg-border mx-2"></div>
-        
         <div className="flex items-center gap-3 cursor-pointer group">
           <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group">
             <Image src="/profile.png" alt="Profile" fill className="object-cover group-hover:scale-110 transition-transform" />

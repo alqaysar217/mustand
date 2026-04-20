@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bell, Menu, User, LogOut, LayoutDashboard, FileText, Search, Settings, ChevronLeft, PanelRight } from "lucide-react";
+import { Menu, User, LogOut, LayoutDashboard, FileText, Search, Settings, ChevronLeft, PanelRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -70,10 +70,8 @@ export function StudentNavbar() {
 
                 <div className="p-6 border-t border-white/10">
                    <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm">أ م</div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold">أحمد محمد علي</p>
-                      <p className="text-[10px] text-white/50">20210045</p>
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20">
+                      <Image src="/profile.png" alt="Profile" fill className="object-cover" />
                     </div>
                   </div>
                   <Button 
@@ -114,20 +112,9 @@ export function StudentNavbar() {
       </div>
 
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-muted group">
-          <Bell className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-white"></span>
-        </Button>
-        
-        <div className="h-10 w-px bg-border mx-2"></div>
-        
         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => router.push('/student/profile')}>
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-primary">أحمد محمد علي</p>
-            <p className="text-[10px] text-muted-foreground font-bold">20210045</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border-2 border-primary/20 hover:border-primary transition-colors group-hover:bg-primary/10">
-            <User className="w-5 h-5 text-primary" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group">
+            <Image src="/profile.png" alt="Profile" fill className="object-cover" />
           </div>
         </div>
       </div>

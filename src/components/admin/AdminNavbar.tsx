@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bell, Menu, User, Settings, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2, PanelRight } from "lucide-react";
+import { Menu, User, Settings, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2, PanelRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import {
@@ -83,10 +83,8 @@ export function AdminNavbar() {
 
                 <div className="p-6 border-t border-white/10">
                    <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm">أد</div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold">المدير العام</p>
-                      <p className="text-[10px] text-white/50">صلاحيات كاملة</p>
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20">
+                      <Image src="/profile.png" alt="Profile" fill className="object-cover" />
                     </div>
                   </div>
                   <Button 
@@ -122,30 +120,16 @@ export function AdminNavbar() {
             <h2 className="text-xl font-black text-primary">مستند</h2>
           </div>
         ) : (
-          <>
-            <h2 className="text-xl font-black text-primary hidden sm:block">لوحة التحكم المركزية</h2>
-            <h2 className="text-lg font-black text-primary sm:hidden">لوحة التحكم</h2>
-          </>
+          <h2 className="text-xl font-black text-primary hidden sm:block">لوحة التحكم المركزية</h2>
         )}
       </div>
 
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-muted group">
-          <Bell className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-white"></span>
-        </Button>
-        
-        <div className="h-10 w-px bg-border mx-2"></div>
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-3 cursor-pointer group">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-primary">مدير النظام</p>
-                <p className="text-[10px] text-muted-foreground font-bold">المسؤول الرئيسي</p>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border-2 border-primary/20 hover:border-primary transition-colors group-hover:bg-primary/10">
-                <User className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group">
+                <Image src="/profile.png" alt="Profile" fill className="object-cover" />
               </div>
             </div>
           </DropdownMenuTrigger>
