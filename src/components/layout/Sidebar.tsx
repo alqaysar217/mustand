@@ -66,22 +66,22 @@ export function Sidebar() {
       </nav>
 
       <div className="p-6 mt-auto">
-        <div className="bg-white/5 rounded-3xl p-4 mb-4 shadow-inner">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 border border-white/10 shadow-xl">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-2 border-white/30 shadow-md">
               <Image src="/emploeed-1.png" alt="Profile" fill className="object-cover" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-bold truncate">محمد علي</p>
-              <p className="text-[10px] text-white/50 truncate font-bold">موظف أرشيف</p>
+              <p className="text-sm font-black truncate text-white">محمد علي</p>
+              <p className="text-[10px] text-white/60 truncate font-bold uppercase tracking-wider">موظف أرشيف</p>
             </div>
           </div>
           <Button 
             variant="ghost" 
             onClick={() => router.push('/')}
-            className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 rounded-xl px-2 h-9 font-bold transition-colors"
+            className="w-full justify-center bg-white/5 hover:bg-destructive hover:text-white text-white/80 rounded-2xl h-11 font-black transition-all gap-2 border border-white/5"
           >
-            <LogOut className="w-4 h-4 ml-2" />
+            <LogOut className="w-4 h-4" />
             <span className="text-xs">تسجيل الخروج</span>
           </Button>
         </div>
