@@ -227,7 +227,7 @@ export default function AdminArchivePage() {
                 <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
                 <SelectContent className="rounded-xl font-bold">
                   <SelectItem value="all">كافة التخصصات</SelectItem>
-                  {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.id}</SelectItem>)}
+                  {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
