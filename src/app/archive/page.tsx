@@ -331,11 +331,11 @@ export default function ArchivePage() {
       </main>
 
       <Dialog open={!!viewingExam} onOpenChange={(o) => !o && setViewingExam(null)}>
-        <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] p-0 overflow-hidden bg-background border-none shadow-2xl rounded-3xl md:rounded-[2.5rem]">
+        <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl rounded-3xl md:rounded-[2.5rem] bg-background">
           <DialogHeader className="sr-only"><DialogTitle>معاينة الاختبار</DialogTitle><DialogDescription>عرض تفاصيل ورقة الاختبار المؤرشفة</DialogDescription></DialogHeader>
           {viewingExam && (
             <div className="flex flex-col md:flex-row h-full w-full relative">
-              {/* Common Close Button */}
+              {/* Floating Close Button */}
               <button 
                 onClick={() => setViewingExam(null)}
                 className="absolute top-4 left-4 z-50 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors border border-primary/5"
@@ -343,8 +343,8 @@ export default function ArchivePage() {
                 <X className="w-5 h-5 text-primary" />
               </button>
 
-              {/* Right Side: Data (Arabic Side) */}
-              <div className="w-full md:w-2/5 p-6 md:p-8 border-b md:border-b-0 md:border-l bg-white flex flex-col text-right overflow-y-auto order-2 md:order-1">
+              {/* Right Side: Professional Data Distribution */}
+              <div className="w-full md:w-2/5 p-6 md:p-8 border-b md:border-b-0 md:border-l bg-white flex flex-col text-right order-2 md:order-1">
                  <div className="space-y-6 flex-1 pt-4 md:pt-0">
                     <div className="space-y-2">
                        <Label className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">بيانات الطالب المركزية</Label>
@@ -358,8 +358,9 @@ export default function ArchivePage() {
                     <Separator className="opacity-50" />
 
                     <div className="grid grid-cols-1 gap-4">
+                       {/* Academic Details Cards */}
                        <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-primary">
-                          <Label className="text-muted-foreground text-[9px] font-black block mb-1">المادة</Label>
+                          <Label className="text-muted-foreground text-[9px] font-black block mb-1">المادة الدراسية</Label>
                           <div className="flex items-center justify-end gap-2 font-black text-primary text-base md:text-lg">
                              {viewingExam.subjectName}
                              <BookOpen className="w-4 h-4 text-secondary" />
@@ -368,7 +369,7 @@ export default function ArchivePage() {
 
                        <div className="grid grid-cols-2 gap-3">
                           <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-secondary">
-                             <Label className="text-muted-foreground text-[9px] font-black block mb-1">السنة</Label>
+                             <Label className="text-muted-foreground text-[9px] font-black block mb-1">السنة الدراسية</Label>
                              <div className="flex items-center justify-end gap-2 font-black text-primary text-xs md:text-sm">
                                 {viewingExam.year}
                                 <Calendar className="w-3.5 h-3.5 text-secondary opacity-50" />
@@ -396,7 +397,7 @@ export default function ArchivePage() {
                        </div>
 
                        <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-blue-500">
-                          <Label className="text-muted-foreground text-[9px] font-black block mb-1">الفصل</Label>
+                          <Label className="text-muted-foreground text-[9px] font-black block mb-1">الفصل (الترم)</Label>
                           <div className="flex items-center justify-end gap-2 font-black text-primary text-xs md:text-sm">
                              {viewingExam.term}
                              <Clock className="w-3.5 h-3.5 text-blue-500" />
@@ -405,7 +406,7 @@ export default function ArchivePage() {
                     </div>
                  </div>
 
-                 <div className="pt-8 mt-auto">
+                 <div className="pt-8 mt-auto pb-4 md:pb-0">
                     <Button onClick={() => handleDownload(viewingExam)} className="w-full h-12 rounded-xl font-black gradient-blue shadow-lg gap-2 text-sm">
                        <Download className="w-5 h-5" />
                        تحميل المستند
@@ -413,12 +414,12 @@ export default function ArchivePage() {
                  </div>
               </div>
 
-              {/* Left Side: Image Content */}
-              <div className="flex-1 relative bg-neutral-100 flex items-center justify-center p-4 md:p-8 min-h-[300px] md:min-h-0 order-1 md:order-2">
+              {/* Left Side: Exam Image View */}
+              <div className="flex-1 relative bg-neutral-100 flex items-center justify-center p-4 md:p-8 min-h-[350px] md:min-h-0 order-1 md:order-2">
                  <div className="relative w-full h-full bg-white shadow-xl rounded-xl overflow-hidden border-4 border-white group">
                     <Image 
                        src={viewingExam.fileUrl || PlaceHolderImages[1].imageUrl} 
-                       alt="Exam View" 
+                       alt="Exam Original Preview" 
                        fill 
                        className="object-contain" 
                        priority 
