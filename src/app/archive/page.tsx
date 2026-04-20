@@ -257,29 +257,39 @@ export default function ArchivePage() {
           <div className="animate-slide-up">
             {processedResults.length > 0 ? (
               view === 'grid' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                   {processedResults.map((item) => (
-                    <Card key={item.id} className="group overflow-hidden border-none shadow-xl rounded-[2rem] bg-white hover:-translate-y-2 transition-all">
-                      <div className="relative aspect-[3/4] bg-muted/30 overflow-hidden">
-                        <Image src={item.fileUrl || PlaceHolderImages[1].imageUrl} alt="Exam" fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end gap-3 backdrop-blur-[2px]">
-                          <Button onClick={() => setViewingExam(item)} className="w-full rounded-xl bg-white text-primary font-black hover:bg-white/90">عرض سريع</Button>
-                          <Button disabled={downloadingId === item.id} onClick={() => handleDownload(item)} variant="outline" className="w-full rounded-xl bg-white/10 text-white border-white/20 font-black backdrop-blur-md h-11">{downloadingId === item.id ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Download className="w-4 h-4 ml-2" />}تحميل</Button>
+                    <Card key={item.id} className="group overflow-hidden border-none shadow-lg rounded-2xl bg-white hover:-translate-y-1 transition-all flex flex-col h-full">
+                      <div className="relative aspect-[3/2] bg-muted/30 overflow-hidden shrink-0">
+                        <Image 
+                          src={item.fileUrl || PlaceHolderImages[1].imageUrl} 
+                          alt="Exam" 
+                          fill 
+                          className="object-cover object-top group-hover:scale-105 transition-transform duration-700" 
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[1px]">
+                          <Button size="icon" onClick={() => setViewingExam(item)} className="rounded-lg h-8 w-8 bg-white text-primary shadow-lg hover:bg-white/90"><Eye className="w-4 h-4" /></Button>
+                          <Button size="icon" disabled={downloadingId === item.id} onClick={() => handleDownload(item)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90">{downloadingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}</Button>
+                          <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4" /></Button>
                         </div>
-                        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
-                          <Badge className="bg-primary/90 backdrop-blur-md border-none rounded-lg px-3 py-1 font-black shadow-lg text-[10px]">{item.term}</Badge>
-                          <Badge variant="outline" className="bg-white/90 backdrop-blur-md text-primary border-none rounded-lg px-2 py-0.5 font-bold text-[9px]">{item.level}</Badge>
+                        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
+                          <Badge className="bg-primary/80 backdrop-blur-md text-[8px] px-1.5 py-0 rounded-md font-bold">{item.term}</Badge>
                         </div>
                       </div>
-                      <div className="p-5 text-right">
-                        <div className="flex justify-between items-start mb-2 gap-2">
-                          <Button variant="ghost" size="icon" className="text-destructive h-8 w-8 hover:bg-destructive/10 rounded-lg shrink-0" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4" /></Button>
-                          <h3 className="text-base font-black text-primary leading-tight line-clamp-1 flex-1">{item.studentName}</h3>
-                        </div>
-                        <p className="text-xs text-secondary font-black mb-4 flex items-center justify-end gap-2">{item.subjectName}<BookOpen className="w-3 h-3" /></p>
-                        <div className="flex items-center justify-between text-[9px] text-muted-foreground border-t pt-4 font-bold">
-                          <div className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG-u-nu-latn') : 'الآن'}</div>
-                          <div className="bg-muted/50 px-2 py-0.5 rounded-md">قيد: {item.studentRegId}</div>
+                      
+                      <div className="p-3 text-right flex-1 flex flex-col">
+                        <h3 className="text-xs font-black text-primary leading-tight line-clamp-1 mb-1">{item.studentName}</h3>
+                        <p className="text-[10px] text-secondary font-bold flex items-center justify-end gap-1 mb-3">
+                          {item.subjectName}
+                          <BookOpen className="w-2.5 h-2.5" />
+                        </p>
+                        
+                        <div className="mt-auto border-t pt-2.5 flex items-center justify-between text-[8px] font-bold">
+                           <div className="flex items-center gap-1 text-muted-foreground/80">
+                             <Clock className="w-2.5 h-2.5" />
+                             {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG-u-nu-latn') : 'الآن'}
+                           </div>
+                           <div className="bg-muted px-1.5 py-0.5 rounded text-primary/70">{item.studentRegId}</div>
                         </div>
                       </div>
                     </Card>
