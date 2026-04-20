@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -12,7 +12,8 @@ import {
   BookOpen,
   Users,
   Loader2,
-  TrendingUp
+  TrendingUp,
+  FileText
 } from "lucide-react";
 import {
   Table,
@@ -36,104 +37,89 @@ import {
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 
-const MOCK_STUDENT_REPORTS = [
-  { id: '1', name: 'أحمد محمود علي', regId: '20210045', exams: 12, lastUpload: '2024-05-20', status: 'active' },
-  { id: '2', name: 'سارة خالد يوسف', regId: '20220112', exams: 8, lastUpload: '2024-05-18', status: 'active' },
-  { id: '3', name: 'وليد جاسم مرزوق', regId: '20210567', exams: 15, lastUpload: '2024-05-15', status: 'active' },
-  { id: '4', name: 'مريم سعيد سالم', regId: '20230001', exams: 4, lastUpload: '2024-05-10', status: 'active' },
-];
+// Firebase
+import { useFirestore, useCollection } from "@/firebase";
+import { collection } from "firebase/firestore";
 
-const MOCK_SUBJECT_REPORTS = [
-  { id: '1', name: 'برمجة 1', dept: 'تقنية المعلومات', exams: 145, avgPages: 4.2 },
-  { id: '2', name: 'رياضيات متقدمة', dept: 'علوم الحاسوب', exams: 98, avgPages: 6.1 },
-  { id: '3', name: 'هندسة برمجيات', dept: 'هندسة البرمجيات', exams: 72, avgPages: 5.5 },
-];
-
-const COLORS = ['#0B3C5D', '#328CC1', '#D9E3F0', '#000000'];
+const COLORS = ['#0B3C5D', '#328CC1', '#D9E3F0', '#4ade80', '#f97316'];
 
 export default function ReportsPage() {
-  const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState<string | null>(null);
-  const [academicYears, setAcademicYears] = useState<string[]>([]);
+  const firestore = useFirestore();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const currentYear = new Date().getFullYear();
-    const years = [];
-    for (let i = 0; i < 5; i++) {
-      const year = currentYear - i;
-      years.push(`${year - 1} / ${year}`);
-    }
-    setAcademicYears(years);
-  }, []);
+  // Queries
+  const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
+  const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
+  const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
+  const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
+  const yearsQuery = useMemo(() => firestore ? collection(firestore, "academicYears") : null, [firestore]);
 
-  const handleExport = (format: 'excel' | 'zip') => {
-    setExporting(format);
-    
-    // Simulate processing time
-    setTimeout(() => {
-      if (format === 'excel') {
-        try {
-          // Define CSV headers
-          const headers = ["الطالب", "رقم القيد", "عدد الاختبارات", "آخر تحديث", "الحالة"];
-          
-          // Convert data to CSV rows
-          const rows = MOCK_STUDENT_REPORTS.map(r => [
-            r.name,
-            r.regId,
-            r.exams.toString(),
-            r.lastUpload,
-            r.status === 'active' ? 'نشط' : 'موقوف'
-          ]);
+  const { data: students = [], loading: loadingStudents } = useCollection(studentsQuery);
+  const { data: archives = [] } = useCollection(archivesQuery);
+  const { data: subjects = [] } = useCollection(subjectsQuery);
+  const { data: departments = [] } = useCollection(deptsQuery);
+  const { data: academicYears = [] } = useCollection(yearsQuery);
 
-          // Combine headers and rows
-          const csvContent = [
-            headers.join(","),
-            ...rows.map(row => row.join(","))
-          ].join("\n");
+  const [exporting, setExporting] = useState<string | null>(null);
+  
+  // Filters State
+  const [filterYear, setFilterYear] = useState("all");
+  const [filterTerm, setFilterTerm] = useState("all");
+  const [filterDept, setFilterDept] = useState("all");
 
-          // Add UTF-8 BOM for Arabic support in Excel
-          const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `student_report_${new Date().toISOString().split('T')[0]}.csv`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
+  // Filtered Students
+  const filteredStudents = useMemo(() => {
+    return (students as any[]).filter(s => {
+      const matchDept = filterDept === "all" || s.departmentId === filterDept;
+      // Note: In real app, year/term might be part of student current level metadata
+      return matchDept;
+    });
+  }, [students, filterDept]);
 
-          toast({
-            title: "تم التصدير بنجاح",
-            description: "تم تحميل ملف بيانات الطلاب بصيغة CSV بنجاح.",
-          });
-        } catch (error) {
-          toast({
-            variant: "destructive",
-            title: "خطأ في التصدير",
-            description: "حدث خطأ أثناء محاولة توليد الملف.",
-          });
-        }
-      } else if (format === 'zip') {
-        toast({
-          title: "تنبيه النظام",
-          description: "ميزة تنزيل الصور الجماعية تتطلب الوصول إلى التخزين السحابي. سيتم تفعيلها قريباً.",
-        });
-      }
-      
+  // Archives for Chart (Group by Subject)
+  const subjectChartData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    archives.forEach((item: any) => {
+      counts[item.subjectName] = (counts[item.subjectName] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, count]) => ({ name, count })).slice(0, 8);
+  }, [archives]);
+
+  const handleExportCSV = () => {
+    setExporting('excel');
+    try {
+      const headers = ["الاسم الكامل", "رقم القيد", "التخصص", "المستوى", "الحالة", "تاريخ الانضمام"];
+      const rows = filteredStudents.map(s => [
+        s.name,
+        s.regId,
+        s.departmentName,
+        s.level,
+        s.status === 'active' ? 'نشط' : 'موقوف',
+        s.joinDate || '---'
+      ]);
+
+      const csvContent = [
+        headers.join(","),
+        ...rows.map(row => row.join(","))
+      ].join("\n");
+
+      // Add UTF-8 BOM for Excel Arabic support
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `report_students_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({ title: "تم التصدير بنجاح", description: "تم تحميل ملف التقارير بصيغة CSV." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "خطأ في التصدير" });
+    } finally {
       setExporting(null);
-    }, 1500);
-  };
-
-  const handleRefreshData = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      toast({
-        title: "تم تحديث البيانات",
-        description: "تمت مزامنة آخر الإحصائيات مع قاعدة البيانات بنجاح.",
-      });
-    }, 1200);
+    }
   };
 
   return (
@@ -147,20 +133,19 @@ export default function ReportsPage() {
         <div className="flex flex-wrap gap-2">
           <Button 
             variant="outline" 
-            onClick={() => handleExport('excel')}
-            disabled={exporting !== null}
+            onClick={handleExportCSV}
+            disabled={exporting !== null || loadingStudents}
             className="rounded-xl h-11 border-2 gap-2 font-bold hover:bg-green-50 hover:text-green-600 hover:border-green-200"
           >
             {exporting === 'excel' ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : <FileSpreadsheet className="w-4 h-4" />}
-            تصدير CSV
+            تصدير تقارير الطلاب (CSV)
           </Button>
           <Button 
             variant="outline" 
-            onClick={() => handleExport('zip')}
-            disabled={exporting !== null}
+            onClick={() => toast({ title: "تنبيه", description: "جاري العمل على تجهيز محرك ضغط الصور السحابي." })}
             className="rounded-xl h-11 border-2 gap-2 font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
           >
-            {exporting === 'zip' ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : <FileArchive className="w-4 h-4" />}
+            <FileArchive className="w-4 h-4" />
             تنزيل الصور (ZIP)
           </Button>
         </div>
@@ -169,44 +154,41 @@ export default function ReportsPage() {
       <Card className="p-6 border-none shadow-xl rounded-3xl bg-white">
         <h3 className="text-sm font-bold text-muted-foreground mb-4 flex items-center gap-2">
           <Filter className="w-4 h-4" />
-          مرشحات التقرير
+          مرشحات التقرير الحالية
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-2">
             <label className="text-xs font-bold text-primary mr-1">السنة الدراسية</label>
-            <select className="w-full h-11 px-3 rounded-xl border bg-muted/30 outline-none text-sm font-bold text-primary focus:border-primary">
+            <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full h-11 px-3 rounded-xl border bg-muted/30 outline-none text-sm font-bold text-primary focus:border-primary">
               <option value="all">جميع السنوات</option>
-              {academicYears.map(year => (
-                <option key={year} value={year}>{year}</option>
+              {academicYears.map((year: any) => (
+                <option key={year.id} value={year.label}>{year.label}</option>
               ))}
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-xs font-bold text-primary mr-1">الفصل الدراسي</label>
-            <select className="w-full h-11 px-3 rounded-xl border bg-muted/30 outline-none text-sm font-bold text-primary focus:border-primary">
+            <select value={filterTerm} onChange={(e) => setFilterTerm(e.target.value)} className="w-full h-11 px-3 rounded-xl border bg-muted/30 outline-none text-sm font-bold text-primary focus:border-primary">
               <option value="all">جميع الفصول</option>
-              <option value="1">الفصل الأول</option>
-              <option value="2">الفصل الثاني</option>
-              <option value="3">الفصل التكميلي</option>
+              <option value="الفصل الأول">الفصل الأول</option>
+              <option value="الفصل الثاني">الفصل الثاني</option>
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-xs font-bold text-primary mr-1">التخصص</label>
-            <select className="w-full h-11 px-3 rounded-xl border bg-muted/30 outline-none text-sm font-bold text-primary focus:border-primary">
+            <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="w-full h-11 px-3 rounded-xl border bg-muted/30 outline-none text-sm font-bold text-primary focus:border-primary">
               <option value="all">جميع التخصصات</option>
-              <option value="it">تقنية المعلومات</option>
-              <option value="cs">علوم الحاسوب</option>
-              <option value="se">هندسة البرمجيات</option>
+              {departments.map((d: any) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
             </select>
           </div>
           <div className="flex items-end">
             <Button 
-              onClick={handleRefreshData}
-              disabled={loading}
+              onClick={() => toast({ title: "تم التحديث", description: "تم تطبيق المرشحات بنجاح." })}
               className="w-full h-11 rounded-xl font-bold gradient-blue shadow-lg"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : null}
-              تحديث البيانات
+              تحديث الإحصائيات
             </Button>
           </div>
         </div>
@@ -216,34 +198,34 @@ export default function ReportsPage() {
         <Card className="p-6 border-none shadow-lg rounded-3xl bg-white border-r-4 border-primary">
           <div className="flex items-center justify-between mb-2">
             <Users className="w-5 h-5 text-primary" />
-            <Badge className="bg-green-50 text-green-600 border-none font-bold text-[10px]">+5% نمو</Badge>
+            <Badge className="bg-green-50 text-green-600 border-none font-bold text-[10px]">قاعدة البيانات</Badge>
           </div>
           <p className="text-muted-foreground text-xs font-bold">الطلاب المسجلين</p>
-          <h4 className="text-2xl font-black text-primary">4,520</h4>
+          <h4 className="text-2xl font-black text-primary">{students.length.toLocaleString()}</h4>
         </Card>
         <Card className="p-6 border-none shadow-lg rounded-3xl bg-white border-r-4 border-secondary">
           <div className="flex items-center justify-between mb-2">
             <BookOpen className="w-5 h-5 text-secondary" />
-            <Badge className="bg-blue-50 text-blue-600 border-none font-bold text-[10px]">12 مادة جديدة</Badge>
+            <Badge className="bg-blue-50 text-blue-600 border-none font-bold text-[10px]">المناهج</Badge>
           </div>
           <p className="text-muted-foreground text-xs font-bold">إجمالي المواد</p>
-          <h4 className="text-2xl font-black text-primary">128</h4>
+          <h4 className="text-2xl font-black text-primary">{subjects.length.toLocaleString()}</h4>
         </Card>
         <Card className="p-6 border-none shadow-lg rounded-3xl bg-white border-r-4 border-orange-500">
           <div className="flex items-center justify-between mb-2">
-            <TrendingUp className="w-5 h-5 text-orange-500" />
-            <Badge className="bg-orange-50 text-orange-600 border-none font-bold text-[10px]">نشاط مرتفع</Badge>
+            <FileText className="w-5 h-5 text-orange-500" />
+            <Badge className="bg-orange-50 text-orange-600 border-none font-bold text-[10px]">الأرشفة الرقمية</Badge>
           </div>
-          <p className="text-muted-foreground text-xs font-bold">إجمالي الأرشفة</p>
-          <h4 className="text-2xl font-black text-primary">12,840</h4>
+          <p className="text-muted-foreground text-xs font-bold">إجمالي الاختبارات</p>
+          <h4 className="text-2xl font-black text-primary">{archives.length.toLocaleString()}</h4>
         </Card>
       </div>
 
       <Tabs defaultValue="students" className="w-full" dir="rtl">
         <TabsList className="bg-muted/50 p-1 rounded-2xl h-14 mb-8">
-          <TabsTrigger value="students" className="rounded-xl font-bold text-sm h-12 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">تقارير الطلاب</TabsTrigger>
-          <TabsTrigger value="subjects" className="rounded-xl font-bold text-sm h-12 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">تقارير المواد</TabsTrigger>
-          <TabsTrigger value="activity" className="rounded-xl font-bold text-sm h-12 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">نشاط النظام</TabsTrigger>
+          <TabsTrigger value="students" className="rounded-xl font-bold text-sm h-12 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">تقرير الطلاب النشطين</TabsTrigger>
+          <TabsTrigger value="subjects" className="rounded-xl font-bold text-sm h-12 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">توزيع الأرشفة</TabsTrigger>
+          <TabsTrigger value="activity" className="rounded-xl font-bold text-sm h-12 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">حالة النظام</TabsTrigger>
         </TabsList>
 
         <TabsContent value="students" className="space-y-6">
@@ -252,25 +234,29 @@ export default function ReportsPage() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead className="text-right font-bold">الطالب</TableHead>
-                    <TableHead className="text-right font-bold">رقم القيد</TableHead>
-                    <TableHead className="text-right font-bold">عدد الاختبارات</TableHead>
-                    <TableHead className="text-right font-bold">آخر تحديث</TableHead>
-                    <TableHead className="text-right font-bold">الحالة</TableHead>
+                    <TableHead className="text-right font-bold text-primary">الطالب</TableHead>
+                    <TableHead className="text-right font-bold text-primary">رقم القيد</TableHead>
+                    <TableHead className="text-right font-bold text-primary">التخصص</TableHead>
+                    <TableHead className="text-right font-bold text-primary">المستوى</TableHead>
+                    <TableHead className="text-right font-bold text-primary">الحالة</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {MOCK_STUDENT_REPORTS.map((report) => (
-                    <TableRow key={report.id}>
+                  {loadingStudents ? (
+                    <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+                  ) : filteredStudents.length > 0 ? filteredStudents.map((report) => (
+                    <TableRow key={report.id} className="hover:bg-muted/10">
                       <TableCell className="font-bold text-primary">{report.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{report.regId}</TableCell>
-                      <TableCell className="font-black text-secondary">{report.exams}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{report.lastUpload}</TableCell>
+                      <TableCell className="font-mono text-xs font-bold text-muted-foreground">{report.regId}</TableCell>
+                      <TableCell className="font-bold text-primary text-xs">{report.departmentName}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-bold">{report.level}</TableCell>
                       <TableCell>
-                        <Badge className="bg-green-100 text-green-700 border-none rounded-lg">نشط</Badge>
+                        <Badge className="bg-green-100 text-green-700 border-none rounded-lg font-bold">نشط</Badge>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">لا توجد بيانات مطابقة</TableCell></TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -280,45 +266,52 @@ export default function ReportsPage() {
         <TabsContent value="subjects" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
-              <h3 className="text-lg font-bold text-primary mb-6">توزيع الاختبارات حسب المادة</h3>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={MOCK_SUBJECT_REPORTS}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
-                    <YAxis fontSize={10} axisLine={false} tickLine={false} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      cursor={{ fill: '#f4f7fb', radius: 10 }}
-                    />
-                    <Bar dataKey="exams" radius={[8, 8, 0, 0]}>
-                      {MOCK_SUBJECT_REPORTS.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <h3 className="text-lg font-bold text-primary mb-6 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-secondary" />
+                توزيع الاختبارات حسب المادة
+              </h3>
+              <div className="h-[350px] w-full">
+                {subjectChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={subjectChartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#0B3C5D', fontWeight: 'bold'}} />
+                      <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontWeight: 'bold'}} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        cursor={{ fill: '#f4f7fb', radius: 10 }}
+                      />
+                      <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                        {subjectChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground font-bold">لا توجد سجلات أرشفة بعد</div>
+                )}
               </div>
             </Card>
 
             <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
+              <h3 className="text-lg font-bold text-primary mb-6">قائمة المواد الأكثر أرشفة</h3>
                <div className="rounded-2xl border overflow-hidden">
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead className="text-right font-bold">المادة</TableHead>
-                      <TableHead className="text-right font-bold">القسم</TableHead>
-                      <TableHead className="text-right font-bold">متوسط الصفحات</TableHead>
+                      <TableHead className="text-right font-bold text-primary">المادة</TableHead>
+                      <TableHead className="text-right font-bold text-primary text-center">عدد الملفات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {MOCK_SUBJECT_REPORTS.map((s) => (
-                      <TableRow key={s.id}>
+                    {subjectChartData.map((s, i) => (
+                      <TableRow key={i}>
                         <TableCell className="font-bold text-primary">{s.name}</TableCell>
-                        <TableCell className="text-xs font-bold text-muted-foreground">{s.dept}</TableCell>
-                        <TableCell className="font-black text-secondary">{s.avgPages}</TableCell>
+                        <TableCell className="font-black text-secondary text-center">{s.count}</TableCell>
                       </TableRow>
                     ))}
+                    {subjectChartData.length === 0 && <TableRow><TableCell colSpan={2} className="h-40 text-center text-muted-foreground font-bold">لا توجد بيانات</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </div>
@@ -328,12 +321,12 @@ export default function ReportsPage() {
 
         <TabsContent value="activity">
           <Card className="p-12 text-center border-none shadow-xl rounded-3xl bg-white">
-            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
-              <BarChart3 className="w-10 h-10 text-muted-foreground" />
+            <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-6">
+              <BarChart3 className="w-10 h-10 text-primary opacity-30" />
             </div>
             <h3 className="text-xl font-bold text-primary mb-2">تقارير نشاط النظام</h3>
-            <p className="text-muted-foreground max-w-sm mx-auto">سيتم عرض سجلات الوصول وعمليات الرفع حسب المستخدمين والزمن في هذا القسم.</p>
-            <Button variant="outline" className="mt-6 rounded-xl border-2 font-bold px-8">بدء التحليل المتقدم</Button>
+            <p className="text-muted-foreground max-w-sm mx-auto font-bold">سيتم عرض سجلات الوصول وعمليات الرفع حسب المستخدمين والزمن في هذا القسم المخصص للمديرين.</p>
+            <Button variant="outline" className="mt-6 rounded-xl border-2 font-bold px-8" onClick={() => window.location.href='/admin/logs'}>عرض سجل العمليات الفعلي</Button>
           </Card>
         </TabsContent>
       </Tabs>
