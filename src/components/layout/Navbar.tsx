@@ -74,7 +74,9 @@ export function Navbar() {
 
                 <div className="p-6 border-t border-white/10">
                    <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-sm text-white">م ع</div>
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/20">
+                      <Image src="/profile.png" alt="Profile" fill className="object-cover" />
+                    </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-white">محمد علي</p>
                       <p className="text-[10px] text-white/50 font-bold">موظف أرشيف</p>
@@ -127,8 +129,8 @@ export function Navbar() {
             <p className="text-sm font-bold text-primary">أ. محمد علي</p>
             <p className="text-[10px] text-muted-foreground font-bold">موظف (قسم الاختبارات)</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border-2 border-primary/20 hover:border-primary transition-colors group">
-            <User className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+          <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group">
+            <Image src="/profile.png" alt="Profile" fill className="object-cover group-hover:scale-110 transition-transform" />
           </div>
         </div>
       </div>
