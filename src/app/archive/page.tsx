@@ -56,14 +56,19 @@ export default function ArchivePage() {
   const { isOpen } = useSidebarToggle();
   
   const firestore = useFirestore();
+  
+  // Queries
   const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
   const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
   const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
+  const yearsQuery = useMemo(() => firestore ? collection(firestore, "academicYears") : null, [firestore]);
 
   const { data: archives = [], loading } = useCollection(archivesQuery);
   const { data: departments = [] } = useCollection(deptsQuery);
   const { data: subjects = [] } = useCollection(subjectsQuery);
+  const { data: academicYears = [] } = useCollection(yearsQuery);
 
+  // Filters State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedYear, setSelectedYear] = useState("all");
   const [selectedTerm, setSelectedTerm] = useState("all");
@@ -137,8 +142,24 @@ export default function ArchivePage() {
 
         <div className="space-y-4 mb-10">
           <Card className="p-4 rounded-[2rem] shadow-xl border-none bg-white flex flex-col md:flex-row items-center gap-4">
-            <div className="flex-1 min-w-[300px] relative w-full"><Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" /><input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="ابحث باسم الطالب، رقم القيد، أو المادة..." className="w-full h-14 pr-12 pl-4 rounded-2xl border-none bg-muted/20 outline-none focus:ring-2 focus:ring-primary font-bold transition-all" /></div>
-            <Button variant={showFilters ? "default" : "outline"} onClick={() => setShowFilters(!showFilters)} className="h-14 rounded-2xl px-6 border-2 font-black gap-2">{showFilters ? <X className="w-5 h-5" /> : <Filter className="w-5 h-5" />}تصفية النتائج</Button>
+            <div className="flex-1 min-w-[300px] relative w-full">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input 
+                type="text" 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)} 
+                placeholder="ابحث باسم الطالب، رقم القيد، أو المادة..." 
+                className="w-full h-14 pr-12 pl-4 rounded-2xl border-none bg-muted/20 outline-none focus:ring-2 focus:ring-primary font-bold transition-all" 
+              />
+            </div>
+            <Button 
+              variant={showFilters ? "default" : "outline"} 
+              onClick={() => setShowFilters(!showFilters)} 
+              className="h-14 rounded-2xl px-6 border-2 font-black gap-2"
+            >
+              {showFilters ? <X className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
+              تصفية النتائج
+            </Button>
           </Card>
 
           {showFilters && (
@@ -149,9 +170,9 @@ export default function ArchivePage() {
                   <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold"><SelectValue placeholder="اختر السنة" /></SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
                     <SelectItem value="all">كافة السنوات</SelectItem>
-                    <SelectItem value="2023 / 2024">2023 / 2024</SelectItem>
-                    <SelectItem value="2022 / 2023">2022 / 2023</SelectItem>
-                    <SelectItem value="2021 / 2022">2021 / 2022</SelectItem>
+                    {academicYears.map((y: any) => (
+                      <SelectItem key={y.id} value={y.label}>{y.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -200,6 +221,7 @@ export default function ArchivePage() {
                     <SelectItem value="all">كافة الفصول</SelectItem>
                     <SelectItem value="الفصل الأول">الفصل الأول</SelectItem>
                     <SelectItem value="الفصل الثاني">الفصل الثاني</SelectItem>
+                    <SelectItem value="الفصل التكميلي">الفصل التكميلي</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -241,10 +263,14 @@ export default function ArchivePage() {
                         </div>
                         <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
                           <Badge className="bg-primary/90 backdrop-blur-md border-none rounded-lg px-3 py-1 font-black shadow-lg">{item.term}</Badge>
+                          <Badge variant="outline" className="bg-white/90 backdrop-blur-md text-primary border-none rounded-lg px-2 py-0.5 font-bold text-[10px]">{item.level}</Badge>
                         </div>
                       </div>
                       <div className="p-6 text-right">
-                        <div className="flex justify-between items-start mb-2 gap-2"><Button variant="ghost" size="icon" className="text-destructive h-8 w-8 hover:bg-destructive/10 rounded-lg shrink-0" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4" /></Button><h3 className="text-lg font-black text-primary leading-tight line-clamp-1 flex-1">{item.studentName}</h3></div>
+                        <div className="flex justify-between items-start mb-2 gap-2">
+                          <Button variant="ghost" size="icon" className="text-destructive h-8 w-8 hover:bg-destructive/10 rounded-lg shrink-0" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4" /></Button>
+                          <h3 className="text-lg font-black text-primary leading-tight line-clamp-1 flex-1">{item.studentName}</h3>
+                        </div>
                         <p className="text-sm text-secondary font-black mb-4 flex items-center justify-end gap-2">{item.subjectName}<BookOpen className="w-3 h-3" /></p>
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground border-t pt-4 font-bold">
                           <div className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG-u-nu-latn') : 'الآن'}</div>
@@ -256,7 +282,36 @@ export default function ArchivePage() {
                 </div>
               ) : (
                 <Card className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
-                  <div className="overflow-x-auto"><table className="w-full text-right"><thead><tr className="bg-muted/30 border-b"><th className="p-6 font-black text-primary">الطالب</th><th className="p-6 font-black text-primary">رقم القيد</th><th className="p-6 font-black text-primary">المادة</th><th className="p-6 font-black text-primary">تاريخ الرفع</th><th className="p-6 text-center font-black text-primary">إجراءات</th></tr></thead><tbody>{processedResults.map((item) => (<tr key={item.id} className="border-b hover:bg-muted/10 transition-colors group"><td className="p-6 font-black text-primary">{item.studentName}</td><td className="p-6 font-mono font-bold text-muted-foreground">{item.studentRegId}</td><td className="p-6"><Badge variant="outline" className="font-bold border-secondary text-secondary rounded-lg">{item.subjectName}</Badge></td><td className="p-6 text-xs font-bold text-muted-foreground">{item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG-u-nu-latn') : 'الآن'}</td><td className="p-6 text-center"><div className="flex justify-center gap-2"><Button size="icon" variant="ghost" className="rounded-xl hover:bg-primary/5" onClick={() => setViewingExam(item)}><Eye className="w-4 h-4 text-primary" /></Button><Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5" onClick={() => handleDownload(item)} disabled={downloadingId === item.id}><Download className="w-4 h-4 text-secondary" /></Button><Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button></div></td></tr>))}</tbody></table></div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right">
+                      <thead>
+                        <tr className="bg-muted/30 border-b">
+                          <th className="p-6 font-black text-primary">الطالب</th>
+                          <th className="p-6 font-black text-primary">رقم القيد</th>
+                          <th className="p-6 font-black text-primary">المادة</th>
+                          <th className="p-6 font-black text-primary">المستوى</th>
+                          <th className="p-6 text-center font-black text-primary">إجراءات</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {processedResults.map((item) => (
+                          <tr key={item.id} className="border-b hover:bg-muted/10 transition-colors group">
+                            <td className="p-6 font-black text-primary">{item.studentName}</td>
+                            <td className="p-6 font-mono font-bold text-muted-foreground">{item.studentRegId}</td>
+                            <td className="p-6"><Badge variant="outline" className="font-bold border-secondary text-secondary rounded-lg">{item.subjectName}</Badge></td>
+                            <td className="p-6 text-sm font-bold text-muted-foreground">{item.level}</td>
+                            <td className="p-6 text-center">
+                              <div className="flex justify-center gap-2">
+                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-primary/5" onClick={() => setViewingExam(item)}><Eye className="w-4 h-4 text-primary" /></Button>
+                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5" onClick={() => handleDownload(item)} disabled={downloadingId === item.id}><Download className="w-4 h-4 text-secondary" /></Button>
+                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </Card>
               )
             ) : (
@@ -264,7 +319,7 @@ export default function ArchivePage() {
                 <div className="w-24 h-24 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-6"><Search className="w-12 h-12 text-muted-foreground opacity-30" /></div>
                 <h3 className="text-3xl font-black text-primary mb-2">الأرشيف فارغ</h3>
                 <p className="text-muted-foreground font-bold">لم يتم العثور على أي ملفات مؤرشفة حالياً</p>
-                <Button variant="link" onClick={() => { setSearchTerm(""); setSelectedYear("all"); setSelectedTerm("all"); setSelectedDept("all"); setSelectedLevel("all"); setSelectedSubject("all"); }} className="mt-4 font-bold text-secondary">إعادة ضبط البحث</Button>
+                <Button variant="link" onClick={() => { setSelectedYear("all"); setSelectedDept("all"); setSelectedLevel("all"); setSelectedSubject("all"); setSelectedTerm("all"); setSearchTerm(""); }} className="mt-4 font-bold text-secondary">إعادة ضبط البحث</Button>
               </div>
             )}
           </div>
@@ -278,7 +333,14 @@ export default function ArchivePage() {
             <div className="relative w-full h-[85vh] flex flex-col">
               <div className="absolute top-6 right-6 z-50"><Button variant="ghost" size="icon" onClick={() => setViewingExam(null)} className="rounded-full bg-black/10 hover:bg-black/20"><X className="w-6 h-6" /></Button></div>
               <div className="flex-1 relative"><Image src={viewingExam.fileUrl || PlaceHolderImages[1].imageUrl} alt="Exam Full" fill className="object-contain" priority /></div>
-              <div className="p-8 bg-white/80 backdrop-blur-md border-t flex items-center justify-between"><div className="text-right"><p className="text-lg font-black text-primary">{viewingExam.studentName}</p><p className="text-sm font-bold text-secondary">{viewingExam.subjectName} - {viewingExam.year}</p></div><Button onClick={() => handleDownload(viewingExam)} className="rounded-2xl h-12 px-8 font-black gradient-blue shadow-lg gap-2"><Download className="w-5 h-5" />تحميل المستند</Button></div>
+              <div className="p-8 bg-white/80 backdrop-blur-md border-t flex items-center justify-between">
+                <div className="text-right">
+                  <p className="text-lg font-black text-primary">{viewingExam.studentName}</p>
+                  <p className="text-sm font-bold text-secondary">{viewingExam.subjectName} - {viewingExam.year}</p>
+                  <p className="text-[10px] text-muted-foreground font-bold">{viewingExam.level} | {viewingExam.term}</p>
+                </div>
+                <Button onClick={() => handleDownload(viewingExam)} className="rounded-2xl h-12 px-8 font-black gradient-blue shadow-lg gap-2"><Download className="w-5 h-5" />تحميل المستند</Button>
+              </div>
             </div>
           )}
         </DialogContent>

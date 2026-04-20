@@ -205,14 +205,14 @@ export default function UploadPage() {
     const capturedData = { ...extractedData };
     const capturedForm = { ...formData };
 
-    // 1. تحديث الواجهة فوراً
+    // 1. تحديث الواجهة فوراً لضمان السرعة
     setFiles([]);
     setExtractedData({ id: '', name: '', found: false, originalName: '' });
-    setStep(2); // العودة لخطوة الرفع لمواصلة العمل
+    setStep(2); // العودة لخطوة الرفع لمواصلة العمل فوراً
     
     toast({ 
       title: "بدأت الأرشفة", 
-      description: `يتم الآن حفظ ملف الطالب ${capturedData.name} في الخلفية.` 
+      description: `يتم الآن حفظ ملف الطالب ${capturedData.name} في الخلفية لضمان سرعتك.` 
     });
 
     // 2. التنفيذ في الخلفية (Parallel Execution)
@@ -220,7 +220,6 @@ export default function UploadPage() {
     const fileName = `archives/${folderName}/${capturedForm.subjectName}/${capturedData.id}_${Date.now()}.jpg`;
     const storageRef = ref(storage, fileName);
     
-    // الرفع للسحابة ثم الحفظ في القاعدة
     uploadString(storageRef, capturedFiles[0], 'data_url')
       .then(async (uploadResult) => {
         const downloadUrl = await getDownloadURL(uploadResult.ref);
@@ -232,7 +231,7 @@ export default function UploadPage() {
           year: capturedForm.year,
           term: capturedForm.term,
           departmentId: capturedForm.deptId,
-          level: capturedForm.level, // إضافة المستوى لضمان التصفية
+          level: capturedForm.level, // المستوى هام جداً للفلترة
           fileUrl: downloadUrl,
           pages: capturedFiles.length,
           uploadedAt: serverTimestamp()
@@ -311,10 +310,22 @@ export default function UploadPage() {
                 <div><h2 className="text-2xl font-black text-primary">تحديد سياق الاختبار</h2><p className="text-muted-foreground text-sm font-bold">يرجى تحديد البيانات الأكاديمية للمادة قبل البدء بالرفع</p></div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3"><Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><Calendar className="w-4 h-4 text-secondary" />العام الجامعي</Label><select value={formData.year} onChange={(e) => setFormData({...formData, year: e.target.value})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"><option value="">اختر العام الجامعي...</option>{academicYears.map((y: any) => <option key={y.id} value={y.label}>{y.label}</option>)}</select></div>
-                <div className="space-y-3"><Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />التخصص (القسم)</Label><select value={formData.deptId} onChange={(e) => setFormData({...formData, deptId: e.target.value, subjectId: '', subjectName: ''})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"><option value="">اختر التخصص...</option>{departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
-                <div className="space-y-3"><Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label><select value={formData.level} onChange={(e) => setFormData({...formData, level: e.target.value, subjectId: '', subjectName: ''})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"><option value="">اختر المستوى...</option><option value="المستوى الأول">المستوى الأول</option><option value="المستوى الثاني">المستوى الثاني</option><option value="المستوى الثالث">المستوى الثالث</option><option value="المستوى الرابع">المستوى الرابع</option></select></div>
-                <div className="space-y-3"><Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة الدراسية</Label><select disabled={!formData.deptId || !formData.level} value={formData.subjectId} onChange={(e) => { const sel = filteredSubjects.find((s: any) => s.id === e.target.value) as any; setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", term: sel?.term || "" }); }} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none disabled:opacity-50"><option value="">{(!formData.deptId || !formData.level) ? 'حدد التخصص والمستوى أولاً' : 'اختر المادة...'}</option>{filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}</select></div>
+                <div className="space-y-3">
+                  <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><Calendar className="w-4 h-4 text-secondary" />العام الجامعي</Label>
+                  <select value={formData.year} onChange={(e) => setFormData({...formData, year: e.target.value})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"><option value="">اختر العام الجامعي...</option>{academicYears.map((y: any) => <option key={y.id} value={y.label}>{y.label}</option>)}</select>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />التخصص (القسم)</Label>
+                  <select value={formData.deptId} onChange={(e) => setFormData({...formData, deptId: e.target.value, subjectId: '', subjectName: ''})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"><option value="">اختر التخصص...</option>{departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label>
+                  <select value={formData.level} onChange={(e) => setFormData({...formData, level: e.target.value, subjectId: '', subjectName: ''})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none"><option value="">اختر المستوى...</option><option value="المستوى الأول">المستوى الأول</option><option value="المستوى الثاني">المستوى الثاني</option><option value="المستوى الثالث">المستوى الثالث</option><option value="المستوى الرابع">المستوى الرابع</option></select>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة الدراسية</Label>
+                  <select disabled={!formData.deptId || !formData.level} value={formData.subjectId} onChange={(e) => { const sel = filteredSubjects.find((s: any) => s.id === e.target.value) as any; setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", term: sel?.term || "" }); }} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/20 outline-none font-black text-primary focus:border-primary focus:bg-white transition-all text-right appearance-none disabled:opacity-50"><option value="">{(!formData.deptId || !formData.level) ? 'حدد التخصص والمستوى أولاً' : 'اختر المادة...'}</option>{filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}</select>
+                </div>
               </div>
             </div>
           )}

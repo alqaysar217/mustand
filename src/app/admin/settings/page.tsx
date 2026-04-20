@@ -19,13 +19,14 @@ import {
   CheckCircle,
   Users,
   Layers,
-  Zap
+  Zap,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Firebase
 import { useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc, doc, writeBatch } from "firebase/firestore";
 
 const SHARED_LEVELS_1_2 = [
   { l: "المستوى الأول", t: "الفصل الأول", ar: "مقدمة في الحاسوب", en: "Introduction to Computer" },
@@ -66,6 +67,7 @@ export default function AdminSettingsPage() {
   const [importingIT, setImportingIT] = useState(false);
   const [importingStudents, setImportingStudents] = useState(false);
   const [injectingArchives, setInjectingArchives] = useState(false);
+  const [clearingArchives, setClearingArchives] = useState(false);
   const firestore = useFirestore();
 
   const handleSave = (section: string) => {
@@ -74,6 +76,23 @@ export default function AdminSettingsPage() {
       setLoading(false);
       toast({ title: "تم الحفظ بنجاح", description: `تم تحديث إعدادات ${section} بنجاح.` });
     }, 1000);
+  };
+
+  const handleClearArchives = async () => {
+    if (!firestore) return;
+    setClearingArchives(true);
+    try {
+      const archivesRef = collection(firestore, "archives");
+      const snap = await getDocs(archivesRef);
+      const batch = writeBatch(firestore);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      toast({ title: "تم مسح الأرشيف", description: "تم حذف كافة السجلات بنجاح." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "خطأ في المسح" });
+    } finally {
+      setClearingArchives(false);
+    }
   };
 
   const handleInjectMockArchives = async () => {
@@ -89,7 +108,7 @@ export default function AdminSettingsPage() {
       let count = 0;
       for (let i = 1; i <= 10; i++) {
         const student = STUDENTS_IMPORT_LIST[(i - 1) % STUDENTS_IMPORT_LIST.length];
-        const subject = subs.length > 0 ? subs[(i - 1) % subs.length] : { nameAr: "مادة تجريبية " + i, id: "mock_" + i, level: "المستوى الأول" };
+        const subject = subs.length > 0 ? subs[(i - 1) % subs.length] : { nameAr: "مادة تجريبية " + i, id: "mock_" + i, level: "المستوى الأول", departmentId: "central_dept", departmentName: "تقنية المعلومات" };
         
         await addDoc(archivesRef, {
           studentName: student.n,
@@ -99,7 +118,7 @@ export default function AdminSettingsPage() {
           year: "2023 / 2024",
           term: i % 2 === 0 ? "الفصل الأول" : "الفصل الثاني",
           departmentId: (subject as any).departmentId || "central_dept_id",
-          level: (subject as any).level || "المستوى الأول", // إضافة المستوى للحقن
+          level: (subject as any).level || "المستوى الأول",
           fileUrl: `/exam-${i}.png`, 
           pages: 1,
           uploadedAt: serverTimestamp()
@@ -109,7 +128,7 @@ export default function AdminSettingsPage() {
 
       toast({
         title: "تم حقن البيانات",
-        description: `تمت إضافة ${count} سجلات مؤرشفة بنجاح مع كافة بيانات التصفية.`,
+        description: `تمت إضافة ${count} سجلات مؤرشفة بنجاح مع كافة بيانات التصفية من الصور الحقيقية.`,
       });
     } catch (error) {
       toast({ variant: "destructive", title: "خطأ في الحقن", description: "فشل تزويد الأرشيف بالبيانات." });
@@ -246,15 +265,26 @@ export default function AdminSettingsPage() {
                <h2 className="text-xl font-bold text-primary">أدوات تطوير الأرشيف</h2>
              </div>
              <div className="space-y-4">
-               <p className="text-sm font-bold text-muted-foreground">أداة لحقن الأرشيف بـ 10 اختبارات مؤرشفة حقيقية باستخدام الصور الموجودة في النظام لغرض التجربة الفورية.</p>
-               <Button 
-                disabled={injectingArchives} 
-                onClick={handleInjectMockArchives}
-                className="w-full h-14 rounded-2xl font-black bg-orange-500 hover:bg-orange-600 text-white shadow-xl gap-3 text-lg"
-               >
-                 {injectingArchives ? <Loader2 className="w-6 h-6 animate-spin" /> : <Layers className="w-6 h-6" />}
-                 حقن 10 سجلات مؤرشفة (بيانات وصور حقيقية)
-               </Button>
+               <p className="text-sm font-bold text-muted-foreground">أداة لحقن الأرشيف بـ 10 اختبارات مؤرشفة حقيقية باستخدام الصور الموجودة في النظام لغرض التجربة الفورية، مع خيار لتفريغ الأرشيف الحالي.</p>
+               <div className="flex flex-col sm:flex-row gap-4">
+                 <Button 
+                  disabled={injectingArchives} 
+                  onClick={handleInjectMockArchives}
+                  className="flex-1 h-14 rounded-2xl font-black bg-orange-500 hover:bg-orange-600 text-white shadow-xl gap-3 text-lg"
+                 >
+                   {injectingArchives ? <Loader2 className="w-6 h-6 animate-spin" /> : <Layers className="w-6 h-6" />}
+                   حقن 10 سجلات كاملة (صور حقيقية)
+                 </Button>
+                 <Button 
+                  variant="destructive"
+                  disabled={clearingArchives} 
+                  onClick={handleClearArchives}
+                  className="flex-1 h-14 rounded-2xl font-black shadow-xl gap-3 text-lg"
+                 >
+                   {clearingArchives ? <Loader2 className="w-6 h-6 animate-spin" /> : <Trash2 className="w-6 h-6" />}
+                   مسح كافة السجلات الحالية
+                 </Button>
+               </div>
              </div>
           </Card>
         </div>
