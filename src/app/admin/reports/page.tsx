@@ -39,9 +39,7 @@ import {
   YAxis, 
   Tooltip,
   CartesianGrid,
-  Cell,
-  PieChart,
-  Pie
+  Cell
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -187,7 +185,7 @@ export default function ReportsPage() {
             <Badge className="bg-green-50 text-green-700 border-none font-black">قاعدة البيانات</Badge>
           </div>
           <p className="text-muted-foreground text-sm font-bold">إجمالي الطلاب</p>
-          <h4 className="text-3xl font-black text-primary">{formatNumber(students.length)}</h4>
+          <h4 className="text-3xl font-black text-primary">{mounted ? students.length.toLocaleString() : '0'}</h4>
         </Card>
         
         <Card className="p-6 border-none shadow-xl rounded-3xl bg-white border-r-8 border-secondary">
@@ -196,7 +194,7 @@ export default function ReportsPage() {
             <Badge className="bg-blue-50 text-blue-700 border-none font-black">القوى العاملة</Badge>
           </div>
           <p className="text-muted-foreground text-sm font-bold">إجمالي العاملين</p>
-          <h4 className="text-3xl font-black text-primary">{formatNumber(staff.length)}</h4>
+          <h4 className="text-3xl font-black text-primary">{mounted ? staff.length.toLocaleString() : '0'}</h4>
         </Card>
 
         <Card className="p-6 border-none shadow-xl rounded-3xl bg-white border-r-8 border-orange-500">
@@ -205,7 +203,7 @@ export default function ReportsPage() {
             <Badge className="bg-orange-50 text-orange-700 border-none font-black">الأرشفة السحابية</Badge>
           </div>
           <p className="text-muted-foreground text-sm font-bold">إجمالي الاختبارات</p>
-          <h4 className="text-3xl font-black text-primary">{formatNumber(archives.length)}</h4>
+          <h4 className="text-3xl font-black text-primary">{mounted ? archives.length.toLocaleString() : '0'}</h4>
         </Card>
       </div>
 
@@ -214,8 +212,8 @@ export default function ReportsPage() {
           <TabsTrigger 
             value="students" 
             className={cn(
-              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center",
-              activeTab === "students" ? "gradient-blue text-white shadow-xl h-[calc(100%-8px)]" : "text-muted-foreground hover:bg-muted/50"
+              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center h-[calc(100%-8px)] my-auto",
+              activeTab === "students" ? "gradient-blue text-white shadow-xl" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
             <GraduationCap className="w-5 h-5" />
@@ -224,8 +222,8 @@ export default function ReportsPage() {
           <TabsTrigger 
             value="staff" 
             className={cn(
-              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center",
-              activeTab === "staff" ? "gradient-blue text-white shadow-xl h-[calc(100%-8px)]" : "text-muted-foreground hover:bg-muted/50"
+              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center h-[calc(100%-8px)] my-auto",
+              activeTab === "staff" ? "gradient-blue text-white shadow-xl" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
             <ShieldCheck className="w-5 h-5" />
@@ -234,8 +232,8 @@ export default function ReportsPage() {
           <TabsTrigger 
             value="archives" 
             className={cn(
-              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center",
-              activeTab === "archives" ? "gradient-blue text-white shadow-xl h-[calc(100%-8px)]" : "text-muted-foreground hover:bg-muted/50"
+              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center h-[calc(100%-8px)] my-auto",
+              activeTab === "archives" ? "gradient-blue text-white shadow-xl" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
             <ArchiveIcon className="w-5 h-5" />
@@ -244,26 +242,44 @@ export default function ReportsPage() {
         </TabsList>
 
         <TabsContent value="students" className="space-y-6 animate-slide-up">
-          <Card className="p-6 border-none shadow-xl rounded-3xl bg-white mb-6">
-            <div className="flex items-center gap-3 mb-6"><Filter className="w-5 h-5 text-secondary" /><h3 className="text-lg font-black text-primary">تصفية نتائج الطلاب</h3></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <Label className="font-bold text-xs mr-1">الكلية</Label>
-                <select value={filterCollege} onChange={(e) => setFilterCollege(e.target.value)} className="w-full h-11 px-4 rounded-xl border-2 bg-muted/20 font-bold outline-none focus:border-primary">
-                  <option value="all">كل الكليات</option>
+          <Card className="p-8 border-none shadow-xl rounded-3xl bg-white mb-6">
+            <div className="flex items-center gap-3 mb-8 border-b pb-4">
+              <div className="p-2 bg-secondary/10 rounded-xl text-secondary"><Filter className="w-6 h-6" /></div>
+              <h3 className="text-xl font-black text-primary">تصفية نتائج البحث المتقدم</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="space-y-3">
+                <Label className="font-black text-sm text-primary pr-1">الكلية الجامعية</Label>
+                <select 
+                  value={filterCollege} 
+                  onChange={(e) => setFilterCollege(e.target.value)} 
+                  className="w-full h-12 px-4 rounded-xl border-2 border-muted bg-muted/20 font-bold outline-none focus:border-primary text-right"
+                  dir="rtl"
+                >
+                  <option value="all">كل الكليات المسجلة</option>
                   {colleges.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label className="font-bold text-xs mr-1">التخصص</Label>
-                <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="w-full h-11 px-4 rounded-xl border-2 bg-muted/20 font-bold outline-none focus:border-primary">
+              <div className="space-y-3">
+                <Label className="font-black text-sm text-primary pr-1">التخصص العلمي</Label>
+                <select 
+                  value={filterDept} 
+                  onChange={(e) => setFilterDept(e.target.value)} 
+                  className="w-full h-12 px-4 rounded-xl border-2 border-muted bg-muted/20 font-bold outline-none focus:border-primary text-right"
+                  dir="rtl"
+                >
                   <option value="all">كل التخصصات</option>
                   {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label className="font-bold text-xs mr-1">المستوى</Label>
-                <select value={filterLevel} onChange={(e) => setFilterLevel(e.target.value)} className="w-full h-11 px-4 rounded-xl border-2 bg-muted/20 font-bold outline-none focus:border-primary">
+              <div className="space-y-3">
+                <Label className="font-black text-sm text-primary pr-1">المستوى الدراسي</Label>
+                <select 
+                  value={filterLevel} 
+                  onChange={(e) => setFilterLevel(e.target.value)} 
+                  className="w-full h-12 px-4 rounded-xl border-2 border-muted bg-muted/20 font-bold outline-none focus:border-primary text-right"
+                  dir="rtl"
+                >
                   <option value="all">كل المستويات</option>
                   <option value="المستوى الأول">المستوى الأول</option>
                   <option value="المستوى الثاني">المستوى الثاني</option>
@@ -272,19 +288,28 @@ export default function ReportsPage() {
                 </select>
               </div>
               <div className="flex items-end">
-                <Button variant="secondary" onClick={() => { setFilterCollege('all'); setFilterDept('all'); setFilterLevel('all'); }} className="w-full h-11 rounded-xl font-bold">إعادة تعيين</Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => { setFilterCollege('all'); setFilterDept('all'); setFilterLevel('all'); }} 
+                  className="w-full h-12 rounded-xl font-black shadow-sm"
+                >
+                  إعادة تعيين المرشحات
+                </Button>
               </div>
             </div>
           </Card>
 
           <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
             <div className="p-6 border-b bg-muted/10 flex items-center justify-between">
-              <h3 className="font-black text-primary flex items-center gap-2"><GraduationCap className="w-5 h-5 text-secondary" />قائمة الطلاب المطابقة ({filteredStudents.length})</h3>
+              <h3 className="font-black text-primary flex items-center gap-2">
+                <GraduationCap className="w-6 h-6 text-secondary" />
+                قائمة الطلاب المطابقة للمعايير ({filteredStudents.length})
+              </h3>
             </div>
-            <Table>
+            <Table className="text-right" dir="rtl">
               <TableHeader className="bg-muted/30">
                 <TableRow>
-                  <TableHead className="text-right font-black text-primary">الطالب</TableHead>
+                  <TableHead className="text-right font-black text-primary">اسم الطالب</TableHead>
                   <TableHead className="text-right font-black text-primary">رقم القيد</TableHead>
                   <TableHead className="text-right font-black text-primary">التخصص</TableHead>
                   <TableHead className="text-right font-black text-primary">المستوى</TableHead>
@@ -293,7 +318,7 @@ export default function ReportsPage() {
               </TableHeader>
               <TableBody>
                 {filteredStudents.length > 0 ? filteredStudents.map((s) => (
-                  <TableRow key={s.id} className="hover:bg-muted/10">
+                  <TableRow key={s.id} className="hover:bg-muted/10 transition-colors">
                     <TableCell className="font-bold text-primary">{s.name}</TableCell>
                     <TableCell className="font-mono text-xs font-bold text-muted-foreground">{s.regId}</TableCell>
                     <TableCell className="font-bold text-xs text-secondary">{s.departmentName}</TableCell>
@@ -311,13 +336,19 @@ export default function ReportsPage() {
         <TabsContent value="staff" className="space-y-6 animate-slide-up">
            <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
             <div className="p-6 border-b bg-muted/10 flex items-center justify-between">
-              <h3 className="font-black text-primary flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-secondary" />تقرير الموظفين النشطين</h3>
-              <Button size="sm" variant="ghost" onClick={() => handleExportCSV('staff')} className="text-green-600 font-bold gap-2"><FileSpreadsheet className="w-4 h-4" />تصدير القائمة</Button>
+              <h3 className="font-black text-primary flex items-center gap-2">
+                <ShieldCheck className="w-6 h-6 text-secondary" />
+                تقرير الموظفين والمديرين النشطين
+              </h3>
+              <Button size="sm" variant="ghost" onClick={() => handleExportCSV('staff')} className="text-green-600 font-bold gap-2">
+                <FileSpreadsheet className="w-4 h-4" />
+                تصدير القائمة
+              </Button>
             </div>
-            <Table>
+            <Table className="text-right" dir="rtl">
               <TableHeader className="bg-muted/30">
                 <TableRow>
-                  <TableHead className="text-right font-black text-primary">الاسم</TableHead>
+                  <TableHead className="text-right font-black text-primary">اسم الموظف</TableHead>
                   <TableHead className="text-right font-black text-primary">الدور الوظيفي</TableHead>
                   <TableHead className="text-right font-black text-primary">اسم المستخدم</TableHead>
                   <TableHead className="text-right font-black text-primary">الحالة</TableHead>
@@ -325,7 +356,7 @@ export default function ReportsPage() {
               </TableHeader>
               <TableBody>
                 {staff.map((u: any) => (
-                  <TableRow key={u.id} className="hover:bg-muted/10">
+                  <TableRow key={u.id} className="hover:bg-muted/10 transition-colors">
                     <TableCell className="font-bold text-primary">{u.name}</TableCell>
                     <TableCell>
                       <Badge className={u.role === 'manager' ? "bg-primary text-white border-none rounded-lg" : "bg-secondary text-white border-none rounded-lg"}>
@@ -334,9 +365,9 @@ export default function ReportsPage() {
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">@{u.username}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <div className={`w-2 h-2 rounded-full ${u.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <span className="text-xs font-bold">{u.status === 'active' ? 'متصل/نشط' : 'موقوف'}</span>
+                      <div className="flex items-center gap-2 justify-start">
+                        <div className={`w-2.5 h-2.5 rounded-full ${u.status === 'active' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`}></div>
+                        <span className="text-xs font-bold">{u.status === 'active' ? 'نشط/متصل' : 'موقوف'}</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -349,16 +380,19 @@ export default function ReportsPage() {
         <TabsContent value="archives" className="space-y-8 animate-slide-up">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
-              <h3 className="text-lg font-black text-primary mb-8 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-secondary" />توزيع الاختبارات حسب التخصص</h3>
+              <h3 className="text-lg font-black text-primary mb-8 flex items-center gap-2">
+                <TrendingUp className="w-6 h-6 text-secondary" />
+                توزيع الاختبارات المؤرشفة حسب التخصص
+              </h3>
               <div className="h-[350px] w-full">
                 {archiveChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={archiveChartData}>
+                    <BarChart data={archiveChartData} margin={{ right: 30, left: 0, top: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                       <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#0B3C5D', fontWeight: 'bold'}} />
-                      <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontWeight: 'bold'}} />
+                      <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontWeight: 'bold'}} orientation="right" />
                       <Tooltip 
-                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', direction: 'rtl' }}
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', direction: 'rtl', textAlign: 'right' }}
                         cursor={{ fill: '#f4f7fb', radius: 10 }}
                       />
                       <Bar dataKey="value" radius={[8, 8, 0, 0]}>
@@ -375,18 +409,19 @@ export default function ReportsPage() {
             </Card>
 
             <Card className="p-8 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
-               <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-black text-primary">أحدث سجلات الأرشفة المنفذة</h3>
+               <div className="flex items-center justify-between mb-8 border-b pb-4">
+                  <h3 className="text-xl font-black text-primary">أحدث عمليات الأرشفة المنفذة</h3>
+                  <Button variant="link" className="text-secondary font-bold" onClick={() => setActiveTab('students')}>مشاهدة الكل</Button>
                </div>
                <div className="space-y-4">
-                 {archives.slice(0, 5).map((a: any, i: number) => (
+                 {archives.slice(0, 6).map((a: any, i: number) => (
                    <div key={i} className="flex items-center gap-4 p-4 bg-muted/20 rounded-2xl border border-transparent hover:border-primary/10 transition-all">
-                      <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm"><FileText className="w-5 h-5 text-secondary" /></div>
-                      <div className="flex-1">
+                      <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm text-secondary"><FileText className="w-6 h-6" /></div>
+                      <div className="flex-1 text-right">
                         <p className="text-sm font-black text-primary">{a.studentName}</p>
                         <p className="text-[10px] font-bold text-muted-foreground">{a.subjectName} • {a.year}</p>
                       </div>
-                      <Badge variant="outline" className="text-[9px] font-bold border-secondary text-secondary">{a.term}</Badge>
+                      <Badge variant="outline" className="text-[9px] font-black border-secondary text-secondary px-3 py-1 rounded-lg">{a.term}</Badge>
                    </div>
                  ))}
                  {archives.length === 0 && <p className="text-center py-10 text-muted-foreground font-bold">لا توجد عمليات مؤرشفة بعد</p>}
@@ -399,10 +434,12 @@ export default function ReportsPage() {
       {/* Footer Info */}
       <Card className="p-6 border-none shadow-lg bg-primary/5 border-r-4 border-primary rounded-2xl">
         <div className="flex gap-4">
-          <ShieldCheck className="w-6 h-6 text-primary shrink-0" />
+          <ShieldCheck className="w-7 h-7 text-primary shrink-0" />
           <div className="text-right">
-            <h4 className="font-bold text-primary">ملاحظة الخصوصية والأمان</h4>
-            <p className="text-sm text-muted-foreground font-medium">كافة التقارير المصدرة تحتوي على بيانات حساسة، يرجى تداولها فقط مع الأشخاص المخولين بالوصول إلى قاعدة بيانات الجامعة.</p>
+            <h4 className="font-bold text-primary text-lg">ملاحظة الخصوصية والأمان</h4>
+            <p className="text-sm text-muted-foreground font-bold leading-relaxed">
+              كافة التقارير المصدرة تحتوي على بيانات أكاديمية حساسة. يرجى تداول هذه الملفات فقط مع الجهات المخولة رسمياً، وضمان حذف النسخ المؤقتة بعد الاستخدام.
+            </p>
           </div>
         </div>
       </Card>
