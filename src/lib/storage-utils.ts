@@ -1,3 +1,4 @@
+
 'use client';
 
 /**
@@ -34,10 +35,10 @@ export async function downloadFile(url: string, fileName: string) {
 }
 
 /**
- * ضغط الصورة قبل الرفع لتقليل حجم البيانات وتجنب مشاكل الوقت المستغرق (Retry Limit Exceeded).
- * يحافظ على وضوح النص مع تقليل الحجم بشكل كبير.
+ * ضغط الصورة قبل الرفع لتقليل حجم البيانات وتجنب مشاكل وقت التنفيذ أو تجاوز الحدود.
+ * يحافظ على وضوح النص مع تقليل الحجم بشكل كبير (أقل من 1 ميجابايت غالباً).
  */
-export async function compressImage(dataUrl: string, quality = 0.7, maxWidth = 1200): Promise<string> {
+export async function compressImage(dataUrl: string, quality = 0.8, maxWidth = 1600): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = dataUrl;
@@ -46,7 +47,7 @@ export async function compressImage(dataUrl: string, quality = 0.7, maxWidth = 1
       let width = img.width;
       let height = img.height;
 
-      // الحفاظ على النسبة والتناسب مع تصغير العرض الأقصى
+      // الحفاظ على النسبة والتناسب
       if (width > maxWidth) {
         height = (maxWidth / width) * height;
         width = maxWidth;
@@ -56,9 +57,11 @@ export async function compressImage(dataUrl: string, quality = 0.7, maxWidth = 1
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (ctx) {
+        // تعبئة الخلفية باللون الأبيض (مفيد لصور PNG الشفافة)
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
+        // تحويل لـ JPEG لتقليل الحجم بشكل كبير مقارنة بـ PNG
         resolve(canvas.toDataURL('image/jpeg', quality));
       } else {
         resolve(dataUrl);

@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview This flow extracts student registration ID and name from an uploaded exam image using AI-powered OCR.
- * Optimized for speed and precision.
+ * Optimized for speed and precision using Gemini 1.5 Flash.
  */
 
 import {ai} from '@/ai/genkit';
@@ -33,20 +33,26 @@ const extractExamDetailsPrompt = ai.definePrompt({
   config: {
     safetySettings: [
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
     ],
   },
-  prompt: `أنت خبير في قراءة بيانات أوراق الامتحانات الجامعية العربية.
-استخرج البيانات التالية بدقة قصوى:
+  prompt: `أنت خبير في قراءة وتحليل ترويسة أوراق الامتحانات الجامعية العربية.
+مهمتك هي استخراج بيانات الطالب من الصورة المرفقة بدقة عالية.
 
-1. رقم القيد (Registration ID): ابحث عن خانة "رقم القيد" أو أي رقم تسلسلي يمثل هوية الطالب. استخرج الأرقام فقط (مثال: 2024001).
-2. اسم الطالب الكامل (Student Name): استخرج الاسم الرباعي المكتوب في أعلى الورقة.
+البيانات المطلوبة:
+1. رقم القيد: ابحث عن حقل يسمى "رقم القيد" أو "رقم الجلوس" أو أي رقم تسلسلي فريد للطالب. استخرج الأرقام فقط (مثلاً: 221011506).
+2. اسم الطالب: استخرج الاسم الكامل (غالباً رباعي) المكتوب بوضوح في أعلى الورقة.
 
-قواعد صارمة:
-- أعد البيانات بصيغة JSON نظيفة.
-- في خانة الرقم، احذف أي نصوص عربية، ضع الأرقام فقط.
-- ركز على الترويسة (Header) الخاصة بالورقة.
+قواعد الاستخراج:
+- ركز على الجزء العلوي من الورقة (Header) حيث توجد البيانات الرسمية.
+- إذا كان الخط يدوياً، حاول قراءته بأفضل شكل ممكن.
+- أعد النتيجة بصيغة JSON مطابقة للمخطط المطلوب.
+- إذا لم تجد رقم القيد، ابحث عن أي رقم يتكون من 7 إلى 10 خانات.
 
-Image: {{media url=examImageDataUri}}`,
+صورة الورقة: {{media url=examImageDataUri}}`,
 });
 
 const extractExamDetailsFlow = ai.defineFlow(
@@ -57,17 +63,22 @@ const extractExamDetailsFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      const {output} = await extractExamDetailsPrompt(input);
+      const response = await extractExamDetailsPrompt(input);
+      const output = response.output;
       
-      // برمجياً: تنظيف رقم القيد من أي حروف غير رقمية
-      const cleanRegId = output?.studentRegistrationId?.replace(/\D/g, '') || '';
+      if (!output) {
+        throw new Error('MODEL_RETURNED_EMPTY_OUTPUT');
+      }
+
+      // تنظيف رقم القيد برمجياً للتأكد من خلوه من الرموز
+      const cleanRegId = output.studentRegistrationId?.replace(/\D/g, '') || '';
       
       return {
         studentRegistrationId: cleanRegId,
-        studentName: output?.studentName?.trim() || ''
+        studentName: output.studentName?.trim() || ''
       };
     } catch (error: any) {
-      console.warn('OCR Analysis Failed:', error.message);
+      console.error('OCR AI Flow Error:', error);
       throw new Error('AI_ANALYSIS_FAILED');
     }
   }
