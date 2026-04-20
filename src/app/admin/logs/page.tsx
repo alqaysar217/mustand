@@ -9,7 +9,7 @@ import {
   Clock, 
   FileText, 
   Settings, 
-  Trash2,
+  Trash2, 
   AlertCircle,
   Loader2,
   Archive as ArchiveIcon
@@ -133,7 +133,8 @@ export default function LogsPage() {
                       <h3 className="text-xl font-black text-primary">لا توجد سجلات بعد</h3>
                       <p className="text-muted-foreground font-bold text-sm">سيتم تسجيل كافة الأنشطة الإدارية هنا بمجرد حدوثها.</p>
                     </div>
-                  </TableRow>
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
