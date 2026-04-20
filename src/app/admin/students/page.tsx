@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -99,6 +98,17 @@ export default function AdminStudentsPage() {
         joinDate: new Date().toISOString().split('T')[0],
         createdAt: serverTimestamp()
       });
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: "إضافة طالب جديد",
+        target: `${newStudent.name} (${newStudent.regId})`,
+        type: 'update',
+        timestamp: serverTimestamp()
+      });
+
       setIsAddDialogOpen(false);
       setNewStudent({ name: "", regId: "", departmentId: "", level: "المستوى الأول", admissionType: "عام" });
       toast({ title: "تم تسجيل الطالب بنجاح" });
@@ -109,28 +119,42 @@ export default function AdminStudentsPage() {
     }
   };
 
-  const handleUpdateStudent = () => {
+  const handleUpdateStudent = async () => {
     if (!firestore || !editingStudent?.name || !editingStudent?.regId || !editingStudent?.departmentId) return;
 
     setSubmitting(true);
-    const selectedDept = (departments as any[]).find(d => d.id === editingStudent.departmentId);
-    const docRef = doc(firestore, "students", editingStudent.id);
-    const data = {
-      name: editingStudent.name,
-      regId: editingStudent.regId,
-      departmentId: editingStudent.departmentId,
-      departmentName: selectedDept?.name || "",
-      level: editingStudent.level,
-      admissionType: editingStudent.admissionType,
-      updatedAt: serverTimestamp()
-    };
+    try {
+      const selectedDept = (departments as any[]).find(d => d.id === editingStudent.departmentId);
+      const docRef = doc(firestore, "students", editingStudent.id);
+      const data = {
+        name: editingStudent.name,
+        regId: editingStudent.regId,
+        departmentId: editingStudent.departmentId,
+        departmentName: selectedDept?.name || "",
+        level: editingStudent.level,
+        admissionType: editingStudent.admissionType,
+        updatedAt: serverTimestamp()
+      };
 
-    updateDoc(docRef, data)
-      .then(() => {
-        setEditingStudent(null);
-        toast({ title: "تم التحديث", description: "تم تحديث بيانات الطالب بنجاح." });
-      })
-      .finally(() => setSubmitting(false));
+      await updateDoc(docRef, data);
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: "تحديث بيانات طالب",
+        target: `${editingStudent.name} (${editingStudent.regId})`,
+        type: 'update',
+        timestamp: serverTimestamp()
+      });
+
+      setEditingStudent(null);
+      toast({ title: "تم التحديث", description: "تم تحديث بيانات الطالب بنجاح." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "خطأ في التحديث" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleMoveToBin = async (student: any) => {
@@ -146,6 +170,17 @@ export default function AdminStudentsPage() {
         identifier: student.regId
       });
       await deleteDoc(doc(firestore, "students", id));
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: "نقل طالب لسلة المحذوفات",
+        target: `${student.name} (${student.regId})`,
+        type: 'delete',
+        timestamp: serverTimestamp()
+      });
+
       toast({ title: "تم نقل الطالب لسلة المحذوفات" });
     } catch (error) {
       toast({ variant: "destructive", title: "فشل نقل البيانات" });
@@ -154,8 +189,8 @@ export default function AdminStudentsPage() {
 
   const getStatusBadge = (status: string) => {
     return status === 'active' 
-      ? <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-lg gap-1"><CheckCircle2 className="w-3 h-3" /> نشط</Badge>
-      : <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-100 border-none rounded-lg gap-1"><XCircle className="w-3 h-3" /> موقوف</Badge>;
+      ? <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-lg gap-1 font-black"><CheckCircle2 className="w-3 h-3" /> نشط</Badge>
+      : <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-100 border-none rounded-lg gap-1 font-black"><XCircle className="w-3 h-3" /> موقوف</Badge>;
   };
 
   return (

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useMemo } from "react";
@@ -134,6 +133,17 @@ export default function AdminArchivePage() {
         identifier: item.subjectName
       });
       await deleteDoc(doc(firestore, "archives", id));
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: "حذف ملف من الأرشيف",
+        target: `${item.studentName} - ${item.subjectName}`,
+        type: 'delete',
+        timestamp: serverTimestamp()
+      });
+
       toast({ title: "تم نقل الملف لسلة المحذوفات" });
     } catch (error) {
       toast({ variant: "destructive", title: "خطأ في النقل" });
@@ -163,6 +173,16 @@ export default function AdminArchivePage() {
       };
       
       await addDoc(collection(firestore, "archives"), archiveData);
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: "أرشفة مستند جديد",
+        target: `${newArchive.name} - ${newArchive.subjectName}`,
+        type: 'archive',
+        timestamp: serverTimestamp()
+      });
       
       setIsAddDialogOpen(false);
       setUploadedImage(null);

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -96,6 +95,17 @@ export default function UsersPage() {
         status: 'active',
         createdAt: serverTimestamp()
       });
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: "إنشاء حساب موظف جديد",
+        target: `${newUser.name} (@${newUser.username})`,
+        type: 'update',
+        timestamp: serverTimestamp()
+      });
+
       setIsAddDialogOpen(false);
       setNewUser({ name: '', username: '', role: 'employee', password: '' });
       toast({ title: "تمت إضافة المستخدم بنجاح" });
@@ -106,21 +116,43 @@ export default function UsersPage() {
     }
   };
 
-  const handleToggleStatus = async (id: string, currentStatus: string) => {
+  const handleToggleStatus = async (id: string, currentStatus: string, name: string) => {
     if (!firestore) return;
     const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
       await updateDoc(doc(firestore, "users", id), { status: nextStatus });
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: nextStatus === 'active' ? "تفعيل حساب مستخدم" : "تعطيل حساب مستخدم",
+        target: name,
+        type: 'update',
+        timestamp: serverTimestamp()
+      });
+
       toast({ title: `تم ${nextStatus === 'active' ? 'تفعيل' : 'تعطيل'} الحساب` });
     } catch (e) {
       toast({ variant: "destructive", title: "فشل تحديث الحالة" });
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (!firestore) return;
     try {
       await deleteDoc(doc(firestore, "users", id));
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: "حذف مستخدم نهائياً",
+        target: name,
+        type: 'delete',
+        timestamp: serverTimestamp()
+      });
+
       toast({ variant: "destructive", title: "تم حذف المستخدم نهائياً" });
     } catch (e) {
       toast({ variant: "destructive", title: "خطأ في الحذف" });
@@ -137,6 +169,17 @@ export default function UsersPage() {
         role: editingUser.role,
         password: editingUser.password || ""
       });
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: "تحديث بيانات مستخدم",
+        target: editingUser.name,
+        type: 'update',
+        timestamp: serverTimestamp()
+      });
+
       setEditingUser(null);
       toast({ title: "تم تحديث البيانات" });
     } catch (e) {
@@ -148,16 +191,16 @@ export default function UsersPage() {
 
   const getRoleBadge = (role: string) => {
     switch(role) {
-      case 'manager': return <Badge className="bg-primary hover:bg-primary/90 rounded-lg gap-1"><Shield className="w-3 h-3" /> مدير نظام</Badge>;
-      case 'employee': return <Badge className="bg-secondary hover:bg-secondary/90 rounded-lg gap-1"><Briefcase className="w-3 h-3" /> موظف أرشفة</Badge>;
-      default: return <Badge variant="secondary">{role}</Badge>;
+      case 'manager': return <Badge className="bg-primary hover:bg-primary/90 rounded-lg gap-1 font-black"><Shield className="w-3 h-3" /> مدير نظام</Badge>;
+      case 'employee': return <Badge className="bg-secondary hover:bg-secondary/90 rounded-lg gap-1 font-black"><Briefcase className="w-3 h-3" /> موظف أرشفة</Badge>;
+      default: return <Badge variant="secondary" className="font-bold">{role}</Badge>;
     }
   };
 
   const getStatusBadge = (status: string) => {
     return status === 'active' 
-      ? <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-lg gap-1"><CheckCircle className="w-3 h-3" /> نشط</Badge>
-      : <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-100 border-none rounded-lg gap-1"><XCircle className="w-3 h-3" /> موقوف</Badge>;
+      ? <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-lg gap-1 font-black"><CheckCircle className="w-3 h-3" /> نشط</Badge>
+      : <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-100 border-none rounded-lg gap-1 font-black"><XCircle className="w-3 h-3" /> موقوف</Badge>;
   };
 
   return (
@@ -233,7 +276,7 @@ export default function UsersPage() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => handleToggleStatus(user.id, user.status)}
+                        onClick={() => handleToggleStatus(user.id, user.status, user.name)}
                         className={user.status === 'active' ? "rounded-xl hover:bg-orange-50 text-orange-500" : "rounded-xl hover:bg-green-50 text-green-600"}
                         title={user.status === 'active' ? "تعطيل" : "تفعيل"}
                       >
@@ -262,7 +305,7 @@ export default function UsersPage() {
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter className="flex-row gap-3">
-                            <AlertDialogAction onClick={() => handleDelete(user.id)} className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 font-bold h-11">نعم، احذف المستخدم</AlertDialogAction>
+                            <AlertDialogAction onClick={() => handleDelete(user.id, user.name)} className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 font-bold h-11">نعم، احذف المستخدم</AlertDialogAction>
                             <AlertDialogCancel className="flex-1 rounded-xl font-bold border-2 h-11">تراجع</AlertDialogCancel>
                           </AlertDialogFooter>
                         </AlertDialogContent>
