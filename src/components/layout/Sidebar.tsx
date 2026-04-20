@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -42,8 +41,8 @@ export function Sidebar() {
       isOpen ? "translate-x-0" : "translate-x-full"
     )}>
       <div className="p-8 flex items-center gap-4">
-        <div className="relative w-12 h-12 bg-white rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0 p-0">
-          <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
+        <div className="relative w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0 p-0">
+          <Image src="/logo-mustand.png" alt="Logo" fill className="object-contain p-2" />
         </div>
         <div className="flex flex-col">
           <span className="text-xl font-black tracking-tight">مستند</span>

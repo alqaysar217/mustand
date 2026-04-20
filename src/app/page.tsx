@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -43,8 +42,8 @@ export default function Home() {
       <div className="fixed inset-0 gradient-blue flex flex-col items-center justify-center text-white z-50">
         <div className="relative w-40 h-40 mb-6 flex items-center justify-center">
            <div className="absolute inset-0 bg-white/20 rounded-full blur-3xl animate-pulse" />
-           <div className="w-32 h-32 bg-white rounded-[10px] flex items-center justify-center border-2 border-white/20 relative z-10 shadow-2xl animate-fade-in overflow-hidden">
-              <Image src="https://picsum.photos/seed/logo1/200/200" alt="Logo" fill className="object-cover" priority />
+           <div className="w-32 h-32 bg-white rounded-3xl flex items-center justify-center border-2 border-white/20 relative z-10 shadow-2xl animate-fade-in overflow-hidden">
+              <Image src="/logo-mustand.png" alt="Logo" fill className="object-contain p-4" priority />
            </div>
         </div>
         <h1 className="text-4xl font-black mb-2 tracking-tight">مستند</h1>
@@ -58,8 +57,8 @@ export default function Home() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background animate-fade-in text-right" dir="rtl">
         <div className="mb-10 text-center">
-          <div className="relative w-24 h-24 mx-auto mb-4 bg-white rounded-[10px] shadow-xl flex items-center justify-center border-2 border-primary/10 overflow-hidden">
-            <Image src="https://picsum.photos/seed/logo1/200/200" alt="Logo" fill className="object-cover" />
+          <div className="relative w-24 h-24 mx-auto mb-4 bg-white rounded-2xl shadow-xl flex items-center justify-center border-2 border-primary/10 overflow-hidden">
+            <Image src="/logo-mustand.png" alt="Logo" fill className="object-contain p-2" />
           </div>
           <h1 className="text-3xl font-black text-primary">نظام مستند</h1>
         </div>
@@ -100,8 +99,8 @@ export default function Home() {
         </Button>
 
         <div className="text-center mb-10">
-          <div className="relative mx-auto bg-primary/5 rounded-[10px] mb-4 border border-primary/10 overflow-hidden w-24 h-24">
-            <Image src="https://picsum.photos/seed/logo1/200/200" alt="Logo" fill className="object-cover" />
+          <div className="relative mx-auto bg-primary/5 rounded-2xl mb-4 border border-primary/10 overflow-hidden w-24 h-24">
+            <Image src="/logo-mustand.png" alt="Logo" fill className="object-contain p-2" />
           </div>
           <h2 className="text-2xl font-black text-primary">تسجيل الدخول - {selectedRole === 'manager' ? 'الإدارة' : 'الأرشفة'}</h2>
           <p className="text-muted-foreground mt-1 font-bold">أهلاً بك مرة أخرى في نظام الأرشفة</p>

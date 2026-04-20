@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -54,8 +53,8 @@ export function AdminNavbar() {
       {/* Right Side: Logo & Name */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 bg-white rounded-[10px] flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
-            <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
+          <div className="relative w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
+            <Image src="/logo-mustand.png" alt="Logo" fill className="object-contain p-1.5" />
           </div>
           <h2 className="text-xl font-black text-primary">مستند</h2>
         </div>
@@ -84,8 +83,8 @@ export function AdminNavbar() {
             <SheetContent side="right" className="p-0 bg-primary border-none w-72 text-right">
               <div className="flex flex-col h-full text-white">
                 <SheetHeader className="p-8 flex flex-row items-center gap-4 border-b border-white/10 text-right space-y-0">
-                  <div className="relative w-12 h-12 bg-white rounded-[10px] flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0">
-                    <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
+                  <div className="relative w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0">
+                    <Image src="/logo-mustand.png" alt="Logo" fill className="object-contain p-2" />
                   </div>
                   <SheetTitle className="text-xl font-bold tracking-tight text-white m-0">مستند</SheetTitle>
                 </SheetHeader>
