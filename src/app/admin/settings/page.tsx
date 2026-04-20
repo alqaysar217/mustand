@@ -83,14 +83,13 @@ export default function AdminSettingsPage() {
       const archivesRef = collection(firestore, "archives");
       const subjectsRef = collection(firestore, "subjects");
       
-      // جلب بعض المواد الموجودة لربطها
       const subSnap = await getDocs(subjectsRef);
       const subs = subSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       let count = 0;
       for (let i = 1; i <= 10; i++) {
         const student = STUDENTS_IMPORT_LIST[(i - 1) % STUDENTS_IMPORT_LIST.length];
-        const subject = subs.length > 0 ? subs[(i - 1) % subs.length] : { nameAr: "مادة تجريبية " + i, id: "mock_" + i };
+        const subject = subs.length > 0 ? subs[(i - 1) % subs.length] : { nameAr: "مادة تجريبية " + i, id: "mock_" + i, level: "المستوى الأول" };
         
         await addDoc(archivesRef, {
           studentName: student.n,
@@ -99,8 +98,9 @@ export default function AdminSettingsPage() {
           subjectId: subject.id,
           year: "2023 / 2024",
           term: i % 2 === 0 ? "الفصل الأول" : "الفصل الثاني",
-          departmentId: "central_dept_id",
-          fileUrl: `/exam-${i}.png`, // الإشارة للصور في مجلد public
+          departmentId: (subject as any).departmentId || "central_dept_id",
+          level: (subject as any).level || "المستوى الأول", // إضافة المستوى للحقن
+          fileUrl: `/exam-${i}.png`, 
           pages: 1,
           uploadedAt: serverTimestamp()
         });
@@ -109,7 +109,7 @@ export default function AdminSettingsPage() {
 
       toast({
         title: "تم حقن البيانات",
-        description: `تمت إضافة ${count} سجلات مؤرشفة بنجاح باستخدام صور الاختبارات المرجعية.`,
+        description: `تمت إضافة ${count} سجلات مؤرشفة بنجاح مع كافة بيانات التصفية.`,
       });
     } catch (error) {
       toast({ variant: "destructive", title: "خطأ في الحقن", description: "فشل تزويد الأرشيف بالبيانات." });

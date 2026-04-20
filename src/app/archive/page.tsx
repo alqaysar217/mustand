@@ -17,7 +17,9 @@ import {
   Loader2,
   Trash2,
   BookOpen,
-  X
+  X,
+  Building2,
+  GraduationCap
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -55,14 +57,22 @@ export default function ArchivePage() {
   
   const firestore = useFirestore();
   const archivesQuery = useMemo(() => firestore ? collection(firestore, "archives") : null, [firestore]);
+  const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
+  const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
 
   const { data: archives = [], loading } = useCollection(archivesQuery);
+  const { data: departments = [] } = useCollection(deptsQuery);
+  const { data: subjects = [] } = useCollection(subjectsQuery);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedYear, setSelectedYear] = useState("all");
   const [selectedTerm, setSelectedTerm] = useState("all");
+  const [selectedDept, setSelectedDept] = useState("all");
+  const [selectedLevel, setSelectedLevel] = useState("all");
+  const [selectedSubject, setSelectedSubject] = useState("all");
 
   const processedResults = useMemo(() => {
+    // الترتيب البرمجي المحلي لضمان الظهور الفوري دون الحاجة لفهارس Firebase
     const sorted = [...archives].sort((a: any, b: any) => {
       const timeA = a.uploadedAt?.seconds || 0;
       const timeB = b.uploadedAt?.seconds || 0;
@@ -78,10 +88,13 @@ export default function ArchivePage() {
       const matchesSearch = sName.includes(search) || sId.includes(search) || subName.includes(search);
       const matchesYear = selectedYear === "all" || item.year === selectedYear;
       const matchesTerm = selectedTerm === "all" || item.term === selectedTerm;
+      const matchesDept = selectedDept === "all" || item.departmentId === selectedDept;
+      const matchesLevel = selectedLevel === "all" || item.level === selectedLevel;
+      const matchesSubject = selectedSubject === "all" || item.subjectId === selectedSubject;
 
-      return matchesSearch && matchesYear && matchesTerm;
+      return matchesSearch && matchesYear && matchesTerm && matchesDept && matchesLevel && matchesSubject;
     });
-  }, [archives, searchTerm, selectedYear, selectedTerm]);
+  }, [archives, searchTerm, selectedYear, selectedTerm, selectedDept, selectedLevel, selectedSubject]);
 
   const handleDownload = async (item: any) => {
     if (!item?.fileUrl) return;
@@ -129,9 +142,84 @@ export default function ArchivePage() {
           </Card>
 
           {showFilters && (
-            <Card className="p-6 rounded-[2rem] shadow-lg border-none bg-white animate-slide-up grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2"><label className="text-xs font-black text-primary mr-1">السنة الدراسية</label><Select value={selectedYear} onValueChange={setSelectedYear}><SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold"><SelectValue placeholder="اختر السنة" /></SelectTrigger><SelectContent className="rounded-xl font-bold"><SelectItem value="all">كافة السنوات</SelectItem><SelectItem value="2023 / 2024">2023 / 2024</SelectItem><SelectItem value="2022 / 2023">2022 / 2023</SelectItem></SelectContent></Select></div>
-              <div className="space-y-2"><label className="text-xs font-black text-primary mr-1">الفصل الدراسي</label><Select value={selectedTerm} onValueChange={setSelectedTerm}><SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold"><SelectValue placeholder="اختر الترم" /></SelectTrigger><SelectContent className="rounded-xl font-bold"><SelectItem value="all">كافة الفصول</SelectItem><SelectItem value="الفصل الأول">الفصل الأول</SelectItem><SelectItem value="الفصل الثاني">الفصل الثاني</SelectItem></SelectContent></Select></div>
+            <Card className="p-8 rounded-[2rem] shadow-lg border-none bg-white animate-slide-up grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2"><Calendar className="w-4 h-4 text-secondary" />السنة الدراسية</label>
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold"><SelectValue placeholder="اختر السنة" /></SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="all">كافة السنوات</SelectItem>
+                    <SelectItem value="2023 / 2024">2023 / 2024</SelectItem>
+                    <SelectItem value="2022 / 2023">2022 / 2023</SelectItem>
+                    <SelectItem value="2021 / 2022">2021 / 2022</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />التخصص</label>
+                <Select value={selectedDept} onValueChange={setSelectedDept}>
+                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="all">كافة التخصصات</SelectItem>
+                    {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى</label>
+                <Select value={selectedLevel} onValueChange={setSelectedLevel}>
+                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold"><SelectValue placeholder="المستوى" /></SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="all">كافة المستويات</SelectItem>
+                    <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                    <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                    <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                    <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة</label>
+                <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold"><SelectValue placeholder="اختر المادة" /></SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="all">كافة المواد</SelectItem>
+                    {subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nameAr}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2">الفصل الدراسي</label>
+                <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold"><SelectValue placeholder="اختر الترم" /></SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="all">كافة الفصول</SelectItem>
+                    <SelectItem value="الفصل الأول">الفصل الأول</SelectItem>
+                    <SelectItem value="الفصل الثاني">الفصل الثاني</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-end">
+                <Button 
+                  variant="outline" 
+                  className="w-full h-11 rounded-xl font-bold border-2 border-primary/20 text-primary"
+                  onClick={() => {
+                    setSelectedYear("all");
+                    setSelectedDept("all");
+                    setSelectedLevel("all");
+                    setSelectedSubject("all");
+                    setSelectedTerm("all");
+                    setSearchTerm("");
+                  }}
+                >
+                  إعادة ضبط الفلاتر
+                </Button>
+              </div>
             </Card>
           )}
         </div>
@@ -151,7 +239,9 @@ export default function ArchivePage() {
                           <Button onClick={() => setViewingExam(item)} className="w-full rounded-xl bg-white text-primary font-black hover:bg-white/90">عرض سريع</Button>
                           <Button disabled={downloadingId === item.id} onClick={() => handleDownload(item)} variant="outline" className="w-full rounded-xl bg-white/10 text-white border-white/20 font-black backdrop-blur-md h-11">{downloadingId === item.id ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Download className="w-4 h-4 ml-2" />}تحميل الملف</Button>
                         </div>
-                        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end"><Badge className="bg-primary/90 backdrop-blur-md border-none rounded-lg px-3 py-1 font-black shadow-lg">{item.term}</Badge></div>
+                        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                          <Badge className="bg-primary/90 backdrop-blur-md border-none rounded-lg px-3 py-1 font-black shadow-lg">{item.term}</Badge>
+                        </div>
                       </div>
                       <div className="p-6 text-right">
                         <div className="flex justify-between items-start mb-2 gap-2"><Button variant="ghost" size="icon" className="text-destructive h-8 w-8 hover:bg-destructive/10 rounded-lg shrink-0" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4" /></Button><h3 className="text-lg font-black text-primary leading-tight line-clamp-1 flex-1">{item.studentName}</h3></div>
@@ -174,7 +264,7 @@ export default function ArchivePage() {
                 <div className="w-24 h-24 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-6"><Search className="w-12 h-12 text-muted-foreground opacity-30" /></div>
                 <h3 className="text-3xl font-black text-primary mb-2">الأرشيف فارغ</h3>
                 <p className="text-muted-foreground font-bold">لم يتم العثور على أي ملفات مؤرشفة حالياً</p>
-                <Button variant="link" onClick={() => { setSearchTerm(""); setSelectedYear("all"); setSelectedTerm("all"); }} className="mt-4 font-bold text-secondary">إعادة ضبط البحث</Button>
+                <Button variant="link" onClick={() => { setSearchTerm(""); setSelectedYear("all"); setSelectedTerm("all"); setSelectedDept("all"); setSelectedLevel("all"); setSelectedSubject("all"); }} className="mt-4 font-bold text-secondary">إعادة ضبط البحث</Button>
               </div>
             )}
           </div>

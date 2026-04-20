@@ -232,6 +232,7 @@ export default function UploadPage() {
           year: capturedForm.year,
           term: capturedForm.term,
           departmentId: capturedForm.deptId,
+          level: capturedForm.level, // إضافة المستوى لضمان التصفية
           fileUrl: downloadUrl,
           pages: capturedFiles.length,
           uploadedAt: serverTimestamp()

@@ -78,6 +78,7 @@
         "subjectId": { "type": "string" },
         "subjectName": { "type": "string" },
         "departmentId": { "type": "string" },
+        "level": { "type": "string", "description": "المستوى الدراسي للاختبار" },
         "year": { "type": "string" },
         "term": { "type": "string" },
         "fileUrl": { "type": "string" },
