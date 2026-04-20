@@ -54,10 +54,10 @@ export function Navbar() {
           <PanelRight className={cn("w-6 h-6 transition-transform duration-300", !isOpen && "rotate-180")} />
         </Button>
 
-        {/* الشعار واسم النظام - في الموبايل يظهر دائماً، في الكمبيوتر يظهر فقط عند إغلاق القائمة */}
+        {/* الشعار واسم النظام - يظهر دائماً في الموبايل، وفي الكمبيوتر يظهر فقط عند إغلاق القائمة */}
         <div className={cn(
           "flex items-center gap-3 animate-fade-in",
-          isOpen && "md:hidden" 
+          isOpen ? "md:hidden" : "flex"
         )}>
           <div className="relative w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
             <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
@@ -76,7 +76,7 @@ export function Navbar() {
                 <Menu className="w-7 h-7" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="p-0 bg-primary border-none w-72 text-right">
+            <SheetContent side="right" className="p-0 bg-primary border-none w-72 text-right [&>button]:hidden">
               <div className="flex flex-col h-full text-white">
                 <SheetHeader className="p-8 flex flex-row items-center gap-4 border-b border-white/10 text-right space-y-0">
                   <div className="relative w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0">
