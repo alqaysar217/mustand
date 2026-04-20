@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useMemo } from "react";
@@ -48,12 +47,12 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
+import { downloadFile, compressImage } from "@/lib/storage-utils";
 
 // Firebase
 import { useFirestore, useCollection, useStorage } from "@/firebase";
 import { collection, deleteDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { downloadFile } from "@/lib/storage-utils";
 
 export default function AdminArchivePage() {
   const firestore = useFirestore();
@@ -123,9 +122,14 @@ export default function AdminArchivePage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIsSubmitting(true);
       const reader = new FileReader();
-      reader.onload = (event) => {
-        setNewArchive(prev => ({ ...prev, file: event.target?.result as string }));
+      reader.onload = async (event) => {
+        if (event.target?.result) {
+          const compressed = await compressImage(event.target.result as string);
+          setNewArchive(prev => ({ ...prev, file: compressed }));
+        }
+        setIsSubmitting(false);
       };
       reader.readAsDataURL(file);
     }
@@ -163,6 +167,9 @@ export default function AdminArchivePage() {
           uploadedAt: serverTimestamp()
         };
         addDoc(collection(firestore, "archives"), archiveData);
+      }).catch((err) => {
+        console.error("Storage upload error:", err);
+        toast({ variant: "destructive", title: "فشل الرفع", description: "تعذر رفع الملف للسحابة. يرجى المحاولة مرة أخرى." });
       });
       
       // Close UI ASAP
@@ -342,11 +349,16 @@ export default function AdminArchivePage() {
 
             <div className="pt-4">
               <Label className="text-primary font-bold block mb-3">صورة الاختبار</Label>
-              <div onClick={() => fileInputRef.current?.click()} className={cn("w-full h-40 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer", newArchive.file ? "border-green-500 bg-green-50" : "border-muted-foreground/20 hover:border-primary")}>
-                {newArchive.file ? (
+              <div onClick={() => !isSubmitting && fileInputRef.current?.click()} className={cn("w-full h-40 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer", newArchive.file ? "border-green-500 bg-green-50" : "border-muted-foreground/20 hover:border-primary")}>
+                {isSubmitting ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                    <span className="text-sm font-bold text-primary">جاري معالجة الصورة...</span>
+                  </div>
+                ) : newArchive.file ? (
                   <div className="flex flex-col items-center gap-1">
                     <CheckCircle className="w-10 h-10 text-green-500" />
-                    <span className="text-xs font-bold text-green-600">تم اختيار الملف</span>
+                    <span className="text-xs font-bold text-green-600">تم اختيار الملف بنجاح</span>
                   </div>
                 ) : (
                   <>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useRef } from "react";
@@ -39,6 +38,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
+import { compressImage } from "@/lib/storage-utils";
 
 // Firebase Imports
 import { useFirestore, useCollection, useStorage } from "@/firebase";
@@ -106,21 +106,32 @@ export default function UploadPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (fileList && fileList.length > 0) {
+      setLoadingText("جاري تحسين الصور...");
+      setLoading(true);
+      
       const filesArray = Array.from(fileList);
-      const readers = filesArray.map(file => {
+      const processors = filesArray.map(file => {
         return new Promise<string>((resolve) => {
           const reader = new FileReader();
-          reader.onload = (event) => {
-            if (event.target?.result) resolve(event.target.result as string);
+          reader.onload = async (event) => {
+            if (event.target?.result) {
+              // ضغط الصورة فوراً قبل حفظها في الذاكرة أو رفعها
+              const compressed = await compressImage(event.target.result as string);
+              resolve(compressed);
+            }
           };
           reader.readAsDataURL(file);
         });
       });
 
-      Promise.all(readers).then(newFiles => {
+      Promise.all(processors).then(newFiles => {
         setFiles(prev => [...prev, ...newFiles]);
+        setLoading(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
         if (step === 2 && newFiles.length > 0) nextStep();
+      }).catch(() => {
+        setLoading(false);
+        toast({ variant: "destructive", title: "خطأ في معالجة الصور" });
       });
     }
   };
@@ -203,22 +214,20 @@ export default function UploadPage() {
       return;
     }
 
-    // استراتيجية الأرشفة الفورية (Zero-Wait)
     const capturedFiles = [...files];
     const capturedData = { ...extractedData };
     const capturedForm = { ...formData };
 
-    // 1. تحديث الواجهة فوراً لضمان السرعة
+    // تحديث الواجهة فوراً
     setFiles([]);
     setExtractedData({ id: '', name: '', found: false, originalName: '' });
-    setStep(2); // العودة لخطوة الرفع لمواصلة العمل فوراً
+    setStep(2); 
     
     toast({ 
       title: "بدأت الأرشفة", 
       description: `يتم الآن حفظ ملف الطالب ${capturedData.name} في الخلفية لضمان سرعتك.` 
     });
 
-    // 2. التنفيذ في الخلفية (Parallel Execution)
     const folderName = (capturedForm.year || "unknown").replace(/\s/g, '').replace(/\//g, '-');
     const fileName = `archives/${folderName}/${capturedForm.subjectName}/${capturedData.id}_${Date.now()}.jpg`;
     const storageRef = ref(storage, fileName);
@@ -246,6 +255,11 @@ export default function UploadPage() {
       })
       .catch((err) => {
         console.error("Storage Error:", err);
+        toast({
+          variant: "destructive",
+          title: "فشلت الأرشفة الخلفية",
+          description: "حدث خطأ أثناء رفع الملف للسحابة. يرجى المحاولة مرة أخرى لاحقاً."
+        });
       });
   };
 
