@@ -106,6 +106,7 @@ export default function AdminSettingsPage() {
       const subs = subSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       let count = 0;
+      // الحقن بـ 10 سجلات باستخدام صور exam-1.png إلى exam-10.png من مجلد public
       for (let i = 1; i <= 10; i++) {
         const student = STUDENTS_IMPORT_LIST[(i - 1) % STUDENTS_IMPORT_LIST.length];
         const subject = subs.length > 0 ? subs[(i - 1) % subs.length] : { nameAr: "مادة تجريبية " + i, id: "mock_" + i, level: "المستوى الأول", departmentId: "central_dept", departmentName: "تقنية المعلومات", collegeName: "كلية الحاسبات" };
@@ -121,7 +122,7 @@ export default function AdminSettingsPage() {
           departmentName: (subject as any).departmentName || "تقنية المعلومات",
           collegeName: (subject as any).collegeName || "كلية الحاسبات",
           level: (subject as any).level || "المستوى الأول",
-          fileUrl: `/exam-${i}.png`, 
+          fileUrl: `/exam-${i}.png`, // الإشارة للصور في مجلد public
           pages: 1,
           uploadedAt: serverTimestamp()
         });

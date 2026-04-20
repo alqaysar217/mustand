@@ -23,7 +23,8 @@ import {
   Fingerprint,
   Clock,
   School,
-  FileText
+  FileText,
+  Sparkles
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -83,6 +84,7 @@ export default function ArchivePage() {
   const [selectedSubject, setSelectedSubject] = useState("all");
 
   const processedResults = useMemo(() => {
+    // Client-side sorting for zero index delay
     const sorted = [...archives].sort((a: any, b: any) => {
       const timeA = a.uploadedAt?.seconds || 0;
       const timeB = b.uploadedAt?.seconds || 0;
@@ -333,15 +335,30 @@ export default function ArchivePage() {
               <div className="py-32 text-center bg-white rounded-[3rem] shadow-xl border-4 border-dashed border-muted/50 max-w-2xl mx-auto">
                 <div className="w-20 h-20 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-6"><Search className="w-10 h-10 text-muted-foreground opacity-30" /></div>
                 <h3 className="text-2xl font-black text-primary mb-2">الأرشيف فارغ</h3>
-                <p className="text-muted-foreground font-bold text-sm mb-6">لم يتم العثور على أي ملفات مؤرشفة حالياً</p>
-                <Button variant="outline" onClick={() => {
-                   setSelectedYear("all");
-                   setSelectedDept("all");
-                   setSelectedLevel("all");
-                   setSelectedSubject("all");
-                   setSelectedTerm("all");
-                   setSearchTerm("");
-                }} className="rounded-xl border-2 font-bold px-8">إعادة ضبط البحث</Button>
+                <p className="text-muted-foreground font-bold text-sm mb-8">لم يتم العثور على أي ملفات مؤرشفة حالياً. هل تود حقن بيانات تجريبية (10 اختبارات)؟</p>
+                <div className="flex justify-center gap-4">
+                  <Button 
+                    onClick={() => window.location.href='/admin/settings'} 
+                    className="rounded-xl h-12 px-8 font-black gradient-blue shadow-lg gap-2"
+                  >
+                    <Sparkles className="w-5 h-5" />
+                    حقن البيانات الحقيقية
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setSelectedYear("all");
+                      setSelectedDept("all");
+                      setSelectedLevel("all");
+                      setSelectedSubject("all");
+                      setSelectedTerm("all");
+                      setSearchTerm("");
+                    }} 
+                    className="rounded-xl border-2 font-bold px-8 h-12"
+                  >
+                    إعادة ضبط البحث
+                  </Button>
+                </div>
               </div>
             )}
           </div>

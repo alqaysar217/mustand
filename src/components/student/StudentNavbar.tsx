@@ -28,23 +28,14 @@ export function StudentNavbar() {
       "h-20 bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 flex items-center justify-between px-6 md:px-10 transition-all duration-300",
       isOpen ? "mr-0 md:mr-64" : "mr-0"
     )} dir="rtl">
-      {/* Right Side: Logo & System Name (Always visible on mobile) */}
+      {/* Right Side: Logo & Name */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3 md:hidden">
+        <div className="flex items-center gap-3">
           <div className="relative w-10 h-10 bg-white rounded-[10px] flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
             <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
           </div>
           <h2 className="text-xl font-black text-primary">مستند</h2>
         </div>
-
-        {!isOpen && (
-          <div className="hidden md:flex items-center gap-3 animate-fade-in">
-            <div className="relative w-10 h-10 bg-white rounded-[10px] flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
-              <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
-            </div>
-            <h2 className="text-xl font-black text-primary">مستند</h2>
-          </div>
-        )}
 
         <Button 
           variant="ghost" 
@@ -59,7 +50,7 @@ export function StudentNavbar() {
 
       {/* Left Side: Mobile Menu Trigger or Desktop Profile */}
       <div className="flex items-center gap-4">
-        {/* Mobile Menu Trigger */}
+        {/* Mobile Menu Trigger - Shown only on mobile */}
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
@@ -114,10 +105,10 @@ export function StudentNavbar() {
           </Sheet>
         </div>
 
-        {/* Desktop Profile Picture */}
+        {/* Desktop Profile Picture - Hidden on mobile */}
         <div className="hidden md:flex items-center gap-3 cursor-pointer group" onClick={() => router.push('/student/profile')}>
-          <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group">
-            <Image src="/profile.png" alt="Profile" width={40} height={40} className="object-cover" />
+          <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group shadow-sm">
+            <Image src="/profile.png" alt="Profile" fill className="object-cover" />
           </div>
         </div>
       </div>
