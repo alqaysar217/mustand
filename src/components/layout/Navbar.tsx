@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, GraduationCap, BookOpen, LogOut, Building2, PanelRight, School } from "lucide-react";
+import { Menu, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, BookOpen, LogOut, Building2, PanelRight, School } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Link from "next/link";
@@ -17,7 +17,6 @@ const menuItems = [
   { label: 'الأرشيف', icon: Archive, href: '/archive' },
   { label: 'إدارة الكليات', icon: School, href: '/colleges' },
   { label: 'إدارة التخصصات', icon: Building2, href: '/departments' },
-  { label: 'إدارة الطلاب', icon: GraduationCap, href: '/students' },
   { label: 'إدارة المواد', icon: BookOpen, href: '/subjects' },
   { label: 'البحث', icon: Search, href: '/search' },
   { label: 'الإعدادات', icon: Settings, href: '/settings' },
@@ -44,7 +43,6 @@ export function Navbar() {
     )} dir="rtl">
       {/* Right Side: Logo & System Name */}
       <div className="flex items-center gap-4">
-        {/* Mobile View & Desktop (when sidebar hidden): Logo and Name always on right in RTL */}
         <div className="flex items-center gap-3">
           <div className="relative w-10 h-10 bg-white rounded-[10px] flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
             <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
@@ -52,7 +50,6 @@ export function Navbar() {
           <h2 className="text-xl font-black text-primary">مستند</h2>
         </div>
 
-        {/* Desktop View Sidebar Toggle */}
         <Button 
           variant="ghost" 
           size="icon" 
@@ -64,9 +61,8 @@ export function Navbar() {
         </Button>
       </div>
 
-      {/* Left Side: Profile (Desktop) or Menu Trigger (Mobile) */}
+      {/* Left Side: Profile Picture or Mobile Menu */}
       <div className="flex items-center gap-3">
-        {/* Mobile Menu Trigger (Sheet) - Shown only on mobile */}
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
@@ -121,7 +117,6 @@ export function Navbar() {
           </Sheet>
         </div>
 
-        {/* Desktop Profile Picture - Hidden on mobile */}
         <div className="hidden md:flex items-center gap-3 cursor-pointer group">
           <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group shadow-sm">
             <Image src="/profile.png" alt="Profile" fill className="object-cover group-hover:scale-110 transition-transform" />

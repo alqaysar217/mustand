@@ -12,7 +12,6 @@ import {
   Settings, 
   LogOut,
   ChevronLeft,
-  GraduationCap,
   BookOpen,
   Building2,
   School
@@ -27,7 +26,6 @@ const menuItems = [
   { label: 'الأرشيف', icon: Archive, href: '/archive' },
   { label: 'إدارة الكليات', icon: School, href: '/colleges' },
   { label: 'إدارة التخصصات', icon: Building2, href: '/departments' },
-  { label: 'إدارة الطلاب', icon: GraduationCap, href: '/students' },
   { label: 'إدارة المواد', icon: BookOpen, href: '/subjects' },
   { label: 'البحث', icon: Search, href: '/search' },
   { label: 'الإعدادات', icon: Settings, href: '/settings' },
