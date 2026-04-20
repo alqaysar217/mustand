@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -53,6 +53,11 @@ const COLORS = ['#0B3C5D', '#328CC1', '#D9E3F0', '#4ade80', '#f97316'];
 export default function ReportsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Queries
   const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
@@ -94,6 +99,11 @@ export default function ReportsPage() {
     return Object.entries(counts).map(([name, value]) => ({ name, value })).slice(0, 5);
   }, [archives]);
 
+  const formatNumber = (num: number) => {
+    if (!mounted) return num.toString();
+    return num.toLocaleString();
+  };
+
   const handleExportCSV = (reportType: 'students' | 'staff' | 'archives') => {
     setExporting(true);
     try {
@@ -107,7 +117,7 @@ export default function ReportsPage() {
         fileName = `تقرير_الطلاب_${new Date().toLocaleDateString('ar-EG')}.csv`;
       } else if (reportType === 'staff') {
         headers = ["الاسم", "اسم المستخدم", "الدور", "الحالة", "تاريخ التسجيل"];
-        rows = (staff as any[]).map(u => [u.name, u.username, u.role === 'manager' ? 'مدير' : 'موظف', u.status === 'active' ? 'نشط' : 'موقوف', u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : '---']);
+        rows = (staff as any[]).map(u => [u.name, u.username, u.role === 'manager' ? 'مدير' : 'موظف', u.status === 'active' ? 'نشط' : 'موظف', u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : '---']);
         fileName = `تقرير_العاملين_${new Date().toLocaleDateString('ar-EG')}.csv`;
       } else {
         headers = ["الطالب", "المادة", "الترم", "السنة", "تاريخ الرفع"];
@@ -174,7 +184,7 @@ export default function ReportsPage() {
             <Badge className="bg-green-50 text-green-700 border-none font-black">قاعدة البيانات</Badge>
           </div>
           <p className="text-muted-foreground text-sm font-bold">إجمالي الطلاب</p>
-          <h4 className="text-3xl font-black text-primary">{students.length.toLocaleString()}</h4>
+          <h4 className="text-3xl font-black text-primary">{formatNumber(students.length)}</h4>
         </Card>
         
         <Card className="p-6 border-none shadow-xl rounded-3xl bg-white border-r-8 border-secondary">
@@ -183,7 +193,7 @@ export default function ReportsPage() {
             <Badge className="bg-blue-50 text-blue-700 border-none font-black">القوى العاملة</Badge>
           </div>
           <p className="text-muted-foreground text-sm font-bold">إجمالي العاملين</p>
-          <h4 className="text-3xl font-black text-primary">{staff.length.toLocaleString()}</h4>
+          <h4 className="text-3xl font-black text-primary">{formatNumber(staff.length)}</h4>
         </Card>
 
         <Card className="p-6 border-none shadow-xl rounded-3xl bg-white border-r-8 border-orange-500">
@@ -192,7 +202,7 @@ export default function ReportsPage() {
             <Badge className="bg-orange-50 text-orange-700 border-none font-black">الأرشفة السحابية</Badge>
           </div>
           <p className="text-muted-foreground text-sm font-bold">إجمالي الاختبارات</p>
-          <h4 className="text-3xl font-black text-primary">{archives.length.toLocaleString()}</h4>
+          <h4 className="text-3xl font-black text-primary">{formatNumber(archives.length)}</h4>
         </Card>
       </div>
 
@@ -369,3 +379,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
