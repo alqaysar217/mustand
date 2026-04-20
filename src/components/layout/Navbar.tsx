@@ -125,10 +125,6 @@ export function Navbar() {
         <div className="h-10 w-px bg-border mx-2"></div>
         
         <div className="flex items-center gap-3 cursor-pointer group">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-primary">أ. محمد علي</p>
-            <p className="text-[10px] text-muted-foreground font-bold">موظف (قسم الاختبارات)</p>
-          </div>
           <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group">
             <Image src="/profile.png" alt="Profile" fill className="object-cover group-hover:scale-110 transition-transform" />
           </div>
