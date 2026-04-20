@@ -134,7 +134,8 @@ export default function UsersPage() {
       await updateDoc(doc(firestore, "users", editingUser.id), {
         name: editingUser.name,
         username: editingUser.username,
-        role: editingUser.role
+        role: editingUser.role,
+        password: editingUser.password || ""
       });
       setEditingUser(null);
       toast({ title: "تم تحديث البيانات" });
@@ -381,6 +382,19 @@ export default function UsersPage() {
                     <SelectItem value="employee">موظف أرشفة</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                  <Lock className="w-4 h-4 text-secondary" />
+                  كلمة المرور
+                </Label>
+                <Input 
+                  type="text" 
+                  value={editingUser?.password || ""} 
+                  onChange={(e) => setEditingUser({...editingUser, password: e.target.value})} 
+                  className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20 font-mono" 
+                  placeholder="كلمة المرور الجديدة"
+                />
               </div>
             </div>
             <DialogFooter className="flex-row gap-3 pt-6">
