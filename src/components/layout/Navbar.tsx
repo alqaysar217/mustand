@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, BookOpen, LogOut, Building2, PanelRight, School, X } from "lucide-react";
+import { Menu, LayoutDashboard, UploadCloud, Archive, LogOut, PanelRight, ChevronLeft, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Link from "next/link";
@@ -15,11 +14,7 @@ const menuItems = [
   { label: 'الرئيسية', icon: LayoutDashboard, href: '/dashboard' },
   { label: 'رفع اختبار', icon: UploadCloud, href: '/upload' },
   { label: 'الأرشيف', icon: Archive, href: '/archive' },
-  { label: 'إدارة الكليات', icon: School, href: '/colleges' },
-  { label: 'إدارة التخصصات', icon: Building2, href: '/departments' },
-  { label: 'إدارة المواد', icon: BookOpen, href: '/subjects' },
-  { label: 'البحث', icon: Search, href: '/search' },
-  { label: 'الإعدادات', icon: Settings, href: '/settings' },
+  { label: 'إدارة الطلاب', icon: GraduationCap, href: '/students' },
 ];
 
 export function Navbar() {
@@ -41,20 +36,19 @@ export function Navbar() {
       "h-20 bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 flex items-center justify-between px-6 md:px-10 transition-all duration-300",
       isOpen ? "mr-0 md:mr-64" : "mr-0"
     )} dir="rtl">
-      {/* جهة اليمين (العربي) */}
+      {/* الجهة اليمنى */}
       <div className="flex items-center gap-4">
-        {/* زر التحكم بالكمبيوتر - يختفي في الموبايل */}
+        {/* زر التحكم بالكمبيوتر */}
         <Button 
           variant="ghost" 
           size="icon" 
           className="hidden md:flex rounded-xl text-primary hover:bg-primary/5 shrink-0"
           onClick={toggle}
-          title={isOpen ? "إخفاء القائمة" : "إظهار القائمة"}
         >
           <PanelRight className={cn("w-6 h-6 transition-transform duration-300", !isOpen && "rotate-180")} />
         </Button>
 
-        {/* الشعار واسم النظام - يظهر دائماً في الموبايل، وفي الكمبيوتر يظهر فقط عند إغلاق القائمة */}
+        {/* الشعار والاسم (يظهر دائما في الموبايل، وعند إغلاق القائمة في الكمبيوتر) */}
         <div className={cn(
           "flex items-center gap-3 animate-fade-in",
           isOpen ? "md:hidden" : "flex"
@@ -66,9 +60,9 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* جهة اليسار */}
+      {/* الجهة اليسرى */}
       <div className="flex items-center gap-3">
-        {/* أيقونة القائمة للموبايل - تظهر فقط في الشاشات الصغيرة */}
+        {/* المنيو للموبايل */}
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
@@ -88,7 +82,7 @@ export function Navbar() {
                 <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                   {menuItems.map((item) => {
                     const isActive = pathname === item.href;
-                    const Icon = item.icon;
+                    const Icon = item.icon as any;
                     return (
                       <Link 
                         key={item.href} 
@@ -123,7 +117,7 @@ export function Navbar() {
           </Sheet>
         </div>
 
-        {/* بروفايل المستخدم للكمبيوتر */}
+        {/* البروفايل للكمبيوتر */}
         <div className="hidden md:flex items-center gap-3 cursor-pointer group">
           <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group shadow-sm">
             <Image src="/profile.png" alt="Profile" fill className="object-cover group-hover:scale-110 transition-transform" />

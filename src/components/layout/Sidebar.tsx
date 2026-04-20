@@ -7,13 +7,9 @@ import {
   LayoutDashboard, 
   UploadCloud, 
   Archive, 
-  Search, 
-  Settings, 
   LogOut,
   ChevronLeft,
-  BookOpen,
-  Building2,
-  School
+  GraduationCap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,11 +19,7 @@ const menuItems = [
   { label: 'الرئيسية', icon: LayoutDashboard, href: '/dashboard' },
   { label: 'رفع اختبار', icon: UploadCloud, href: '/upload' },
   { label: 'الأرشيف', icon: Archive, href: '/archive' },
-  { label: 'إدارة الكليات', icon: School, href: '/colleges' },
-  { label: 'إدارة التخصصات', icon: Building2, href: '/departments' },
-  { label: 'إدارة المواد', icon: BookOpen, href: '/subjects' },
-  { label: 'البحث', icon: Search, href: '/search' },
-  { label: 'الإعدادات', icon: Settings, href: '/settings' },
+  { label: 'إدارة الطلاب', icon: GraduationCap, href: '/students' },
 ];
 
 export function Sidebar() {
