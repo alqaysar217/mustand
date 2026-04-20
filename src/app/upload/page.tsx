@@ -31,7 +31,7 @@ import {
   CloudUpload,
   Keyboard,
   Cpu,
-  Link as LinkIcon
+  Image as ImageIcon
 } from "lucide-react";
 import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 import Image from "next/image";
@@ -49,9 +49,7 @@ export default function UploadPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("جاري المعالجة...");
-  const [isSearching, setIsSearching] = useState(false);
   const [files, setFiles] = useState<string[]>([]);
-  const [docLink, setDocLink] = useState("");
   const [extractedData, setExtractedData] = useState({ id: '', name: '', found: false });
   const [formData, setFormData] = useState({ 
     year: '', 
@@ -92,29 +90,18 @@ export default function UploadPage() {
       setLoadingText("جاري تحسين الصور...");
       setLoading(true);
       
-      const filesArray = Array.from(fileList);
-      const processors = filesArray.map(file => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = async (event) => {
-            if (event.target?.result) {
-              const compressed = await compressImage(event.target.result as string);
-              resolve(compressed);
-            }
-          };
-          reader.readAsDataURL(file);
-        });
-      });
-
-      Promise.all(processors).then(newFiles => {
-        setFiles(prev => [...prev, ...newFiles]);
-        setLoading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        if (step === 2 && newFiles.length > 0) setStep(3);
-      }).catch(() => {
-        setLoading(false);
-        toast({ variant: "destructive", title: "خطأ في معالجة الصور" });
-      });
+      const file = fileList[0];
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        if (event.target?.result) {
+          const compressed = await compressImage(event.target.result as string, 0.7, 1200);
+          setFiles([compressed]);
+          setLoading(false);
+          setStep(3);
+        }
+      };
+      reader.readAsDataURL(file);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -132,7 +119,6 @@ export default function UploadPage() {
     setLoadingText("جاري استخراج البيانات ذكياً...");
     setLoading(true);
     try {
-      // إرسال الصورة مباشرة بصيغة Base64 لمحرك Gemini
       const result = await extractExamDetails({ examImageDataUri: files[0] });
       const cleanRegId = result.studentRegistrationId?.replace(/\D/g, '') || '';
       const student = await findStudentByRegId(cleanRegId);
@@ -156,8 +142,8 @@ export default function UploadPage() {
   };
 
   const handleSaveToArchive = async () => {
-    if (!firestore || !extractedData.id || !formData.subjectName || !docLink) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى وضع رابط المستند وإكمال بيانات الطالب." });
+    if (!firestore || !extractedData.id || !formData.subjectName || files.length === 0) {
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى رفع صورة الاختبار وإكمال بيانات الطالب." });
       return;
     }
 
@@ -176,8 +162,8 @@ export default function UploadPage() {
         departmentName: formData.deptName,
         collegeName: formData.collegeName,
         level: formData.level, 
-        fileUrl: docLink, // حفظ الرابط المباشر
-        pages: files.length || 1,
+        fileUrl: files[0], // حفظ الصورة نفسها كرابط (Base64)
+        pages: 1,
         uploadMethod: mode === 'ai' ? 'AI' : 'Manual',
         uploadedAt: serverTimestamp()
       };
@@ -186,7 +172,6 @@ export default function UploadPage() {
 
       toast({ title: "تمت الأرشفة بنجاح" });
       setFiles([]);
-      setDocLink("");
       setExtractedData({ id: '', name: '', found: false });
       setStep(1);
 
@@ -208,7 +193,7 @@ export default function UploadPage() {
       )} dir="rtl">
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-black text-primary mb-2">أرشفة رقمية فورية</h1>
-          <p className="text-muted-foreground font-bold text-lg">نظام الأرشفة عبر الروابط المباشرة والتحليل الذكي</p>
+          <p className="text-muted-foreground font-bold text-lg">نظام الأرشفة المباشر مع التحليل الذكي للصور</p>
         </div>
 
         <div className="max-w-md mx-auto mb-12">
@@ -230,9 +215,9 @@ export default function UploadPage() {
                 step >= s ? "bg-primary text-white border-primary scale-110 shadow-lg" : "bg-white text-muted-foreground border-muted"
               )}
             >
-              {step > s ? <CheckCircle className="w-6 h-6" /> : (s === 5 ? 4 : s)}
+              {step > s ? <CheckCircle className="w-6 h-6" /> : (s === 5 ? 4 : s === 3 ? 3 : s)}
               <span className={cn("absolute -bottom-10 whitespace-nowrap text-[11px] font-black", step >= s ? "text-primary" : "text-muted-foreground")}>
-                {s === 1 && 'السياق'} {s === 2 && 'الرابط'} {s === 3 && 'المعاينة'} {s === 5 && 'التأكيد'}
+                {s === 1 && 'السياق'} {s === 2 && 'الرفع'} {s === 3 && 'المعاينة'} {s === 5 && 'التأكيد'}
               </span>
             </div>
           ))}
@@ -289,32 +274,25 @@ export default function UploadPage() {
           )}
 
           {step === 2 && (
-            <div className="space-y-10 animate-slide-up flex-1">
-              <div className="flex items-center gap-4 border-b pb-6">
-                <div className="p-3 bg-secondary/10 rounded-2xl text-secondary"><LinkIcon className="w-7 h-7" /></div>
-                <div><h2 className="text-2xl font-black text-primary">رابط مستند الاختبار</h2><p className="text-muted-foreground text-sm font-bold">ضع رابط الملف من Google Drive أو أي مصدر خارجي</p></div>
+            <div className="space-y-10 animate-slide-up flex-1 flex flex-col items-center justify-center">
+              <div className="text-center space-y-4 mb-8">
+                <div className="p-4 bg-primary/5 rounded-full inline-block text-primary mb-2"><ImageIcon className="w-12 h-12" /></div>
+                <h2 className="text-3xl font-black text-primary">رفع صورة الاختبار</h2>
+                <p className="text-muted-foreground font-bold">يرجى رفع صورة واضحة لترويسة الاختبار</p>
               </div>
-              <div className="space-y-6">
-                <div className="space-y-3">
-                   <Label className="text-sm font-black text-primary">رابط المستند المباشر</Label>
-                   <input 
-                     value={docLink} 
-                     onChange={(e) => setDocLink(e.target.value)} 
-                     placeholder="https://drive.google.com/..." 
-                     className="w-full h-16 px-6 rounded-2xl border-2 border-muted focus:border-primary bg-muted/5 font-bold text-left outline-none transition-all"
-                     dir="ltr"
-                   />
+              
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full max-w-xl p-16 border-4 border-dashed border-muted rounded-[40px] flex flex-col items-center gap-6 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group"
+              >
+                <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-sm">
+                  <FileUp className="w-12 h-12" />
                 </div>
-                {mode === 'ai' && (
-                  <div className="p-6 bg-primary/5 rounded-2xl border-2 border-dashed border-primary/20 flex flex-col items-center gap-4">
-                    <p className="text-sm font-bold text-primary">للبدء بالتحليل الذكي، يرجى رفع صورة معاينة للاختبار:</p>
-                    <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="rounded-xl h-12 px-8 font-black gap-2 border-2">
-                      <FileUp className="w-5 h-5" />
-                      رفع صورة للمعاينة
-                    </Button>
-                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
-                  </div>
-                )}
+                <div className="text-center">
+                  <p className="text-xl font-black text-primary">اضغط هنا لاختيار الصورة</p>
+                  <p className="text-sm text-muted-foreground font-bold mt-2">يدعم صيغ JPG, PNG</p>
+                </div>
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
               </div>
             </div>
           )}
@@ -322,13 +300,18 @@ export default function UploadPage() {
           {step === 3 && (
              <div className="animate-slide-up flex-1 space-y-10">
                <div className="flex items-center justify-between border-b pb-6">
-                  <div><h2 className="text-2xl font-black text-primary">معاينة المستند</h2><p className="text-muted-foreground font-bold text-sm">تأكيد الرابط وصورة المعاينة المرفوعة</p></div>
-                  <Button variant="ghost" onClick={() => { setFiles([]); setStep(2); }} className="text-destructive font-black gap-2"><Trash2 className="w-5 h-5" />مسح المعاينة</Button>
+                  <div><h2 className="text-2xl font-black text-primary">معاينة الصورة</h2><p className="text-muted-foreground font-bold text-sm">تأكيد الصورة المرفوعة قبل البدء بالتحليل</p></div>
+                  <Button variant="ghost" onClick={() => { setFiles([]); setStep(2); }} className="text-destructive font-black gap-2"><Trash2 className="w-5 h-5" />مسح الصورة</Button>
                </div>
-               <div className="flex flex-col md:flex-row gap-10">
-                  <div className="flex-1 space-y-4">
-                    <Label className="font-black text-primary">رابط الملف المحفوظ:</Label>
-                    <div className="p-4 bg-muted/30 rounded-2xl break-all font-mono text-xs text-secondary border border-muted">{docLink}</div>
+               <div className="flex flex-col md:flex-row gap-10 items-center justify-center">
+                  <div className="w-full md:w-80 aspect-[3/4] relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
+                    <Image src={files[0]} alt="Preview" fill className="object-cover" />
+                  </div>
+                  <div className="flex-1 max-w-md space-y-6 text-center md:text-right">
+                    <div className="p-6 bg-muted/20 rounded-3xl border border-muted">
+                      <p className="font-bold text-primary mb-2">تم اختيار الصورة بنجاح</p>
+                      <p className="text-sm text-muted-foreground">سيتم استخدام هذه الصورة كملف مؤرشف نهائي.</p>
+                    </div>
                     {mode === 'ai' ? (
                        <Button onClick={handleOCR} className="w-full h-16 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-3 animate-pulse">
                          <Scan className="w-6 h-6" />
@@ -341,11 +324,6 @@ export default function UploadPage() {
                        </Button>
                     )}
                   </div>
-                  {files.length > 0 && (
-                    <div className="w-full md:w-64 aspect-[3/4] relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
-                      <Image src={files[0]} alt="Preview" fill className="object-cover" />
-                    </div>
-                  )}
                </div>
              </div>
           )}
@@ -386,13 +364,10 @@ export default function UploadPage() {
           )}
 
           <div className="mt-auto pt-10 flex items-center justify-between border-t-2 border-muted/30">
-            <Button variant="outline" onClick={() => setStep(prev => prev === 5 ? (mode === 'manual' ? 2 : 3) : Math.max(prev - 1, 1))} disabled={step === 1 || loading} className="h-16 px-10 rounded-2xl border-2 border-muted font-black gap-4 hover:bg-muted/10 transition-all flex items-center">السابق<ChevronRight className="w-6 h-6" /></Button>
+            <Button variant="outline" onClick={() => setStep(prev => prev === 5 ? 3 : Math.max(prev - 1, 1))} disabled={step === 1 || loading} className="h-16 px-10 rounded-2xl border-2 border-muted font-black gap-4 hover:bg-muted/10 transition-all flex items-center">السابق<ChevronRight className="w-6 h-6" /></Button>
             <div className="flex gap-4">
               {step === 1 && (
                 <Button onClick={() => setStep(2)} disabled={!formData.subjectId} className="h-16 px-16 rounded-2xl font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"><ChevronLeft className="w-6 h-6" />التالي</Button>
-              )}
-              {step === 2 && (
-                <Button onClick={() => setStep(mode === 'manual' ? 5 : 3)} disabled={!docLink} className="h-16 px-16 rounded-2xl font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"><ChevronLeft className="w-6 h-6" />التالي</Button>
               )}
               {step === 5 && (
                 <Button onClick={handleSaveToArchive} disabled={loading || !extractedData.id} className="h-16 px-16 rounded-2xl font-black gap-4 bg-green-600 text-white shadow-xl hover:bg-green-700 hover:scale-105 transition-all"><CloudUpload className="w-6 h-6" />إكمال الأرشفة السحابية</Button>
