@@ -331,10 +331,10 @@ export default function StudentsManagementPage() {
                   <User className="w-4 h-4 text-secondary" />
                   الاسم الكامل
                 </Label>
-                <Input 
+                <input 
                   value={editingStudent?.name || ""}
                   onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
-                  className="rounded-xl h-11 border-muted text-right font-bold" 
+                  className="rounded-xl h-11 border border-muted text-right font-bold px-3 outline-none focus:border-primary transition-all" 
                 />
               </div>
               <div className="space-y-2 text-right">
@@ -342,10 +342,10 @@ export default function StudentsManagementPage() {
                   <Fingerprint className="w-4 h-4 text-secondary" />
                   رقم القيد
                 </Label>
-                <Input 
+                <input 
                   value={editingStudent?.regId || ""}
                   onChange={(e) => setEditingStudent({...editingStudent, regId: e.target.value})}
-                  className="rounded-xl h-11 border-muted text-right font-bold" 
+                  className="rounded-xl h-11 border border-muted text-right font-bold px-3 outline-none focus:border-primary transition-all" 
                 />
               </div>
               <div className="space-y-2 text-right">

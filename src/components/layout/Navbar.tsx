@@ -36,9 +36,8 @@ export function Navbar() {
       "h-20 bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 flex items-center justify-between px-6 md:px-10 transition-all duration-300",
       isOpen ? "mr-0 md:mr-64" : "mr-0"
     )} dir="rtl">
-      {/* الجهة اليمنى */}
+      {/* الجهة اليمنى - الكمبيوتر */}
       <div className="flex items-center gap-4">
-        {/* زر التحكم بالكمبيوتر */}
         <Button 
           variant="ghost" 
           size="icon" 
@@ -48,11 +47,19 @@ export function Navbar() {
           <PanelRight className={cn("w-6 h-6 transition-transform duration-300", !isOpen && "rotate-180")} />
         </Button>
 
-        {/* الشعار والاسم (يظهر دائما في الموبايل، وعند إغلاق القائمة في الكمبيوتر) */}
+        {/* الشعار والاسم في الكمبيوتر (يظهر فقط عند إغلاق القائمة) */}
         <div className={cn(
-          "flex items-center gap-3 animate-fade-in",
-          isOpen ? "md:hidden" : "flex"
+          "hidden md:flex items-center gap-3 animate-fade-in",
+          isOpen ? "md:opacity-0 pointer-events-none" : "opacity-100"
         )}>
+          <div className="relative w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
+            <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
+          </div>
+          <h2 className="text-xl font-black text-primary">مستند</h2>
+        </div>
+
+        {/* الشعار والاسم في الموبايل (يظهر دائماً يميناً) */}
+        <div className="flex md:hidden items-center gap-3">
           <div className="relative w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
             <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
           </div>
@@ -62,7 +69,7 @@ export function Navbar() {
 
       {/* الجهة اليسرى */}
       <div className="flex items-center gap-3">
-        {/* المنيو للموبايل */}
+        {/* المنيو للموبايل - تظهر يساراً */}
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
@@ -120,7 +127,7 @@ export function Navbar() {
         {/* البروفايل للكمبيوتر */}
         <div className="hidden md:flex items-center gap-3 cursor-pointer group">
           <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group shadow-sm">
-            <Image src="/profile.png" alt="Profile" fill className="object-cover group-hover:scale-110 transition-transform" />
+            <Image src="/emploeed-1.png" alt="Profile" fill className="object-cover group-hover:scale-110 transition-transform" />
           </div>
         </div>
       </div>
