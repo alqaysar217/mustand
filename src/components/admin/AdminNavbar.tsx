@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, Settings, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2, PanelRight } from "lucide-react";
+import { Menu, Settings, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2, PanelRight, School } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import {
@@ -22,9 +22,10 @@ import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 const adminMenuItems = [
   { label: 'لوحة التحكم', icon: LayoutDashboard, href: '/admin/dashboard' },
   { label: 'إدارة المستخدمين', icon: Users, href: '/admin/users' },
+  { label: 'إدارة الكليات', icon: School, href: '/admin/colleges' },
+  { label: 'إدارة التخصصات', icon: Building2, href: '/admin/departments' },
   { label: 'إدارة الطلاب', icon: GraduationCap, href: '/admin/students' },
   { label: 'إدارة المواد', icon: BookOpen, href: '/admin/subjects' },
-  { label: 'إدارة التخصصات', icon: Building2, href: '/admin/departments' },
   { label: 'إدارة الأرشيف', icon: Archive, href: '/admin/archive' },
   { label: 'سلة المحذوفات', icon: Trash2, href: '/admin/recycle-bin' },
   { label: 'التقارير', icon: BarChart3, href: '/admin/reports' },
@@ -51,36 +52,39 @@ export function AdminNavbar() {
       "h-20 bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 flex items-center justify-between px-6 md:px-10 transition-all duration-300",
       isOpen ? "mr-0 md:mr-64" : "mr-0"
     )} dir="rtl">
-      {/* Right Side: Toggle Button & Logo/Name (Conditional) */}
+      {/* جهة اليمين */}
       <div className="flex items-center gap-4">
+        {/* زر التحكم بالكمبيوتر */}
         <Button 
           variant="ghost" 
           size="icon" 
-          className="rounded-xl text-primary hover:bg-primary/5 shrink-0"
+          className="hidden md:flex rounded-xl text-primary hover:bg-primary/5 shrink-0"
           onClick={toggle}
           title={isOpen ? "إخفاء القائمة" : "إظهار القائمة"}
         >
           <PanelRight className={cn("w-6 h-6 transition-transform duration-300", !isOpen && "rotate-180")} />
         </Button>
 
-        {!isOpen && (
-          <div className="flex items-center gap-3 animate-fade-in">
-            <div className="relative w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
-              <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
-            </div>
-            <h2 className="text-xl font-black text-primary">مستند</h2>
+        {/* شعار واسم النظام للموبايل + كمبيوتر (عند إخفاء القائمة) */}
+        <div className={cn(
+          "flex items-center gap-3 animate-fade-in",
+          isOpen && "md:hidden" 
+        )}>
+          <div className="relative w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
+            <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
           </div>
-        )}
+          <h2 className="text-xl font-black text-primary">مستند</h2>
+        </div>
       </div>
 
-      {/* Left Side: Mobile Menu or Profile */}
+      {/* جهة اليسار */}
       <div className="flex items-center gap-4">
-        {/* Mobile Menu Trigger - Shown only on mobile */}
+        {/* أيقونة القائمة للموبايل */}
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-xl">
-                <Menu className="w-7 h-7 text-primary" />
+              <Button variant="ghost" size="icon" className="rounded-xl text-primary">
+                <Menu className="w-7 h-7" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="p-0 bg-primary border-none w-72 text-right">
@@ -108,7 +112,7 @@ export function AdminNavbar() {
                         )}
                       >
                         <Icon className={cn("w-5 h-5 transition-transform", !isActive && "group-hover:scale-110")} />
-                        <span className="text-sm">{item.label}</span>
+                        <span className="text-sm font-bold">{item.label}</span>
                         {isActive && <ChevronLeft className="w-4 h-4 mr-auto" />}
                       </Link>
                     );
@@ -130,7 +134,7 @@ export function AdminNavbar() {
           </Sheet>
         </div>
 
-        {/* Desktop Profile Dropdown - Hidden on mobile */}
+        {/* خيارات المدير للكمبيوتر */}
         <div className="hidden md:block">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -165,4 +169,3 @@ export function AdminNavbar() {
     </header>
   );
 }
-
