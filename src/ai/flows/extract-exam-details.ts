@@ -1,8 +1,8 @@
 
 'use server';
 /**
- * @fileOverview This flow extracts student registration ID and name from an uploaded exam image using AI-powered OCR.
- * Optimized for speed and precision using Gemini 1.5 Flash.
+ * @fileOverview نظام استخراج بيانات الامتحانات المطور.
+ * يستخدم Gemini 1.5 Flash لاستخراج كافة البيانات الأكاديمية من ترويسة الورقة.
  */
 
 import {ai} from '@/ai/genkit';
@@ -12,16 +12,18 @@ const ExtractExamDetailsInputSchema = z.object({
   examImageDataUri: z
     .string()
     .describe(
-      "A photo of an exam paper, as a data URI that must include a MIME type and use Base64 encoding."
+      "A photo of an exam paper as a data URI (Base64)."
     ),
 });
 export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSchema>;
 
 const ExtractExamDetailsOutputSchema = z.object({
-  studentRegistrationId: z
-    .string()
-    .describe('The extracted student registration ID (numbers only).'),
-  studentName: z.string().describe('The extracted full name of the student (Arabic).'),
+  studentRegistrationId: z.string().describe('رقم القيد المستخرج').optional(),
+  studentName: z.string().describe('اسم الطالب الكامل').optional(),
+  subjectName: z.string().describe('اسم المادة الدراسية').optional(),
+  academicYear: z.string().describe('العام الجامعي (مثال: 2023 / 2024)').optional(),
+  semester: z.string().describe('الفصل الدراسي').optional(),
+  level: z.string().describe('المستوى الدراسي').optional(),
 });
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
@@ -39,18 +41,17 @@ const extractExamDetailsPrompt = ai.definePrompt({
       { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
     ],
   },
-  prompt: `أنت خبير في قراءة وتحليل ترويسة أوراق الامتحانات الجامعية العربية.
-مهمتك هي استخراج بيانات الطالب من الصورة المرفقة بدقة عالية.
+  prompt: `أنت خبير في تحليل الوثائق الأكاديمية العربية. 
+قم بتحليل ترويسة (Header) ورقة الامتحان المرفقة واستخرج البيانات التالية بدقة عالية في قالب JSON:
 
-البيانات المطلوبة:
-1. رقم القيد: ابحث عن حقل يسمى "رقم القيد" أو "رقم الجلوس" أو أي رقم تسلسلي فريد للطالب. استخرج الأرقام فقط (مثلاً: 221011506).
-2. اسم الطالب: استخرج الاسم الكامل (غالباً رباعي) المكتوب بوضوح في أعلى الورقة.
+1. رقم القيد (Registration ID): ابحث عنه تحت مسمى "رقم القيد" أو "رقم الجلوس".
+2. اسم الطالب (Student Name): الاسم الرباعي المكتوب في الأعلى.
+3. اسم المادة (Subject Name): المادة المخصصة لهذا الامتحان.
+4. العام الجامعي (Academic Year): ابحث عن صيغة مثل 2023/2024.
+5. الفصل الدراسي (Semester): الفصل الأول أو الثاني أو التكميلي.
+6. المستوى (Level): المستوى الأول، الثاني، الثالث، أو الرابع.
 
-قواعد الاستخراج:
-- ركز على الجزء العلوي من الورقة (Header) حيث توجد البيانات الرسمية.
-- إذا كان الخط يدوياً، حاول قراءته بأفضل شكل ممكن.
-- أعد النتيجة بصيغة JSON مطابقة للمخطط المطلوب.
-- إذا لم تجد رقم القيد، ابحث عن أي رقم يتكون من 7 إلى 10 خانات.
+إذا لم تجد حقلاً معيناً، اتركه فارغاً.
 
 صورة الورقة: {{media url=examImageDataUri}}`,
 });
@@ -66,20 +67,16 @@ const extractExamDetailsFlow = ai.defineFlow(
       const response = await extractExamDetailsPrompt(input);
       const output = response.output;
       
-      if (!output) {
-        throw new Error('MODEL_RETURNED_EMPTY_OUTPUT');
-      }
+      if (!output) throw new Error('AI_RETURNED_NO_DATA');
 
-      // تنظيف رقم القيد برمجياً للتأكد من خلوه من الرموز
-      const cleanRegId = output.studentRegistrationId?.replace(/\D/g, '') || '';
-      
       return {
-        studentRegistrationId: cleanRegId,
+        ...output,
+        studentRegistrationId: output.studentRegistrationId?.replace(/\D/g, '') || '',
         studentName: output.studentName?.trim() || ''
       };
     } catch (error: any) {
-      console.error('OCR AI Flow Error:', error);
-      throw new Error('AI_ANALYSIS_FAILED');
+      console.error('OCR Flow Error:', error);
+      throw new Error('فشل التحليل الذكي للوثيقة');
     }
   }
 );

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useMemo } from "react";
@@ -9,15 +10,14 @@ import {
   Eye, 
   Trash2, 
   FileText, 
-  Calendar, 
-  GraduationCap, 
-  BookOpen, 
   Plus, 
   ExternalLink, 
   Loader2, 
   CheckCircle, 
   Link as LinkIcon,
-  Filter
+  Image as ImageIcon,
+  Scan,
+  CloudUpload
 } from "lucide-react";
 import {
   Table,
@@ -46,12 +46,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { compressImage } from "@/lib/storage-utils";
+import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, deleteDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, deleteDoc, doc, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 
 export default function AdminArchivePage() {
   const firestore = useFirestore();
@@ -65,9 +67,10 @@ export default function AdminArchivePage() {
   const [viewingArchive, setViewingArchive] = useState<any>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Form State for new archive
   const [newArchive, setNewArchive] = useState({
     name: '',
     regId: '',
@@ -75,8 +78,9 @@ export default function AdminArchivePage() {
     subjectName: '',
     year: '2023 / 2024',
     term: 'الفصل الأول',
-    department: 'تقنية المعلومات',
-    fileUrl: ''
+    department: '',
+    departmentName: '',
+    level: 'المستوى الأول'
   });
 
   const filteredArchives = useMemo(() => {
@@ -86,6 +90,40 @@ export default function AdminArchivePage() {
       item.subjectName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [archives, searchTerm]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        if (event.target?.result) {
+          const compressed = await compressImage(event.target.result as string, 0.7, 1200);
+          setUploadedImage(compressed);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAIAnalysis = async () => {
+    if (!uploadedImage) return;
+    setIsSubmitting(true);
+    try {
+      const result = await extractExamDetails({ examImageDataUri: uploadedImage });
+      setNewArchive(prev => ({
+        ...prev,
+        regId: result.studentRegistrationId || prev.regId,
+        name: result.studentName || prev.name,
+        year: result.academicYear || prev.year,
+        level: result.level || prev.level
+      }));
+      toast({ title: "تم التحليل بنجاح" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "فشل التحليل الذكي" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!firestore) return;
@@ -97,14 +135,9 @@ export default function AdminArchivePage() {
     }
   };
 
-  const openLink = (url: string) => {
-    if (!url) return;
-    window.open(url, '_blank');
-  };
-
   const handleSaveNewArchive = async () => {
-    if (!firestore || !newArchive.name || !newArchive.regId || !newArchive.subjectName || !newArchive.fileUrl) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى إكمال كافة الحقول ووضع رابط المستند." });
+    if (!firestore || !newArchive.name || !newArchive.regId || !uploadedImage) {
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى رفع الصورة وتعبئة بيانات الطالب والمادة." });
       return;
     }
 
@@ -117,23 +150,23 @@ export default function AdminArchivePage() {
         subjectId: newArchive.subjectId,
         year: newArchive.year,
         term: newArchive.term,
-        departmentId: newArchive.department,
-        fileUrl: newArchive.fileUrl,
+        level: newArchive.level,
+        fileUrl: uploadedImage,
         pages: 1,
-        uploadMethod: 'Manual',
+        uploadMethod: 'Manual-Image',
         uploadedAt: serverTimestamp()
       };
       
       await addDoc(collection(firestore, "archives"), archiveData);
       
       setIsAddDialogOpen(false);
+      setUploadedImage(null);
       setNewArchive({
         name: '', regId: '', subjectId: '', subjectName: '',
-        year: '2023 / 2024', term: 'الفصل الأول', department: 'تقنية المعلومات', fileUrl: ''
+        year: '2023 / 2024', term: 'الفصل الأول', department: '', departmentName: '', level: 'المستوى الأول'
       });
 
       toast({ title: "تمت الأرشفة بنجاح" });
-
     } catch (error: any) {
       toast({ variant: "destructive", title: "حدث خطأ أثناء الحفظ" });
     } finally {
@@ -146,7 +179,7 @@ export default function AdminArchivePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-primary mb-1">إدارة الأرشيف الرقمي</h1>
-          <p className="text-muted-foreground font-bold">التحكم في الملفات المؤرشفة عبر الروابط المباشرة</p>
+          <p className="text-muted-foreground font-bold">التحكم في الملفات المؤرشفة مباشرة عبر الصور</p>
         </div>
         <Button 
           onClick={() => setIsAddDialogOpen(true)}
@@ -177,7 +210,7 @@ export default function AdminArchivePage() {
               <TableRow className="hover:bg-transparent border-b">
                 <TableHead className="text-right font-bold text-primary">الطالب / المادة</TableHead>
                 <TableHead className="text-right font-bold text-primary">السنة / الترم</TableHead>
-                <TableHead className="text-right font-bold text-primary">طريقة الأرشفة</TableHead>
+                <TableHead className="text-right font-bold text-primary">المستوى</TableHead>
                 <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
@@ -204,14 +237,13 @@ export default function AdminArchivePage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={cn("rounded-lg font-bold text-[10px]", item.uploadMethod === 'AI' ? "text-blue-600 border-blue-200 bg-blue-50" : "text-orange-600 border-orange-200 bg-orange-50")}>
-                      {item.uploadMethod === 'AI' ? 'تحليل ذكي' : 'أرشفة يدوية'}
+                    <Badge variant="outline" className="rounded-lg font-bold text-[10px] text-blue-600 border-blue-200 bg-blue-50">
+                      {item.level || 'غير محدد'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-1">
                       <Button variant="ghost" size="icon" onClick={() => setViewingArchive(item)} className="rounded-xl hover:bg-primary/5 text-primary"><Eye className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => openLink(item.fileUrl)} className="rounded-xl hover:bg-secondary/5 text-secondary"><ExternalLink className="w-4 h-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="rounded-xl hover:bg-destructive/10 text-destructive"><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </TableCell>
@@ -225,20 +257,62 @@ export default function AdminArchivePage() {
       </Card>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl overflow-hidden p-0" dir="rtl">
+        <DialogContent className="max-w-3xl rounded-3xl border-none text-right shadow-2xl overflow-hidden p-0" dir="rtl">
           <div className="p-8 space-y-6">
             <DialogHeader className="text-right">
               <DialogTitle className="text-2xl font-black text-primary flex items-center justify-end gap-2">أرشفة مستند جديد<Archive className="w-6 h-6 text-secondary" /></DialogTitle>
-              <DialogDescription className="font-bold text-muted-foreground">أدخل بيانات الطالب ورابط المستند المباشر.</DialogDescription>
+              <DialogDescription className="font-bold text-muted-foreground">ارفع صورة الاختبار وسيساعدك النظام في ملء البيانات.</DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2"><Label className="text-primary font-bold">اسم الطالب</Label><Input value={newArchive.name} onChange={(e) => setNewArchive({...newArchive, name: e.target.value})} placeholder="مثال: أحمد محمد" className="rounded-xl h-11" /></div>
-              <div className="space-y-2"><Label className="text-primary font-bold">رقم القيد</Label><Input value={newArchive.regId} onChange={(e) => setNewArchive({...newArchive, regId: e.target.value})} placeholder="20210045" className="rounded-xl h-11" /></div>
-              <div className="space-y-2"><Label className="text-primary font-bold">المادة</Label><Select value={newArchive.subjectId} onValueChange={(v) => { const s = subjects.find((sub: any) => sub.id === v) as any; setNewArchive({...newArchive, subjectId: v, subjectName: s?.nameAr || ""}); }}><SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="اختر المادة" /></SelectTrigger><SelectContent className="rounded-xl">{subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nameAr}</SelectItem>)}</SelectContent></Select></div>
-              <div className="space-y-2"><Label className="text-primary font-bold">السنة</Label><Select value={newArchive.year} onValueChange={(v) => setNewArchive({...newArchive, year: v})}><SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="السنة" /></SelectTrigger><SelectContent className="rounded-xl"><SelectItem value="2023 / 2024">2023 / 2024</SelectItem><SelectItem value="2022 / 2023">2022 / 2023</SelectItem></SelectContent></Select></div>
-              <div className="space-y-2 col-span-2"><Label className="text-primary font-bold flex items-center gap-2"><LinkIcon className="w-4 h-4 text-secondary" />رابط المستند المباشر (مثل Google Drive)</Label><Input value={newArchive.fileUrl} onChange={(e) => setNewArchive({...newArchive, fileUrl: e.target.value})} placeholder="https://drive.google.com/..." className="rounded-xl h-11 text-left" dir="ltr" /></div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <Label className="text-primary font-bold">صورة الاختبار الممسوحة ضوئياً</Label>
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="aspect-[4/3] border-4 border-dashed rounded-3xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-muted/30 transition-all overflow-hidden relative group"
+                >
+                  {uploadedImage ? (
+                    <>
+                      <Image src={uploadedImage} alt="Uploaded" fill className="object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Button variant="secondary" className="font-bold rounded-xl">تغيير الصورة</Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-12 h-12 text-muted-foreground" />
+                      <p className="text-xs font-bold text-muted-foreground">اضغط لرفع الصورة</p>
+                    </>
+                  )}
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+                </div>
+                {uploadedImage && (
+                  <Button onClick={handleAIAnalysis} disabled={isSubmitting} className="w-full rounded-xl h-11 font-bold gradient-blue gap-2 shadow-md">
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scan className="w-4 h-4" />}
+                    بدء التحليل الذكي للصورة
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2"><Label className="text-primary font-bold">اسم الطالب</Label><Input value={newArchive.name} onChange={(e) => setNewArchive({...newArchive, name: e.target.value})} placeholder="أحمد محمد" className="rounded-xl h-10 font-bold" /></div>
+                  <div className="space-y-2"><Label className="text-primary font-bold">رقم القيد</Label><Input value={newArchive.regId} onChange={(e) => setNewArchive({...newArchive, regId: e.target.value})} placeholder="20210045" className="rounded-xl h-10 font-bold" /></div>
+                  <div className="space-y-2"><Label className="text-primary font-bold">المادة</Label><Select value={newArchive.subjectId} onValueChange={(v) => { const s = subjects.find((sub: any) => sub.id === v) as any; setNewArchive({...newArchive, subjectId: v, subjectName: s?.nameAr || ""}); }}><SelectTrigger className="rounded-xl h-10 font-bold"><SelectValue placeholder="اختر المادة" /></SelectTrigger><SelectContent className="rounded-xl font-bold">{subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nameAr}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2"><Label className="text-primary font-bold">السنة</Label><Select value={newArchive.year} onValueChange={(v) => setNewArchive({...newArchive, year: v})}><SelectTrigger className="rounded-xl h-10 font-bold"><SelectValue placeholder="السنة" /></SelectTrigger><SelectContent className="rounded-xl font-bold"><SelectItem value="2023 / 2024">2023 / 2024</SelectItem><SelectItem value="2022 / 2023">2022 / 2023</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label className="text-primary font-bold">المستوى</Label><Select value={newArchive.level} onValueChange={(v) => setNewArchive({...newArchive, level: v})}><SelectTrigger className="rounded-xl h-10 font-bold"><SelectValue placeholder="المستوى" /></SelectTrigger><SelectContent className="rounded-xl font-bold"><SelectItem value="المستوى الأول">المستوى الأول</SelectItem><SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem><SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem><SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem></SelectContent></Select></div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <DialogFooter className="flex-row gap-3 pt-4"><Button onClick={handleSaveNewArchive} disabled={isSubmitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">{isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "إكمال الأرشفة"}</Button><Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button></DialogFooter>
+            <DialogFooter className="flex-row gap-3 pt-4 border-t">
+              <Button onClick={handleSaveNewArchive} disabled={isSubmitting || !uploadedImage} className="flex-1 rounded-xl h-12 font-bold bg-green-600 hover:bg-green-700 text-white shadow-lg gap-2">
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CloudUpload className="w-5 h-5" />}
+                حفظ في الأرشيف
+              </Button>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
@@ -248,12 +322,14 @@ export default function AdminArchivePage() {
           {viewingArchive && (
             <div className="space-y-6">
               <DialogHeader><DialogTitle className="text-2xl font-bold text-primary">{viewingArchive.studentName}</DialogTitle></DialogHeader>
+              <div className="aspect-[3/4] relative rounded-2xl overflow-hidden border-2 shadow-inner bg-muted">
+                <Image src={viewingArchive.fileUrl} alt="Exam Preview" fill className="object-contain" />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-muted/30 rounded-2xl"><Label className="text-[10px] block mb-1">رقم القيد</Label><p className="font-black text-primary">{viewingArchive.studentRegId}</p></div>
                 <div className="p-4 bg-muted/30 rounded-2xl"><Label className="text-[10px] block mb-1">المادة</Label><p className="font-black text-primary">{viewingArchive.subjectName}</p></div>
               </div>
-              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10"><Label className="text-[10px] block mb-1">رابط المستند:</Label><p className="font-mono text-xs text-secondary truncate">{viewingArchive.fileUrl}</p></div>
-              <div className="flex gap-3"><Button onClick={() => openLink(viewingArchive.fileUrl)} className="flex-1 rounded-xl font-bold h-12 gradient-blue gap-2"><ExternalLink className="w-4 h-4" />فتح المستند</Button><Button variant="outline" className="flex-1 rounded-xl font-bold border-2 h-12" onClick={() => setViewingArchive(null)}>إغلاق</Button></div>
+              <Button variant="outline" className="w-full rounded-xl font-bold border-2 h-12" onClick={() => setViewingArchive(null)}>إغلاق المعاينة</Button>
             </div>
           )}
         </DialogContent>
