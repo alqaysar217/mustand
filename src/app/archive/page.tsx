@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -24,7 +23,8 @@ import {
   Clock,
   School,
   FileText,
-  Sparkles
+  Sparkles,
+  ExternalLink
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -48,7 +48,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
-import { downloadFile } from "@/lib/storage-utils";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
@@ -57,7 +56,6 @@ import { collection, deleteDoc, doc } from "firebase/firestore";
 export default function ArchivePage() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [viewingExam, setViewingExam] = useState<any>(null);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const { toast } = useToast();
   const { isOpen } = useSidebarToggle();
@@ -78,13 +76,10 @@ export default function ArchivePage() {
   // Filters State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedYear, setSelectedYear] = useState("all");
-  const [selectedTerm, setSelectedTerm] = useState("all");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
-  const [selectedSubject, setSelectedSubject] = useState("all");
 
   const processedResults = useMemo(() => {
-    // Client-side sorting for zero index delay
     const sorted = [...archives].sort((a: any, b: any) => {
       const timeA = a.uploadedAt?.seconds || 0;
       const timeB = b.uploadedAt?.seconds || 0;
@@ -99,38 +94,31 @@ export default function ArchivePage() {
 
       const matchesSearch = sName.includes(search) || sId.includes(search) || subName.includes(search);
       const matchesYear = selectedYear === "all" || item.year === selectedYear;
-      const matchesTerm = selectedTerm === "all" || item.term === selectedTerm;
       const matchesDept = selectedDept === "all" || item.departmentId === selectedDept;
       const matchesLevel = selectedLevel === "all" || item.level === selectedLevel;
-      const matchesSubject = selectedSubject === "all" || item.subjectId === selectedSubject;
 
-      return matchesSearch && matchesYear && matchesTerm && matchesDept && matchesLevel && matchesSubject;
+      return matchesSearch && matchesYear && matchesDept && matchesLevel;
     });
-  }, [archives, searchTerm, selectedYear, selectedTerm, selectedDept, selectedLevel, selectedSubject]);
+  }, [archives, searchTerm, selectedYear, selectedDept, selectedLevel]);
 
-  const handleDownload = async (item: any) => {
-    if (!item?.fileUrl) return;
-    setDownloadingId(item.id);
-    try {
-      toast({ title: "جاري التحميل", description: `يتم معالجة ملف: ${item.studentName}` });
-      const result = await downloadFile(item.fileUrl, `${item.studentName}_${item.subjectName}`);
-      if (result.success) toast({ title: "تم التحميل بنجاح" });
-      else throw result.error;
-    } catch (error) {
-      toast({ variant: "destructive", title: "فشل التحميل" });
-    } finally {
-      setDownloadingId(null);
-    }
+  const openLink = (url: string) => {
+    if (!url) return;
+    window.open(url, '_blank');
   };
 
   const handleDelete = async (id: string) => {
     if (!firestore) return;
     try {
       await deleteDoc(doc(firestore, "archives", id));
-      toast({ title: "تم الحذف", description: "تمت إزالة الملف من الأرشيف بنجاح." });
+      toast({ title: "تم الحذف بنجاح" });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل حذف الملف." });
+      toast({ variant: "destructive", title: "خطأ في الحذف" });
     }
+  };
+
+  // وظيفة للتحقق من صحة الرابط لمكون Image
+  const isValidImageUrl = (url: string) => {
+    return typeof url === 'string' && (url.startsWith('http') || url.startsWith('/'));
   };
 
   return (
@@ -140,7 +128,7 @@ export default function ArchivePage() {
       
       <main className={cn("transition-all duration-300 p-4 md:p-10 animate-fade-in text-right", isOpen ? "mr-0 md:mr-64" : "mr-0")} dir="rtl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-          <div><h1 className="text-2xl md:text-3xl font-black text-primary mb-1">الأرشيف المركزي</h1><p className="text-muted-foreground font-bold text-sm">إدارة ومراجعة كافة الاختبارات المؤرشفة سحابياً</p></div>
+          <div><h1 className="text-2xl md:text-3xl font-black text-primary mb-1">الأرشيف المركزي</h1><p className="text-muted-foreground font-bold text-sm">إدارة ومراجعة كافة الاختبارات المؤرشفة عبر الروابط المباشرة</p></div>
           <div className="flex items-center gap-3 bg-white p-1.5 rounded-2xl shadow-sm border self-end md:self-auto">
             <Button variant={view === 'grid' ? 'default' : 'ghost'} size="sm" onClick={() => setView('grid')} className={cn("rounded-xl px-4 gap-2 h-9", view === 'grid' && "gradient-blue shadow-md text-white")}><LayoutGrid className="w-4 h-4" />شبكة</Button>
             <Button variant={view === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setView('list')} className={cn("rounded-xl px-4 gap-2 h-9", view === 'list' && "gradient-blue shadow-md text-white")}><List className="w-4 h-4" />قائمة</Button>
@@ -155,7 +143,7 @@ export default function ArchivePage() {
                 type="text" 
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)} 
-                placeholder="اسم الطالب، القيد، المادة..." 
+                placeholder="اسم الطالب، رقم القيد، أو اسم المادة..." 
                 className="w-full h-12 md:h-14 pr-12 pl-4 rounded-2xl border-none bg-muted/20 outline-none focus:ring-2 focus:ring-primary font-bold transition-all text-sm" 
               />
             </div>
@@ -177,13 +165,10 @@ export default function ArchivePage() {
                   <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="اختر السنة" /></SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
                     <SelectItem value="all">كافة السنوات</SelectItem>
-                    {academicYears.map((y: any) => (
-                      <SelectItem key={y.id} value={y.label}>{y.label}</SelectItem>
-                    ))}
+                    {academicYears.map((y: any) => <SelectItem key={y.id} value={y.label}>{y.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <label className="text-xs font-black text-primary mr-1 flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />التخصص</label>
                 <Select value={selectedDept} onValueChange={setSelectedDept}>
@@ -194,7 +179,6 @@ export default function ArchivePage() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <label className="text-xs font-black text-primary mr-1 flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى</label>
                 <Select value={selectedLevel} onValueChange={setSelectedLevel}>
@@ -207,47 +191,6 @@ export default function ArchivePage() {
                     <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة</label>
-                <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="اختر المادة" /></SelectTrigger>
-                  <SelectContent className="rounded-xl font-bold">
-                    <SelectItem value="all">كافة المواد</SelectItem>
-                    {subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nameAr}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2">الفصل الدراسي</label>
-                <Select value={selectedTerm} onValueChange={setSelectedTerm}>
-                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="اختر الترم" /></SelectTrigger>
-                  <SelectContent className="rounded-xl font-bold">
-                    <SelectItem value="all">كافة الفصول</SelectItem>
-                    <SelectItem value="الفصل الأول">الفصل الأول</SelectItem>
-                    <SelectItem value="الفصل الثاني">الفصل الثاني</SelectItem>
-                    <SelectItem value="الفصل التكميلي">الفصل التكميلي</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-end">
-                <Button 
-                  variant="outline" 
-                  className="w-full h-11 rounded-xl font-bold border-2 border-primary/20 text-primary"
-                  onClick={() => {
-                    setSelectedYear("all");
-                    setSelectedDept("all");
-                    setSelectedLevel("all");
-                    setSelectedSubject("all");
-                    setSelectedTerm("all");
-                    setSearchTerm("");
-                  }}
-                >
-                  إعادة ضبط البحث
-                </Button>
               </div>
             </Card>
           )}
@@ -263,29 +206,33 @@ export default function ArchivePage() {
                   {processedResults.map((item) => (
                     <Card key={item.id} className="group overflow-hidden border-none shadow-lg rounded-2xl bg-white hover:-translate-y-1 transition-all flex flex-col h-full">
                       <div className="relative aspect-[3/2] bg-muted/30 overflow-hidden shrink-0">
-                        <Image 
-                          src={item.fileUrl || PlaceHolderImages[1].imageUrl} 
-                          alt="Exam" 
-                          fill 
-                          className="object-cover object-top group-hover:scale-105 transition-transform duration-700" 
-                        />
+                        {isValidImageUrl(item.fileUrl) ? (
+                          <Image 
+                            src={item.fileUrl.includes('drive.google') ? PlaceHolderImages[1].imageUrl : item.fileUrl} 
+                            alt="Exam" 
+                            fill 
+                            className="object-cover object-top group-hover:scale-105 transition-transform duration-700" 
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-primary/5">
+                            <FileText className="w-12 h-12 text-primary opacity-20" />
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[1px]">
                           <Button size="icon" onClick={() => setViewingExam(item)} className="rounded-lg h-8 w-8 bg-white text-primary shadow-lg hover:bg-white/90"><Eye className="w-4 h-4" /></Button>
-                          <Button size="icon" disabled={downloadingId === item.id} onClick={() => handleDownload(item)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90">{downloadingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}</Button>
+                          <Button size="icon" onClick={() => openLink(item.fileUrl)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90"><ExternalLink className="w-4 h-4" /></Button>
                           <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4" /></Button>
                         </div>
                         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
                           <Badge className="bg-primary/80 backdrop-blur-md text-[8px] px-1.5 py-0 rounded-md font-bold">{item.term}</Badge>
                         </div>
                       </div>
-                      
                       <div className="p-3 text-right flex-1 flex flex-col">
                         <h3 className="text-xs font-black text-primary leading-tight line-clamp-1 mb-1">{item.studentName}</h3>
                         <p className="text-[10px] text-secondary font-bold flex items-center justify-start gap-1 mb-3">
                           {item.subjectName}
                           <BookOpen className="w-2.5 h-2.5" />
                         </p>
-                        
                         <div className="mt-auto border-t pt-2.5 flex items-center justify-between text-[8px] font-bold">
                            <div className="flex items-center gap-1 text-muted-foreground/80">
                              <Clock className="w-2.5 h-2.5" />
@@ -320,7 +267,7 @@ export default function ArchivePage() {
                             <td className="p-5 text-center">
                               <div className="flex justify-center gap-2">
                                 <Button size="icon" variant="ghost" className="rounded-xl hover:bg-primary/5 h-9 w-9" onClick={() => setViewingExam(item)}><Eye className="w-4 h-4 text-primary" /></Button>
-                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5 h-9 w-9" onClick={() => handleDownload(item)} disabled={downloadingId === item.id}><Download className="w-4 h-4 text-secondary" /></Button>
+                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5 h-9 w-9" onClick={() => openLink(item.fileUrl)}><ExternalLink className="w-4 h-4 text-secondary" /></Button>
                                 <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5 h-9 w-9" onClick={() => handleDelete(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                               </div>
                             </td>
@@ -334,31 +281,20 @@ export default function ArchivePage() {
             ) : (
               <div className="py-32 text-center bg-white rounded-[3rem] shadow-xl border-4 border-dashed border-muted/50 max-w-2xl mx-auto">
                 <div className="w-20 h-20 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-6"><Search className="w-10 h-10 text-muted-foreground opacity-30" /></div>
-                <h3 className="text-2xl font-black text-primary mb-2">الأرشيف فارغ</h3>
-                <p className="text-muted-foreground font-bold text-sm mb-8">لم يتم العثور على أي ملفات مؤرشفة حالياً. هل تود حقن بيانات تجريبية (10 اختبارات)؟</p>
-                <div className="flex justify-center gap-4">
-                  <Button 
-                    onClick={() => window.location.href='/admin/settings'} 
-                    className="rounded-xl h-12 px-8 font-black gradient-blue shadow-lg gap-2"
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    حقن البيانات الحقيقية
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setSelectedYear("all");
-                      setSelectedDept("all");
-                      setSelectedLevel("all");
-                      setSelectedSubject("all");
-                      setSelectedTerm("all");
-                      setSearchTerm("");
-                    }} 
-                    className="rounded-xl border-2 font-bold px-8 h-12"
-                  >
-                    إعادة ضبط البحث
-                  </Button>
-                </div>
+                <h3 className="text-2xl font-black text-primary mb-2">الأرشيف لا يحتوي نتائج</h3>
+                <p className="text-muted-foreground font-bold text-sm mb-8">لم يتم العثور على أي ملفات مؤرشفة تطابق خيارات البحث الحالية.</p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSelectedYear("all");
+                    setSelectedDept("all");
+                    setSelectedLevel("all");
+                    setSearchTerm("");
+                  }} 
+                  className="rounded-xl border-2 font-bold px-8 h-12"
+                >
+                  إعادة ضبط البحث
+                </Button>
               </div>
             )}
           </div>
@@ -367,100 +303,65 @@ export default function ArchivePage() {
 
       <Dialog open={!!viewingExam} onOpenChange={(o) => !o && setViewingExam(null)}>
         <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl rounded-3xl md:rounded-[2.5rem] bg-background">
-          <DialogHeader className="sr-only"><DialogTitle>معاينة الاختبار</DialogTitle><DialogDescription>عرض تفاصيل ورقة الاختبار المؤرشفة</DialogDescription></DialogHeader>
+          <DialogHeader className="sr-only"><DialogTitle>معاينة الاختبار</DialogTitle></DialogHeader>
           {viewingExam && (
             <div className="flex flex-col md:flex-row h-full w-full relative">
-              {/* Floating Close Button */}
               <button 
                 onClick={() => setViewingExam(null)}
-                className="absolute top-4 left-4 z-50 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors border border-primary/5"
+                className="absolute top-4 left-4 z-50 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
               >
                 <X className="w-5 h-5 text-primary" />
               </button>
-
-              {/* Right Side: Professional Data Distribution */}
-              <div className="w-full md:w-2/5 p-6 md:p-8 border-b md:border-b-0 md:border-l bg-white flex flex-col text-right order-2 md:order-1">
-                 <div className="space-y-6 flex-1 pt-4 md:pt-0">
+              <div className="w-full md:w-2/5 p-8 border-b md:border-b-0 md:border-l bg-white flex flex-col text-right">
+                 <div className="space-y-6 flex-1">
                     <div className="space-y-2">
-                       <Label className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">بيانات الطالب المركزية</Label>
+                       <Label className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">بيانات الطالب</Label>
                        <h3 className="text-xl md:text-2xl font-black text-primary leading-tight">{viewingExam.studentName}</h3>
-                       <div className="flex items-center justify-end gap-2 text-secondary font-black bg-secondary/5 p-2.5 rounded-xl border border-secondary/10 text-xs md:text-sm">
-                          <Fingerprint className="w-4 h-4 md:w-5 md:h-5" />
+                       <div className="flex items-center justify-end gap-2 text-secondary font-black bg-secondary/5 p-2.5 rounded-xl border border-secondary/10 text-xs">
+                          <Fingerprint className="w-4 h-4" />
                           <span>رقم القيد: {viewingExam.studentRegId}</span>
                        </div>
                     </div>
-                    
                     <Separator className="opacity-50" />
-
                     <div className="grid grid-cols-1 gap-4">
                        <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-primary">
                           <Label className="text-muted-foreground text-[9px] font-black block mb-1">المادة الدراسية</Label>
-                          <div className="flex items-center justify-end gap-2 font-black text-primary text-base md:text-lg">
+                          <div className="flex items-center justify-end gap-2 font-black text-primary text-base">
                              {viewingExam.subjectName}
                              <BookOpen className="w-4 h-4 text-secondary" />
                           </div>
                        </div>
-
                        <div className="grid grid-cols-2 gap-3">
-                          <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-secondary">
-                             <Label className="text-muted-foreground text-[9px] font-black block mb-1">السنة الدراسية</Label>
-                             <div className="flex items-center justify-end gap-2 font-black text-primary text-xs md:text-sm">
-                                {viewingExam.year}
-                                <Calendar className="w-3.5 h-3.5 text-secondary opacity-50" />
-                             </div>
+                          <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-secondary text-right">
+                             <Label className="text-muted-foreground text-[9px] font-black block mb-1">السنة</Label>
+                             <div className="font-black text-primary text-xs">{viewingExam.year}</div>
                           </div>
-                          <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-secondary">
+                          <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-secondary text-right">
                              <Label className="text-muted-foreground text-[9px] font-black block mb-1">المستوى</Label>
-                             <div className="flex items-center justify-end gap-2 font-black text-primary text-xs md:text-sm">
-                                {viewingExam.level}
-                                <GraduationCap className="w-3.5 h-3.5 text-secondary opacity-50" />
-                             </div>
-                          </div>
-                       </div>
-
-                       <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-orange-500">
-                          <Label className="text-muted-foreground text-[9px] font-black block mb-1">القسم والكلية</Label>
-                          <div className="flex items-center justify-end gap-2 font-black text-primary text-xs md:text-sm mb-0.5">
-                             {viewingExam.departmentName || "تقنية المعلومات"}
-                             <Building2 className="w-3.5 h-3.5 text-orange-500" />
-                          </div>
-                          <div className="flex items-center justify-end gap-2 text-[10px] font-bold text-muted-foreground">
-                             {viewingExam.collegeName || "كلية الحاسبات"}
-                             <School className="w-3 h-3" />
-                          </div>
-                       </div>
-
-                       <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-blue-500">
-                          <Label className="text-muted-foreground text-[9px] font-black block mb-1">الفصل (الترم)</Label>
-                          <div className="flex items-center justify-end gap-2 font-black text-primary text-xs md:text-sm">
-                             {viewingExam.term}
-                             <Clock className="w-3.5 h-3.5 text-blue-500" />
+                             <div className="font-black text-primary text-xs">{viewingExam.level}</div>
                           </div>
                        </div>
                     </div>
                  </div>
-
-                 <div className="pt-8 mt-auto pb-4 md:pb-0">
-                    <Button onClick={() => handleDownload(viewingExam)} className="w-full h-12 rounded-xl font-black gradient-blue shadow-lg gap-2 text-sm">
-                       <Download className="w-5 h-5" />
-                       تحميل المستند
+                 <div className="pt-8">
+                    <Button onClick={() => openLink(viewingExam.fileUrl)} className="w-full h-12 rounded-xl font-black gradient-blue shadow-lg gap-2 text-sm">
+                       <ExternalLink className="w-5 h-5" />
+                       فتح المستند الأصلي
                     </Button>
                  </div>
               </div>
-
-              {/* Left Side: Exam Image View */}
-              <div className="flex-1 relative bg-neutral-100 flex items-center justify-center p-4 md:p-8 min-h-[350px] md:min-h-0 order-1 md:order-2">
-                 <div className="relative w-full h-full bg-white shadow-xl rounded-xl overflow-hidden border-4 border-white group">
-                    <Image 
-                       src={viewingExam.fileUrl || PlaceHolderImages[1].imageUrl} 
-                       alt="Exam Original Preview" 
-                       fill 
-                       className="object-contain" 
-                       priority 
-                    />
-                    <div className="absolute bottom-4 right-4 bg-primary/90 backdrop-blur-md text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg">
-                       المعاينة الأصلية
-                    </div>
+              <div className="flex-1 relative bg-neutral-100 flex items-center justify-center p-8 min-h-[350px]">
+                 <div className="relative w-full h-full bg-white shadow-xl rounded-xl overflow-hidden border-4 border-white flex items-center justify-center">
+                    {isValidImageUrl(viewingExam.fileUrl) && !viewingExam.fileUrl.includes('drive.google') ? (
+                       <Image src={viewingExam.fileUrl} alt="Exam Preview" fill className="object-contain" />
+                    ) : (
+                       <div className="flex flex-col items-center gap-4 p-10 text-center">
+                          <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center">
+                             <FileText className="w-10 h-10 text-primary opacity-30" />
+                          </div>
+                          <p className="text-sm font-bold text-muted-foreground">هذا المستند مخزن كرابط خارجي (مثل Google Drive). الرجاء الضغط على الزر لفتحه.</p>
+                       </div>
+                    )}
                  </div>
               </div>
             </div>

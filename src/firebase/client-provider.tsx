@@ -25,7 +25,6 @@ export function FirebaseClientProvider({
       firebaseApp={instances.firebaseApp}
       firestore={instances.firestore}
       auth={instances.auth}
-      storage={instances.storage}
     >
       <FirebaseErrorListener />
       {children}
