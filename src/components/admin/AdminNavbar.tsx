@@ -41,12 +41,43 @@ export function AdminNavbar() {
       "h-20 bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 flex items-center justify-between px-6 md:px-10 transition-all duration-300",
       isOpen ? "mr-0 md:mr-64" : "mr-0"
     )} dir="rtl">
+      {/* Right Side: Logo & Name (Always visible on mobile) */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 md:hidden">
+          <div className="relative w-10 h-10 bg-white rounded-[10px] flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
+            <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
+          </div>
+          <h2 className="text-xl font-black text-primary">مستند</h2>
+        </div>
+
+        {!isOpen && (
+          <div className="hidden md:flex items-center gap-3 animate-fade-in">
+            <div className="relative w-10 h-10 bg-white rounded-[10px] flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
+              <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
+            </div>
+            <h2 className="text-xl font-black text-primary">مستند</h2>
+          </div>
+        )}
+
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="hidden md:flex rounded-xl text-primary hover:bg-primary/5"
+          onClick={toggle}
+          title={isOpen ? "إخفاء القائمة" : "إظهار القائمة"}
+        >
+          <PanelRight className={cn("w-6 h-6 transition-transform duration-300", !isOpen && "rotate-180")} />
+        </Button>
+      </div>
+
+      {/* Left Side: Mobile Menu or Profile (Desktop) */}
+      <div className="flex items-center gap-4">
+        {/* Mobile Menu Trigger */}
+        <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden rounded-xl">
-                <Menu className="w-6 h-6 text-primary" />
+              <Button variant="ghost" size="icon" className="rounded-xl">
+                <Menu className="w-7 h-7 text-primary" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="p-0 bg-primary border-none w-72 text-right">
@@ -82,11 +113,6 @@ export function AdminNavbar() {
                 </nav>
 
                 <div className="p-6 border-t border-white/10">
-                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20">
-                      <Image src="/profile.png" alt="Profile" fill className="object-cover" />
-                    </div>
-                  </div>
                   <Button 
                     variant="ghost" 
                     onClick={() => router.push('/')}
@@ -99,60 +125,39 @@ export function AdminNavbar() {
               </div>
             </SheetContent>
           </Sheet>
-
-          {/* Desktop Toggle Button */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="hidden md:flex rounded-xl text-primary hover:bg-primary/5"
-            onClick={toggle}
-            title={isOpen ? "إخفاء القائمة" : "إظهار القائمة"}
-          >
-            <PanelRight className={cn("w-6 h-6 transition-transform duration-300", !isOpen && "rotate-180")} />
-          </Button>
         </div>
 
-        {!isOpen ? (
-          <div className="flex items-center gap-3 animate-fade-in">
-            <div className="relative w-10 h-10 bg-white rounded-[10px] flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
-              <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
-            </div>
-            <h2 className="text-xl font-black text-primary">مستند</h2>
-          </div>
-        ) : (
-          <h2 className="text-xl font-black text-primary hidden sm:block">لوحة التحكم المركزية</h2>
-        )}
-      </div>
-
-      <div className="flex items-center gap-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="flex items-center gap-3 cursor-pointer group">
-              <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group">
-                <Image src="/profile.png" alt="Profile" fill className="object-cover" />
+        {/* Desktop Profile Dropdown */}
+        <div className="hidden md:block">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-3 cursor-pointer group">
+                <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group">
+                  <Image src="/profile.png" alt="Profile" width={40} height={40} className="object-cover" />
+                </div>
               </div>
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2" dir="rtl">
-            <DropdownMenuLabel className="text-right font-bold">حسابي</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold"
-              onClick={() => router.push('/admin/settings')}
-            >
-              الإعدادات
-              <Settings className="w-4 h-4" />
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl text-destructive focus:text-destructive font-bold"
-              onClick={() => router.push('/')}
-            >
-              تسجيل الخروج
-              <LogOut className="w-4 h-4" />
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2" dir="rtl">
+              <DropdownMenuLabel className="text-right font-bold">حسابي</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold"
+                onClick={() => router.push('/admin/settings')}
+              >
+                الإعدادات
+                <Settings className="w-4 h-4" />
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl text-destructive focus:text-destructive font-bold"
+                onClick={() => router.push('/')}
+              >
+                تسجيل الخروج
+                <LogOut className="w-4 h-4" />
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );
