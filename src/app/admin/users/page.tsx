@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -15,7 +15,10 @@ import {
   UserCheck,
   Shield,
   User as UserIcon,
-  Briefcase
+  Briefcase,
+  Loader2,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import {
   Table,
@@ -46,22 +49,97 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
-const INITIAL_USERS = [
-  { id: '1', name: 'أحمد محمود', username: 'ahmed_admin', role: 'manager', status: 'active', createdAt: '2024-01-10' },
-  { id: '2', name: 'سارة خالد', username: 'sara_emp', role: 'employee', status: 'active', createdAt: '2024-02-15' },
-  { id: '4', name: 'ليلى وليد', username: 'layla_emp', role: 'employee', status: 'active', createdAt: '2024-03-05' },
-];
+// Firebase
+import { useFirestore, useCollection } from "@/firebase";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc, query, orderBy } from "firebase/firestore";
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(INITIAL_USERS);
+  const firestore = useFirestore();
+  const usersQuery = useMemo(() => firestore ? query(collection(firestore, "users"), orderBy("createdAt", "desc")) : null, [firestore]);
+  const { data: users = [], loading } = useCollection(usersQuery);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
 
-  const filteredUsers = users.filter(user => 
-    user.name.includes(searchTerm) || user.username.includes(searchTerm)
-  );
+  const [newUser, setNewUser] = useState({
+    name: '',
+    username: '',
+    role: 'employee',
+    password: ''
+  });
+
+  const filteredUsers = useMemo(() => {
+    return (users as any[]).filter(user => 
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      user.username?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [users, searchTerm]);
+
+  const handleAddUser = async () => {
+    if (!firestore || !newUser.name || !newUser.username) {
+      toast({ variant: "destructive", title: "بيانات ناقصة" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await addDoc(collection(firestore, "users"), {
+        ...newUser,
+        status: 'active',
+        createdAt: serverTimestamp()
+      });
+      setIsAddDialogOpen(false);
+      setNewUser({ name: '', username: '', role: 'employee', password: '' });
+      toast({ title: "تمت إضافة المستخدم بنجاح" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "خطأ في الإضافة" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    if (!firestore) return;
+    const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
+    try {
+      await updateDoc(doc(firestore, "users", id), { status: nextStatus });
+      toast({ title: `تم ${nextStatus === 'active' ? 'تفعيل' : 'تعطيل'} الحساب` });
+    } catch (e) {
+      toast({ variant: "destructive", title: "فشل تحديث الحالة" });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!firestore) return;
+    try {
+      await deleteDoc(doc(firestore, "users", id));
+      toast({ variant: "destructive", title: "تم حذف المستخدم نهائياً" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "خطأ في الحذف" });
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!firestore || !editingUser) return;
+    setSubmitting(true);
+    try {
+      await updateDoc(doc(firestore, "users", editingUser.id), {
+        name: editingUser.name,
+        username: editingUser.username,
+        role: editingUser.role
+      });
+      setEditingUser(null);
+      toast({ title: "تم تحديث البيانات" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "خطأ في التحديث" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const getRoleBadge = (role: string) => {
     switch(role) {
@@ -73,8 +151,8 @@ export default function UsersPage() {
 
   const getStatusBadge = (status: string) => {
     return status === 'active' 
-      ? <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-lg">نشط</Badge>
-      : <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-100 border-none rounded-lg">موقوف</Badge>;
+      ? <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-lg gap-1"><CheckCircle className="w-3 h-3" /> نشط</Badge>
+      : <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-100 border-none rounded-lg gap-1"><XCircle className="w-3 h-3" /> موقوف</Badge>;
   };
 
   return (
@@ -85,52 +163,10 @@ export default function UsersPage() {
           <p className="text-muted-foreground font-bold">التحكم في حسابات الموظفين والمديرين وصلاحيات الوصول</p>
         </div>
         
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2">
-              <UserPlus className="w-5 h-5" />
-              إضافة مستخدم جديد
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
-            <div className="p-8">
-              <DialogHeader className="text-right items-start mb-6">
-                <DialogTitle className="text-2xl font-black text-primary">إضافة مستخدم</DialogTitle>
-                <DialogDescription className="font-bold">أدخل بيانات الحساب الجديد وحدد نوع الصلاحية (مدير أو موظف).</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-6 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-primary font-bold">الاسم الكامل</Label>
-                  <Input id="name" placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11 border-muted" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-primary font-bold">اسم المستخدم</Label>
-                  <Input id="username" placeholder="مثال: m_ahmed" className="rounded-xl h-11 border-muted" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role" className="text-primary font-bold">الدور (الصلاحية)</Label>
-                  <Select>
-                    <SelectTrigger className="rounded-xl h-11 border-muted">
-                      <SelectValue placeholder="اختر نوع الحساب" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl font-bold">
-                      <SelectItem value="manager">مدير نظام (صلاحيات كاملة)</SelectItem>
-                      <SelectItem value="employee">موظف أرشفة (رفع ومراجعة)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pass" className="text-primary font-bold">كلمة المرور</Label>
-                  <Input id="pass" type="password" placeholder="••••••••" className="rounded-xl h-11 border-muted" />
-                </div>
-              </div>
-              <DialogFooter className="flex-row gap-3 pt-6">
-                <Button type="submit" className="flex-1 rounded-xl h-11 font-bold gradient-blue shadow-lg">حفظ المستخدم</Button>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
-              </DialogFooter>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2">
+          <UserPlus className="w-5 h-5" />
+          إضافة مستخدم جديد
+        </Button>
       </div>
 
       <Card className="p-6 border-none shadow-xl rounded-3xl bg-white">
@@ -157,7 +193,9 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.length > 0 ? filteredUsers.map((user) => (
+              {loading ? (
+                <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+              ) : filteredUsers.length > 0 ? filteredUsers.map((user) => (
                 <TableRow key={user.id} className="hover:bg-muted/20 border-b">
                   <TableCell className="p-4">
                     <div className="flex items-center gap-3">
@@ -172,7 +210,9 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell>{getRoleBadge(user.role)}</TableCell>
                   <TableCell>{getStatusBadge(user.status)}</TableCell>
-                  <TableCell className="text-xs font-bold text-muted-foreground">{user.createdAt}</TableCell>
+                  <TableCell className="text-xs font-bold text-muted-foreground">
+                    {user.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString('en-GB') : '---'}
+                  </TableCell>
                   <TableCell className="text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -183,16 +223,16 @@ export default function UsersPage() {
                       <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right" dir="rtl">
                         <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات الحساب</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
+                        <DropdownMenuItem onClick={() => setEditingUser(user)} className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
                           تعديل البيانات
                           <Edit2 className="w-4 h-4 text-secondary" />
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
+                        <DropdownMenuItem onClick={() => handleToggleStatus(user.id, user.status)} className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
                           {user.status === 'active' ? 'تعطيل الحساب' : 'تفعيل الحساب'}
                           {user.status === 'active' ? <UserX className="w-4 h-4 text-orange-500" /> : <UserCheck className="w-4 h-4 text-green-500" />}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive">
+                        <DropdownMenuItem onClick={() => handleDelete(user.id)} className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive">
                           حذف المستخدم نهائياً
                           <Trash2 className="w-4 h-4" />
                         </DropdownMenuItem>
@@ -211,6 +251,87 @@ export default function UsersPage() {
           </Table>
         </div>
       </Card>
+
+      {/* Add User Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-8">
+            <DialogHeader className="text-right items-start mb-6">
+              <DialogTitle className="text-2xl font-black text-primary">إضافة مستخدم</DialogTitle>
+              <DialogDescription className="font-bold">أدخل بيانات الحساب الجديد وحدد نوع الصلاحية.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-6 py-4">
+              <div className="space-y-2">
+                <Label className="text-primary font-bold">الاسم الكامل</Label>
+                <Input value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11 border-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-primary font-bold">اسم المستخدم</Label>
+                <Input value={newUser.username} onChange={(e) => setNewUser({...newUser, username: e.target.value})} placeholder="مثال: m_ahmed" className="rounded-xl h-11 border-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-primary font-bold">الدور (الصلاحية)</Label>
+                <Select value={newUser.role} onValueChange={(v) => setNewUser({...newUser, role: v})}>
+                  <SelectTrigger className="rounded-xl h-11 border-muted">
+                    <SelectValue placeholder="اختر نوع الحساب" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="manager">مدير نظام (صلاحيات كاملة)</SelectItem>
+                    <SelectItem value="employee">موظف أرشفة (رفع ومراجعة)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-primary font-bold">كلمة المرور</Label>
+                <Input type="password" value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})} placeholder="••••••••" className="rounded-xl h-11 border-muted" />
+              </div>
+            </div>
+            <DialogFooter className="flex-row gap-3 pt-6">
+              <Button disabled={submitting} onClick={handleAddUser} className="flex-1 rounded-xl h-11 font-bold gradient-blue shadow-lg">
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ المستخدم"}
+              </Button>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={(o) => !o && setEditingUser(null)}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-8">
+            <DialogHeader className="text-right items-start mb-6">
+              <DialogTitle className="text-2xl font-black text-primary">تعديل بيانات الحساب</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-6 py-4">
+              <div className="space-y-2">
+                <Label className="text-primary font-bold">الاسم</Label>
+                <Input value={editingUser?.name || ""} onChange={(e) => setEditingUser({...editingUser, name: e.target.value})} className="rounded-xl h-11" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-primary font-bold">اسم المستخدم</Label>
+                <Input value={editingUser?.username || ""} onChange={(e) => setEditingUser({...editingUser, username: e.target.value})} className="rounded-xl h-11" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-primary font-bold">الدور</Label>
+                <Select value={editingUser?.role || "employee"} onValueChange={(v) => setEditingUser({...editingUser, role: v})}>
+                  <SelectTrigger className="rounded-xl h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold">
+                    <SelectItem value="manager">مدير نظام</SelectItem>
+                    <SelectItem value="employee">موظف أرشفة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter className="flex-row gap-3 pt-6">
+              <Button disabled={submitting} onClick={handleUpdateUser} className="flex-1 rounded-xl h-11 font-bold gradient-blue shadow-lg">حفظ التعديلات</Button>
+              <Button variant="outline" onClick={() => setEditingUser(null)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

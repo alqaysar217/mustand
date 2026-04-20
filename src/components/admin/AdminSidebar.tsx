@@ -83,7 +83,7 @@ export function AdminSidebar() {
         <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 border border-white/10 shadow-xl">
           <div className="flex items-center gap-4 mb-4">
             <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-2 border-white/30 shadow-md">
-              <Image src="/profile.png" alt="Admin Profile" fill className="object-cover" />
+              <Image src="/admin.png" alt="Admin Profile" fill className="object-cover" />
             </div>
             <div className="overflow-hidden">
               <p className="text-sm font-black truncate text-white">المدير العام</p>

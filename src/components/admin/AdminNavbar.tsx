@@ -65,7 +65,7 @@ export function AdminNavbar() {
           <PanelRight className={cn("w-6 h-6 transition-transform duration-300", !isOpen && "rotate-180")} />
         </Button>
 
-        {/* شعار واسم النظام - يظهر دائماً في الموبايل، وفي الكمبيوتر يظهر فقط عند إغلاق القائمة */}
+        {/* شعار واسم النظام - يظهر فقط عند إغلاق القائمة في الكمبيوتر، ودائماً في الموبايل */}
         <div className={cn(
           "flex items-center gap-3 animate-fade-in",
           isOpen ? "md:hidden" : "flex"
@@ -140,7 +140,7 @@ export function AdminNavbar() {
             <DropdownMenuTrigger asChild>
               <div className="flex items-center gap-3 cursor-pointer group">
                 <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group shadow-sm">
-                  <Image src="/profile.png" alt="Profile" fill className="object-cover" />
+                  <Image src="/admin.png" alt="Admin Profile" fill className="object-cover" />
                 </div>
               </div>
             </DropdownMenuTrigger>
