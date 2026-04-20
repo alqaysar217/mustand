@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Briefcase, Settings2, Loader2, ArrowRight } from "lucide-react";
+import { Briefcase, Settings2, Loader2, ArrowRight, User, Lock, LogIn } from "lucide-react";
 
 export default function Home() {
   const [stage, setStage] = useState<'splash' | 'role' | 'login'>('splash');
@@ -111,21 +111,27 @@ export default function Home() {
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-bold pr-1 text-primary">اسم المستخدم</label>
-            <input 
-              type="text" 
-              className="w-full h-12 px-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all font-bold"
-              placeholder="اسم المستخدم الخاص بك"
-              required
-            />
+            <div className="relative">
+              <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input 
+                type="text" 
+                className="w-full h-12 pr-10 pl-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all font-bold"
+                placeholder="اسم المستخدم الخاص بك"
+                required
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-bold pr-1 text-primary">كلمة المرور</label>
-            <input 
-              type="password" 
-              className="w-full h-12 px-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-              placeholder="••••••••"
-              required
-            />
+            <div className="relative">
+              <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input 
+                type="password" 
+                className="w-full h-12 pr-10 pl-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="••••••••"
+                required
+              />
+            </div>
           </div>
           
           <div className="flex items-center justify-between">
@@ -138,9 +144,9 @@ export default function Home() {
 
           <Button 
             disabled={loading}
-            className="w-full h-12 rounded-xl text-lg font-black gradient-blue shadow-lg"
+            className="w-full h-12 rounded-xl text-lg font-black gradient-blue shadow-lg gap-2"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : null}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <LogIn className="w-5 h-5" />}
             دخول النظام
           </Button>
         </form>
