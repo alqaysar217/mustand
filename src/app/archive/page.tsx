@@ -21,7 +21,7 @@ import {
   GraduationCap,
   Fingerprint,
   Clock,
-  ExternalLink
+  Download
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -45,6 +45,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
+import { downloadFile } from "@/lib/storage-utils";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
@@ -96,9 +97,14 @@ export default function ArchivePage() {
     });
   }, [archives, searchTerm, selectedYear, selectedDept, selectedLevel]);
 
-  const openLink = (url: string) => {
-    if (!url) return;
-    window.open(url, '_blank');
+  const handleDownload = async (item: any) => {
+    if (!item.fileUrl) return;
+    toast({ title: "جاري تحميل الملف..." });
+    const fileName = `${item.studentName}_${item.subjectName}`;
+    const result = await downloadFile(item.fileUrl, fileName);
+    if (!result.success) {
+      toast({ variant: "destructive", title: "فشل التحميل" });
+    }
   };
 
   const handleMoveToBin = async (item: any) => {
@@ -153,7 +159,7 @@ export default function ArchivePage() {
             <Button 
               variant={showFilters ? "default" : "outline"} 
               onClick={() => setShowFilters(!showFilters)} 
-              className="h-12 md:h-14 w-full md:w-auto rounded-2xl px-6 border-2 font-black gap-2 text-sm"
+              className="h-12 md:h-14 w-full md:auto rounded-2xl px-6 border-2 font-black gap-2 text-sm"
             >
               {showFilters ? <X className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
               تصفية
@@ -222,9 +228,9 @@ export default function ArchivePage() {
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[1px]">
-                          <Button size="icon" onClick={() => setViewingExam(item)} className="rounded-lg h-8 w-8 bg-white text-primary shadow-lg hover:bg-white/90"><Eye className="w-4 h-4" /></Button>
-                          <Button size="icon" onClick={() => openLink(item.fileUrl)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90"><ExternalLink className="w-4 h-4" /></Button>
-                          <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" onClick={() => handleMoveToBin(item)}><Trash2 className="w-4 h-4" /></Button>
+                          <Button size="icon" onClick={() => setViewingExam(item)} className="rounded-lg h-8 w-8 bg-white text-primary shadow-lg hover:bg-white/90" title="معاينة"><Eye className="w-4 h-4" /></Button>
+                          <Button size="icon" onClick={() => handleDownload(item)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90" title="تنزيل"><Download className="w-4 h-4" /></Button>
+                          <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" onClick={() => handleMoveToBin(item)} title="حذف"><Trash2 className="w-4 h-4" /></Button>
                         </div>
                         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
                           <Badge className="bg-primary/80 backdrop-blur-md text-[8px] px-1.5 py-0 rounded-md font-bold">{item.term}</Badge>
@@ -269,9 +275,9 @@ export default function ArchivePage() {
                             <td className="p-5 text-xs font-bold text-muted-foreground">{item.level}</td>
                             <td className="p-5 text-center">
                               <div className="flex justify-center gap-2">
-                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-primary/5 h-9 w-9" onClick={() => setViewingExam(item)}><Eye className="w-4 h-4 text-primary" /></Button>
-                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5 h-9 w-9" onClick={() => openLink(item.fileUrl)}><ExternalLink className="w-4 h-4 text-secondary" /></Button>
-                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5 h-9 w-9" onClick={() => handleMoveToBin(item)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-primary/5 h-9 w-9" onClick={() => setViewingExam(item)} title="معاينة"><Eye className="w-4 h-4 text-primary" /></Button>
+                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5 h-9 w-9" onClick={() => handleDownload(item)} title="تنزيل"><Download className="w-4 h-4 text-secondary" /></Button>
+                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5 h-9 w-9" onClick={() => handleMoveToBin(item)} title="حذف"><Trash2 className="w-4 h-4 text-destructive" /></Button>
                               </div>
                             </td>
                           </tr>
@@ -350,9 +356,9 @@ export default function ArchivePage() {
                     </div>
                  </div>
                  <div className="pt-8">
-                    <Button onClick={() => openLink(viewingExam.fileUrl)} className="w-full h-12 rounded-xl font-black gradient-blue shadow-lg gap-2 text-sm">
-                       <ExternalLink className="w-5 h-5" />
-                       فتح المستند الأصلي
+                    <Button onClick={() => handleDownload(viewingExam)} className="w-full h-12 rounded-xl font-black gradient-blue shadow-lg gap-2 text-sm">
+                       <Download className="w-5 h-5" />
+                       تنزيل المستند الأصلي
                     </Button>
                  </div>
               </div>
@@ -365,7 +371,7 @@ export default function ArchivePage() {
                           <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center">
                              <FileText className="w-10 h-10 text-primary opacity-30" />
                           </div>
-                          <p className="text-sm font-bold text-muted-foreground">هذا المستند مخزن كرابط خارجي (مثل Google Drive). الرجاء الضغط على الزر لفتحه.</p>
+                          <p className="text-sm font-bold text-muted-foreground">هذا المستند مخزن سحابياً. الرجاء الضغط على زر التنزيل لحفظه محلياً.</p>
                        </div>
                     )}
                  </div>

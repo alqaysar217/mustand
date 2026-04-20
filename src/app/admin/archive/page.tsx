@@ -24,7 +24,7 @@ import {
   Filter,
   Building2,
   Clock,
-  ExternalLink,
+  Download,
   ChevronLeft
 } from "lucide-react";
 import {
@@ -50,6 +50,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { downloadFile } from "@/lib/storage-utils";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
@@ -159,9 +160,14 @@ export default function AdminArchivePage() {
     }
   };
 
-  const openLink = (url: string) => {
-    if (!url) return;
-    window.open(url, '_blank');
+  const handleDownload = async (item: any) => {
+    if (!item.fileUrl) return;
+    toast({ title: "جاري تجهيز الملف للتحميل..." });
+    const fileName = `${item.studentName}_${item.subjectName}`;
+    const result = await downloadFile(item.fileUrl, fileName);
+    if (!result.success) {
+      toast({ variant: "destructive", title: "فشل تحميل الملف" });
+    }
   };
 
   const isValidImageUrl = (url: string) => {
@@ -196,7 +202,7 @@ export default function AdminArchivePage() {
           <Button 
             variant={showFilters ? "default" : "outline"} 
             onClick={() => setShowFilters(!showFilters)} 
-            className="h-12 md:h-14 w-full md:w-auto rounded-2xl px-6 border-2 font-black gap-2 text-sm"
+            className="h-12 md:h-14 w-full md:auto rounded-2xl px-6 border-2 font-black gap-2 text-sm"
           >
             {showFilters ? <X className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
             تصفية
@@ -221,7 +227,7 @@ export default function AdminArchivePage() {
                 <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
                 <SelectContent className="rounded-xl font-bold">
                   <SelectItem value="all">كافة التخصصات</SelectItem>
-                  {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                  {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.id}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -267,7 +273,7 @@ export default function AdminArchivePage() {
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 backdrop-blur-[1px]">
                         <Button size="icon" onClick={() => setViewingArchive(item)} className="rounded-lg h-8 w-8 bg-white text-primary shadow-lg hover:bg-white/90" title="معاينة"><Eye className="w-4 h-4" /></Button>
                         <Button size="icon" onClick={() => setEditingArchive(item)} className="rounded-lg h-8 w-8 bg-blue-500 text-white shadow-lg hover:bg-blue-600" title="تعديل"><Edit2 className="w-4 h-4" /></Button>
-                        <Button size="icon" onClick={() => openLink(item.fileUrl)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90" title="فتح"><ExternalLink className="w-4 h-4" /></Button>
+                        <Button size="icon" onClick={() => handleDownload(item)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90" title="تنزيل المستند"><Download className="w-4 h-4" /></Button>
                         <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" onClick={() => handleMoveToBin(item)} title="حذف"><Trash2 className="w-4 h-4" /></Button>
                       </div>
                       <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
@@ -330,7 +336,7 @@ export default function AdminArchivePage() {
                             <div className="flex justify-center gap-1.5">
                               <Button size="icon" variant="ghost" className="rounded-xl hover:bg-primary/5 h-9 w-9" onClick={() => setViewingArchive(item)} title="معاينة"><Eye className="w-4 h-4 text-primary" /></Button>
                               <Button size="icon" variant="ghost" className="rounded-xl hover:bg-blue-50 h-9 w-9" onClick={() => setEditingArchive(item)} title="تعديل"><Edit2 className="w-4 h-4 text-blue-600" /></Button>
-                              <Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5 h-9 w-9" onClick={() => openLink(item.fileUrl)} title="فتح"><ExternalLink className="w-4 h-4 text-secondary" /></Button>
+                              <Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5 h-9 w-9" onClick={() => handleDownload(item)} title="تنزيل"><Download className="w-4 h-4 text-secondary" /></Button>
                               <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5 h-9 w-9" onClick={() => handleMoveToBin(item)} title="حذف"><Trash2 className="w-4 h-4 text-destructive" /></Button>
                             </div>
                           </td>
@@ -513,9 +519,9 @@ export default function AdminArchivePage() {
                        <Edit2 className="w-5 h-5" />
                        تعديل بيانات المستند
                     </Button>
-                    <Button variant="outline" onClick={() => openLink(viewingArchive.fileUrl)} className="w-full h-12 rounded-xl font-black border-2 gap-2 text-sm">
-                       <ExternalLink className="w-5 h-5" />
-                       فتح المستند الأصلي
+                    <Button variant="outline" onClick={() => handleDownload(viewingArchive)} className="w-full h-12 rounded-xl font-black border-2 gap-2 text-sm">
+                       <Download className="w-5 h-5" />
+                       تنزيل المستند الأصلي
                     </Button>
                  </div>
               </div>
@@ -528,7 +534,7 @@ export default function AdminArchivePage() {
                           <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center">
                              <FileText className="w-10 h-10 text-primary opacity-30" />
                           </div>
-                          <p className="text-sm font-bold text-muted-foreground">هذا المستند مخزن كرابط خارجي. الرجاء الضغط على الزر لفتحه.</p>
+                          <p className="text-sm font-bold text-muted-foreground">هذا المستند مخزن في السحابة. الرجاء الضغط على زر التنزيل لحفظه.</p>
                        </div>
                     )}
                  </div>
