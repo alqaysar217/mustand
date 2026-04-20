@@ -15,7 +15,6 @@ import {
   UserCheck,
   Shield,
   User as UserIcon,
-  GraduationCap,
   Briefcase
 } from "lucide-react";
 import {
@@ -52,7 +51,6 @@ import { cn } from "@/lib/utils";
 const INITIAL_USERS = [
   { id: '1', name: 'أحمد محمود', username: 'ahmed_admin', role: 'manager', status: 'active', createdAt: '2024-01-10' },
   { id: '2', name: 'سارة خالد', username: 'sara_emp', role: 'employee', status: 'active', createdAt: '2024-02-15' },
-  { id: '3', name: 'محمد علي', username: 'mohamed_std', role: 'student', status: 'suspended', createdAt: '2024-03-01' },
   { id: '4', name: 'ليلى وليد', username: 'layla_emp', role: 'employee', status: 'active', createdAt: '2024-03-05' },
 ];
 
@@ -67,9 +65,8 @@ export default function UsersPage() {
 
   const getRoleBadge = (role: string) => {
     switch(role) {
-      case 'manager': return <Badge className="bg-primary hover:bg-primary/90 rounded-lg gap-1"><Shield className="w-3 h-3" /> مدير</Badge>;
-      case 'employee': return <Badge className="bg-secondary hover:bg-secondary/90 rounded-lg gap-1"><Briefcase className="w-3 h-3" /> موظف</Badge>;
-      case 'student': return <Badge variant="outline" className="rounded-lg gap-1 border-primary text-primary"><GraduationCap className="w-3 h-3" /> طالب</Badge>;
+      case 'manager': return <Badge className="bg-primary hover:bg-primary/90 rounded-lg gap-1"><Shield className="w-3 h-3" /> مدير نظام</Badge>;
+      case 'employee': return <Badge className="bg-secondary hover:bg-secondary/90 rounded-lg gap-1"><Briefcase className="w-3 h-3" /> موظف أرشفة</Badge>;
       default: return <Badge variant="secondary">{role}</Badge>;
     }
   };
@@ -84,8 +81,8 @@ export default function UsersPage() {
     <div className="space-y-8 text-right" dir="rtl">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-primary mb-1">إدارة المستخدمين</h1>
-          <p className="text-muted-foreground font-bold">إضافة، تعديل، والتحكم في صلاحيات الوصول للنظام</p>
+          <h1 className="text-3xl font-black text-primary mb-1">إدارة مستخدمي النظام</h1>
+          <p className="text-muted-foreground font-bold">التحكم في حسابات الموظفين والمديرين وصلاحيات الوصول</p>
         </div>
         
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -95,42 +92,43 @@ export default function UsersPage() {
               إضافة مستخدم جديد
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right" dir="rtl">
-            <DialogHeader className="text-right">
-              <DialogTitle className="text-2xl font-black text-primary">إضافة مستخدم</DialogTitle>
-              <DialogDescription className="font-bold">أدخل بيانات المستخدم الجديد وحدد صلاحياته.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-6 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-primary font-bold">الاسم الكامل</Label>
-                <Input id="name" placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11 border-muted" />
+          <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+            <div className="p-8">
+              <DialogHeader className="text-right items-start mb-6">
+                <DialogTitle className="text-2xl font-black text-primary">إضافة مستخدم</DialogTitle>
+                <DialogDescription className="font-bold">أدخل بيانات الحساب الجديد وحدد نوع الصلاحية (مدير أو موظف).</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-6 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-primary font-bold">الاسم الكامل</Label>
+                  <Input id="name" placeholder="مثال: محمد أحمد علي" className="rounded-xl h-11 border-muted" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="username" className="text-primary font-bold">اسم المستخدم</Label>
+                  <Input id="username" placeholder="مثال: m_ahmed" className="rounded-xl h-11 border-muted" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role" className="text-primary font-bold">الدور (الصلاحية)</Label>
+                  <Select>
+                    <SelectTrigger className="rounded-xl h-11 border-muted">
+                      <SelectValue placeholder="اختر نوع الحساب" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl font-bold">
+                      <SelectItem value="manager">مدير نظام (صلاحيات كاملة)</SelectItem>
+                      <SelectItem value="employee">موظف أرشفة (رفع ومراجعة)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pass" className="text-primary font-bold">كلمة المرور</Label>
+                  <Input id="pass" type="password" placeholder="••••••••" className="rounded-xl h-11 border-muted" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="username" className="text-primary font-bold">اسم المستخدم</Label>
-                <Input id="username" placeholder="مثال: m_ahmed" className="rounded-xl h-11 border-muted" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role" className="text-primary font-bold">الدور (الصلاحية)</Label>
-                <Select>
-                  <SelectTrigger className="rounded-xl h-11 border-muted">
-                    <SelectValue placeholder="اختر نوع الحساب" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="manager">مدير نظام</SelectItem>
-                    <SelectItem value="employee">موظف أرشفة</SelectItem>
-                    <SelectItem value="student">طالب</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pass" className="text-primary font-bold">كلمة المرور</Label>
-                <Input id="pass" type="password" placeholder="••••••••" className="rounded-xl h-11 border-muted" />
-              </div>
+              <DialogFooter className="flex-row gap-3 pt-6">
+                <Button type="submit" className="flex-1 rounded-xl h-11 font-bold gradient-blue shadow-lg">حفظ المستخدم</Button>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
+              </DialogFooter>
             </div>
-            <DialogFooter className="flex-row gap-3">
-              <Button type="submit" className="flex-1 rounded-xl h-11 font-bold gradient-blue">حفظ المستخدم</Button>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-11 font-bold border-2">إلغاء</Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -183,7 +181,7 @@ export default function UsersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52 rounded-2xl p-2 text-right" dir="rtl">
-                        <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات المستخدم</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-right font-bold text-xs text-muted-foreground">خيارات الحساب</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold">
                           تعديل البيانات
@@ -195,7 +193,7 @@ export default function UsersPage() {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold text-destructive focus:text-destructive">
-                          حذف المستخدم (مؤقت)
+                          حذف المستخدم نهائياً
                           <Trash2 className="w-4 h-4" />
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -205,7 +203,7 @@ export default function UsersPage() {
               )) : (
                 <TableRow>
                   <TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">
-                    لا يوجد مستخدمين مطابقين للبحث
+                    لا يوجد مستخدمون مطابقون للبحث
                   </TableCell>
                 </TableRow>
               )}

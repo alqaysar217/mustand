@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -5,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { GraduationCap, Briefcase, Settings2, Loader2, ArrowRight } from "lucide-react";
+import { Briefcase, Settings2, Loader2, ArrowRight } from "lucide-react";
 
 export default function Home() {
   const [stage, setStage] = useState<'splash' | 'role' | 'login'>('splash');
@@ -28,12 +29,10 @@ export default function Home() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate login based on role
+    // محاكاة تسجيل الدخول بناءً على الدور
     setTimeout(() => {
       if (selectedRole === 'manager') {
         router.push('/admin/dashboard');
-      } else if (selectedRole === 'student') {
-        router.push('/student/dashboard');
       } else {
         router.push('/dashboard');
       }
@@ -66,11 +65,10 @@ export default function Home() {
           <h1 className="text-3xl font-black text-primary">نظام مستند</h1>
         </div>
         <h2 className="text-xl font-bold text-muted-foreground mb-8 text-center">اختر نوع المستخدم للبدء</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl">
           {[
-            { id: 'student', label: 'طالب', icon: GraduationCap, desc: 'الوصول لملفاتك الأكاديمية' },
-            { id: 'employee', label: 'موظف', icon: Briefcase, desc: 'إدارة ورفع الملفات' },
-            { id: 'manager', label: 'مدير', icon: Settings2, desc: 'إدارة النظام والتقارير' }
+            { id: 'employee', label: 'موظف أرشفة', icon: Briefcase, desc: 'إدارة ورفع الملفات وتصحيح البيانات' },
+            { id: 'manager', label: 'مدير نظام', icon: Settings2, desc: 'إدارة الصلاحيات، الكليات، والتقارير' }
           ].map((role) => (
             <Card 
               key={role.id}
@@ -106,17 +104,17 @@ export default function Home() {
           <div className="relative mx-auto bg-primary/5 rounded-[10px] mb-4 border border-primary/10 overflow-hidden w-24 h-24">
             <Image src="/logo-sand.png" alt="Logo" fill className="object-cover" />
           </div>
-          <h2 className="text-2xl font-black text-primary">تسجيل الدخول - {selectedRole === 'manager' ? 'الإدارة' : selectedRole === 'employee' ? 'الموظفين' : 'الطلاب'}</h2>
+          <h2 className="text-2xl font-black text-primary">تسجيل الدخول - {selectedRole === 'manager' ? 'الإدارة' : 'الأرشفة'}</h2>
           <p className="text-muted-foreground mt-1 font-bold">أهلاً بك مرة أخرى في نظام الأرشفة</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-bold pr-1 text-primary">اسم المستخدم أو رقم القيد</label>
+            <label className="text-sm font-bold pr-1 text-primary">اسم المستخدم</label>
             <input 
               type="text" 
               className="w-full h-12 px-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all font-bold"
-              placeholder={selectedRole === 'student' ? "رقم القيد" : "اسم المستخدم"}
+              placeholder="اسم المستخدم الخاص بك"
               required
             />
           </div>
@@ -143,7 +141,7 @@ export default function Home() {
             className="w-full h-12 rounded-xl text-lg font-black gradient-blue shadow-lg"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : null}
-            تسجيل الدخول
+            دخول النظام
           </Button>
         </form>
       </Card>
