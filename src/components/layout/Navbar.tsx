@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { Menu, LayoutDashboard, UploadCloud, Archive, Search, Settings, ChevronLeft, GraduationCap, BookOpen, LogOut, Building2, PanelRight, School } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -26,6 +27,15 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isOpen, toggle } = useSidebarToggle();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <header className="h-20 bg-white border-b w-full" />;
+  }
 
   return (
     <header className={cn(

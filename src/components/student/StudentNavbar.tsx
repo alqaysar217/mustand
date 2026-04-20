@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { Menu, User, LogOut, LayoutDashboard, FileText, Search, Settings, ChevronLeft, PanelRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -22,6 +23,15 @@ export function StudentNavbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { isOpen, toggle } = useSidebarToggle();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <header className="h-20 bg-white border-b w-full" />;
+  }
 
   return (
     <header className={cn(
