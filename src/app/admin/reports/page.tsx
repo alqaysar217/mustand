@@ -210,19 +210,19 @@ export default function ReportsPage() {
         <TabsList className="bg-white p-1 rounded-2xl h-16 shadow-lg border mb-10 flex w-full max-w-2xl mx-auto overflow-hidden">
           <TabsTrigger 
             value="students" 
-            className="flex-1 rounded-xl font-black text-sm transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className="flex-1 rounded-xl font-black text-sm transition-all duration-300 data-[state=active]:bg-transparent data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
           >
             تحليل الطلاب
           </TabsTrigger>
           <TabsTrigger 
             value="staff" 
-            className="flex-1 rounded-xl font-black text-sm transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className="flex-1 rounded-xl font-black text-sm transition-all duration-300 data-[state=active]:bg-transparent data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
           >
             تقارير العاملين
           </TabsTrigger>
           <TabsTrigger 
             value="archives" 
-            className="flex-1 rounded-xl font-black text-sm transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className="flex-1 rounded-xl font-black text-sm transition-all duration-300 data-[state=active]:bg-transparent data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
           >
             إحصائيات الأرشيف
           </TabsTrigger>
