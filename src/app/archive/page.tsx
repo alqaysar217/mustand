@@ -22,7 +22,8 @@ import {
   GraduationCap,
   Fingerprint,
   Clock,
-  School
+  School,
+  FileText
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
