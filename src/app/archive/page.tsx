@@ -244,7 +244,7 @@ export default function ArchivePage() {
                     setSearchTerm("");
                   }}
                 >
-                  إعادة ضبط
+                  إعادة ضبط البحث
                 </Button>
               </div>
             </Card>
@@ -279,7 +279,7 @@ export default function ArchivePage() {
                       
                       <div className="p-3 text-right flex-1 flex flex-col">
                         <h3 className="text-xs font-black text-primary leading-tight line-clamp-1 mb-1">{item.studentName}</h3>
-                        <p className="text-[10px] text-secondary font-bold flex items-center justify-end gap-1 mb-3">
+                        <p className="text-[10px] text-secondary font-bold flex items-center justify-start gap-1 mb-3">
                           {item.subjectName}
                           <BookOpen className="w-2.5 h-2.5" />
                         </p>
@@ -330,10 +330,18 @@ export default function ArchivePage() {
                 </Card>
               )
             ) : (
-              <div className="py-20 text-center bg-white rounded-[3rem] shadow-xl border-4 border-dashed border-muted/50 max-w-2xl mx-auto">
+              <div className="py-32 text-center bg-white rounded-[3rem] shadow-xl border-4 border-dashed border-muted/50 max-w-2xl mx-auto">
                 <div className="w-20 h-20 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-6"><Search className="w-10 h-10 text-muted-foreground opacity-30" /></div>
                 <h3 className="text-2xl font-black text-primary mb-2">الأرشيف فارغ</h3>
-                <p className="text-muted-foreground font-bold text-sm">لم يتم العثور على أي ملفات مؤرشفة حالياً</p>
+                <p className="text-muted-foreground font-bold text-sm mb-6">لم يتم العثور على أي ملفات مؤرشفة حالياً</p>
+                <Button variant="outline" onClick={() => {
+                   setSelectedYear("all");
+                   setSelectedDept("all");
+                   setSelectedLevel("all");
+                   setSelectedSubject("all");
+                   setSelectedTerm("all");
+                   setSearchTerm("");
+                }} className="rounded-xl border-2 font-bold px-8">إعادة ضبط البحث</Button>
               </div>
             )}
           </div>
@@ -368,7 +376,6 @@ export default function ArchivePage() {
                     <Separator className="opacity-50" />
 
                     <div className="grid grid-cols-1 gap-4">
-                       {/* Academic Details Cards */}
                        <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-primary">
                           <Label className="text-muted-foreground text-[9px] font-black block mb-1">المادة الدراسية</Label>
                           <div className="flex items-center justify-end gap-2 font-black text-primary text-base md:text-lg">
