@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -147,7 +146,6 @@ export default function ReportsPage() {
     }
   };
 
-  // تأجيل الرندر لتجنب أخطاء Hydration المرتبطة بالـ Tabs و Recharts
   if (!mounted) {
     return (
       <div className="flex flex-col items-center justify-center py-40 space-y-4">
@@ -440,19 +438,6 @@ export default function ReportsPage() {
           </div>
         </TabsContent>
       </Tabs>
-      
-      {/* Footer Info */}
-      <Card className="p-6 border-none shadow-lg bg-primary/5 border-r-4 border-primary rounded-2xl">
-        <div className="flex gap-4">
-          <ShieldCheck className="w-7 h-7 text-primary shrink-0" />
-          <div className="text-right">
-            <h4 className="font-bold text-primary text-lg">ملاحظة الخصوصية والأمان</h4>
-            <p className="text-sm text-muted-foreground font-bold leading-relaxed">
-              كافة التقارير المصدرة تحتوي على بيانات أكاديمية حساسة. يرجى تداول هذه الملفات فقط مع الجهات المخولة رسمياً، وضمان حذف النسخ المؤقتة بعد الاستخدام.
-            </p>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }
