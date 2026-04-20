@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -9,11 +10,15 @@ import {
   Eye, 
   Trash2, 
   FileText, 
-  Plus, 
+  Edit2, 
   Loader2, 
-  ImageIcon,
-  Scan,
-  CloudUpload
+  Save,
+  X,
+  BookOpen,
+  Calendar,
+  GraduationCap,
+  Fingerprint,
+  User
 } from "lucide-react";
 import {
   Table,
@@ -43,12 +48,10 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { compressImage } from "@/lib/storage-utils";
-import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, deleteDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, deleteDoc, doc, addDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 
 export default function AdminArchivePage() {
   const firestore = useFirestore();
@@ -60,23 +63,9 @@ export default function AdminArchivePage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [viewingArchive, setViewingArchive] = useState<any>(null);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingArchive, setEditingArchive] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  const [newArchive, setNewArchive] = useState({
-    name: '',
-    regId: '',
-    subjectId: '',
-    subjectName: '',
-    year: '2023 / 2024',
-    term: 'الفصل الأول',
-    department: '',
-    departmentName: '',
-    level: 'المستوى الأول'
-  });
 
   const filteredArchives = useMemo(() => {
     return (archives as any[]).filter(item => 
@@ -86,35 +75,32 @@ export default function AdminArchivePage() {
     );
   }, [archives, searchTerm]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        if (event.target?.result) {
-          const compressed = await compressImage(event.target.result as string, 0.7, 1200);
-          setUploadedImage(compressed);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleAIAnalysis = async () => {
-    if (!uploadedImage) return;
+  const handleUpdateArchive = async () => {
+    if (!firestore || !editingArchive) return;
     setIsSubmitting(true);
     try {
-      const result = await extractExamDetails({ examImageDataUri: uploadedImage });
-      setNewArchive(prev => ({
-        ...prev,
-        regId: result.studentRegistrationId || prev.regId,
-        name: result.studentName || prev.name,
-        year: result.academicYear || prev.year,
-        level: result.level || prev.level
-      }));
-      toast({ title: "تم التحليل بنجاح" });
-    } catch (e) {
-      toast({ variant: "destructive", title: "فشل التحليل الذكي" });
+      const docRef = doc(firestore, "archives", editingArchive.id);
+      const { id, ...updateData } = editingArchive;
+      
+      await updateDoc(docRef, {
+        ...updateData,
+        updatedAt: serverTimestamp()
+      });
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: "تعديل بيانات ملف مؤرشف",
+        target: `${editingArchive.studentName} - ${editingArchive.subjectName}`,
+        type: 'update',
+        timestamp: serverTimestamp()
+      });
+
+      toast({ title: "تم تحديث البيانات بنجاح" });
+      setEditingArchive(null);
+    } catch (error) {
+      toast({ variant: "destructive", title: "فشل التحديث" });
     } finally {
       setIsSubmitting(false);
     }
@@ -150,69 +136,13 @@ export default function AdminArchivePage() {
     }
   };
 
-  const handleSaveNewArchive = async () => {
-    if (!firestore || !newArchive.name || !newArchive.regId || !uploadedImage) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى رفع الصورة وتعبئة بيانات الطالب والمادة." });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const archiveData = {
-        studentName: newArchive.name,
-        studentRegId: newArchive.regId,
-        subjectName: newArchive.subjectName,
-        subjectId: newArchive.subjectId,
-        year: newArchive.year,
-        term: newArchive.term,
-        level: newArchive.level,
-        fileUrl: uploadedImage,
-        pages: 1,
-        uploadMethod: 'Manual-Image',
-        uploadedAt: serverTimestamp()
-      };
-      
-      await addDoc(collection(firestore, "archives"), archiveData);
-
-      // تسجيل في السجل
-      await addDoc(collection(firestore, "logs"), {
-        user: "المدير العام",
-        role: "manager",
-        action: "أرشفة مستند جديد",
-        target: `${newArchive.name} - ${newArchive.subjectName}`,
-        type: 'archive',
-        timestamp: serverTimestamp()
-      });
-      
-      setIsAddDialogOpen(false);
-      setUploadedImage(null);
-      setNewArchive({
-        name: '', regId: '', subjectId: '', subjectName: '',
-        year: '2023 / 2024', term: 'الفصل الأول', department: '', departmentName: '', level: 'المستوى الأول'
-      });
-
-      toast({ title: "تمت الأرشفة بنجاح" });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "حدث خطأ أثناء الحفظ" });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="space-y-8 text-right" dir="rtl">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-primary mb-1">إدارة الأرشيف الرقمي</h1>
-          <p className="text-muted-foreground font-bold">التحكم في الملفات المؤرشفة مباشرة عبر الصور</p>
+          <p className="text-muted-foreground font-bold">مراجعة وتعديل وحذف الملفات المؤرشفة من قبل الموظفين</p>
         </div>
-        <Button 
-          onClick={() => setIsAddDialogOpen(true)}
-          className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          أرشفة مستند جديد
-        </Button>
       </div>
 
       <Card className="p-6 border-none shadow-xl rounded-2xl bg-white">
@@ -222,7 +152,7 @@ export default function AdminArchivePage() {
             <input 
               type="text"
               placeholder="البحث باسم الطالب، رقم القيد، أو المادة..."
-              className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all"
+              className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all text-right"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -230,13 +160,13 @@ export default function AdminArchivePage() {
         </div>
 
         <div className="rounded-2xl border overflow-hidden">
-          <Table>
+          <Table className="text-right">
             <TableHeader className="bg-muted/50">
               <TableRow className="hover:bg-transparent border-b">
                 <TableHead className="text-right font-bold text-primary">الطالب / المادة</TableHead>
                 <TableHead className="text-right font-bold text-primary">السنة / الترم</TableHead>
                 <TableHead className="text-right font-bold text-primary">المستوى</TableHead>
-                <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
+                <TableHead className="text-center font-bold text-primary w-40">إجراءات المدير</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -268,8 +198,9 @@ export default function AdminArchivePage() {
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => setViewingArchive(item)} className="rounded-xl hover:bg-primary/5 text-primary"><Eye className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleMoveToBin(item)} className="rounded-xl hover:bg-destructive/10 text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => setViewingArchive(item)} className="rounded-xl hover:bg-primary/5 text-primary" title="معاينة المستند"><Eye className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => setEditingArchive(item)} className="rounded-xl hover:bg-blue-50 text-blue-600" title="تعديل البيانات"><Edit2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleMoveToBin(item)} className="rounded-xl hover:bg-destructive/10 text-destructive" title="نقل للسلة"><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -281,64 +212,102 @@ export default function AdminArchivePage() {
         </div>
       </Card>
 
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-3xl rounded-3xl border-none text-right shadow-2xl overflow-hidden p-0" dir="rtl">
-          <div className="p-8 space-y-6">
-            <DialogHeader className="text-right">
-              <DialogTitle className="text-2xl font-black text-primary flex items-center justify-end gap-2">أرشفة مستند جديد<Archive className="w-6 h-6 text-secondary" /></DialogTitle>
-              <DialogDescription className="font-bold text-muted-foreground">ارفع صورة الاختبار وسيساعدك النظام في ملء البيانات.</DialogDescription>
-            </DialogHeader>
+      {/* Edit Archive Dialog */}
+      <Dialog open={!!editingArchive} onOpenChange={(open) => !open && setEditingArchive(null)}>
+        <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+           <div className="p-8 space-y-6">
+              <DialogHeader className="text-right items-start">
+                <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                  تعديل بيانات الملف الموثق
+                  <Edit2 className="w-6 h-6 text-secondary" />
+                </DialogTitle>
+                <DialogDescription className="font-bold text-muted-foreground">تحديث المعلومات الأكاديمية للمستند المختار لتصحيح أخطاء الأرشفة.</DialogDescription>
+              </DialogHeader>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <Label className="text-primary font-bold">صورة الاختبار الممسوحة ضوئياً</Label>
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="aspect-[4/3] border-4 border-dashed rounded-3xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-muted/30 transition-all overflow-hidden relative group"
-                >
-                  {uploadedImage ? (
-                    <>
-                      <Image src={uploadedImage} alt="Uploaded" fill className="object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Button variant="secondary" className="font-bold rounded-xl">تغيير الصورة</Button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <ImageIcon className="w-12 h-12 text-muted-foreground" />
-                      <p className="text-xs font-bold text-muted-foreground">اضغط لرفع الصورة</p>
-                    </>
-                  )}
-                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="space-y-2 col-span-2">
+                  <Label className="text-primary font-bold flex items-center gap-2">
+                    <User className="w-4 h-4 text-secondary" />
+                    اسم الطالب
+                  </Label>
+                  <Input 
+                    value={editingArchive?.studentName || ""} 
+                    onChange={(e) => setEditingArchive({...editingArchive, studentName: e.target.value})} 
+                    className="rounded-xl h-11 border-muted font-bold text-right" 
+                  />
                 </div>
-                {uploadedImage && (
-                  <Button onClick={handleAIAnalysis} disabled={isSubmitting} className="w-full rounded-xl h-11 font-bold gradient-blue gap-2 shadow-md">
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scan className="w-4 h-4" />}
-                    بدء التحليل الذكي للصورة
-                  </Button>
-                )}
+                <div className="space-y-2">
+                  <Label className="text-primary font-bold flex items-center gap-2">
+                    <Fingerprint className="w-4 h-4 text-secondary" />
+                    رقم القيد
+                  </Label>
+                  <Input 
+                    value={editingArchive?.studentRegId || ""} 
+                    onChange={(e) => setEditingArchive({...editingArchive, studentRegId: e.target.value})} 
+                    className="rounded-xl h-11 border-muted font-bold text-right" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-primary font-bold flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-secondary" />
+                    المادة الدراسية
+                  </Label>
+                  <Select 
+                    value={editingArchive?.subjectId || ""} 
+                    onValueChange={(v) => {
+                      const s = subjects.find((sub: any) => sub.id === v) as any;
+                      setEditingArchive({...editingArchive, subjectId: v, subjectName: s?.nameAr || ""});
+                    }}
+                  >
+                    <SelectTrigger className="rounded-xl h-11 font-bold">
+                      <SelectValue placeholder="اختر المادة" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl font-bold">
+                      {subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nameAr}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-primary font-bold flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-secondary" />
+                    السنة الدراسية
+                  </Label>
+                  <Input 
+                    value={editingArchive?.year || ""} 
+                    onChange={(e) => setEditingArchive({...editingArchive, year: e.target.value})} 
+                    className="rounded-xl h-11 border-muted font-bold text-right" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-primary font-bold flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-secondary" />
+                    المستوى
+                  </Label>
+                  <Select 
+                    value={editingArchive?.level || ""} 
+                    onValueChange={(v) => setEditingArchive({...editingArchive, level: v})}
+                  >
+                    <SelectTrigger className="rounded-xl h-11 font-bold">
+                      <SelectValue placeholder="المستوى" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl font-bold">
+                      <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                      <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                      <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                      <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2"><Label className="text-primary font-bold">اسم الطالب</Label><Input value={newArchive.name} onChange={(e) => setNewArchive({...newArchive, name: e.target.value})} placeholder="أحمد محمد" className="rounded-xl h-10 font-bold" /></div>
-                  <div className="space-y-2"><Label className="text-primary font-bold">رقم القيد</Label><Input value={newArchive.regId} onChange={(e) => setNewArchive({...newArchive, regId: e.target.value})} placeholder="20210045" className="rounded-xl h-10 font-bold" /></div>
-                  <div className="space-y-2"><Label className="text-primary font-bold">المادة</Label><Select value={newArchive.subjectId} onValueChange={(v) => { const s = subjects.find((sub: any) => sub.id === v) as any; setNewArchive({...newArchive, subjectId: v, subjectName: s?.nameAr || ""}); }}><SelectTrigger className="rounded-xl h-10 font-bold"><SelectValue placeholder="اختر المادة" /></SelectTrigger><SelectContent className="rounded-xl font-bold">{subjects.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.nameAr}</SelectItem>)}</SelectContent></Select></div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2"><Label className="text-primary font-bold">السنة</Label><Select value={newArchive.year} onValueChange={(v) => setNewArchive({...newArchive, year: v})}><SelectTrigger className="rounded-xl h-10 font-bold"><SelectValue placeholder="السنة" /></SelectTrigger><SelectContent className="rounded-xl font-bold"><SelectItem value="2023 / 2024">2023 / 2024</SelectItem><SelectItem value="2022 / 2023">2022 / 2023</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label className="text-primary font-bold">المستوى</Label><Select value={newArchive.level} onValueChange={(v) => setNewArchive({...newArchive, level: v})}><SelectTrigger className="rounded-xl h-10 font-bold"><SelectValue placeholder="المستوى" /></SelectTrigger><SelectContent className="rounded-xl font-bold"><SelectItem value="المستوى الأول">المستوى الأول</SelectItem><SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem><SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem><SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem></SelectContent></Select></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter className="flex-row gap-3 pt-4 border-t">
-              <Button onClick={handleSaveNewArchive} disabled={isSubmitting || !uploadedImage} className="flex-1 rounded-xl h-12 font-bold bg-green-600 hover:bg-green-700 text-white shadow-lg gap-2">
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CloudUpload className="w-5 h-5" />}
-                حفظ في الأرشيف
-              </Button>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
-            </DialogFooter>
-          </div>
+              <DialogFooter className="flex-row gap-3 pt-6 border-t">
+                <Button onClick={handleUpdateArchive} disabled={isSubmitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2">
+                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                  حفظ التعديلات
+                </Button>
+                <Button variant="outline" onClick={() => setEditingArchive(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+              </DialogFooter>
+           </div>
         </DialogContent>
       </Dialog>
 
@@ -346,13 +315,24 @@ export default function AdminArchivePage() {
         <DialogContent className="max-w-xl rounded-3xl p-8 border-none shadow-2xl text-right" dir="rtl">
           {viewingArchive && (
             <div className="space-y-6">
-              <DialogHeader><DialogTitle className="text-2xl font-bold text-primary">{viewingArchive.studentName}</DialogTitle></DialogHeader>
+              <DialogHeader className="text-right">
+                <DialogTitle className="text-2xl font-bold text-primary flex items-center justify-end gap-2">
+                  {viewingArchive.studentName}
+                  <X className="w-5 h-5 cursor-pointer opacity-50" onClick={() => setViewingArchive(null)} />
+                </DialogTitle>
+              </DialogHeader>
               <div className="aspect-[3/4] relative rounded-2xl overflow-hidden border-2 shadow-inner bg-muted">
                 <Image src={viewingArchive.fileUrl} alt="Exam Preview" fill className="object-contain" />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-muted/30 rounded-2xl"><Label className="text-[10px] block mb-1">رقم القيد</Label><p className="font-black text-primary">{viewingArchive.studentRegId}</p></div>
-                <div className="p-4 bg-muted/30 rounded-2xl"><Label className="text-[10px] block mb-1">المادة</Label><p className="font-black text-primary">{viewingArchive.subjectName}</p></div>
+                <div className="p-4 bg-muted/30 rounded-2xl">
+                  <Label className="text-[10px] block mb-1 font-bold opacity-70">رقم القيد</Label>
+                  <p className="font-black text-primary">{viewingArchive.studentRegId}</p>
+                </div>
+                <div className="p-4 bg-muted/30 rounded-2xl">
+                  <Label className="text-[10px] block mb-1 font-bold opacity-70">المادة</Label>
+                  <p className="font-black text-primary">{viewingArchive.subjectName}</p>
+                </div>
               </div>
               <Button variant="outline" className="w-full rounded-xl font-bold border-2 h-12" onClick={() => setViewingArchive(null)}>إغلاق المعاينة</Button>
             </div>

@@ -18,10 +18,6 @@ import {
   PieChart as PieChartIcon
 } from "lucide-react";
 import { 
-  Bar, 
-  BarChart, 
-  Line, 
-  LineChart, 
   ResponsiveContainer, 
   Tooltip, 
   XAxis, 
@@ -29,7 +25,9 @@ import {
   PieChart,
   Pie,
   Cell,
-  CartesianGrid
+  CartesianGrid,
+  LineChart,
+  Line
 } from "recharts";
 import { cn } from "@/lib/utils";
 
@@ -81,10 +79,6 @@ export default function AdminDashboard() {
           <h1 className="text-4xl font-black text-primary mb-1">لوحة الإدارة المركزية</h1>
           <p className="text-muted-foreground font-bold text-lg">تحكم كامل ومراقبة شاملة لكافة موارد المؤسسة</p>
         </div>
-        <Button onClick={() => window.location.href='/upload'} className="rounded-2xl h-12 px-8 font-black gradient-blue shadow-lg gap-2">
-          <Archive className="w-5 h-5" />
-          بدء أرشفة فورية
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -205,7 +199,7 @@ export default function AdminDashboard() {
             <div>
               <h2 className="text-2xl font-black mb-4">تقارير الذكاء الاصطناعي</h2>
               <p className="text-white/80 font-bold leading-relaxed mb-8">
-                يقوم النظام بتحليل أكثر من 500 ورقة امتحان شهرياً بدقة تصل إلى 98.5%. يمكنك استخراج تقارير الأداء التفصيلية بنقرة واحدة.
+                يقوم النظام بتحليل كافة أوراق الامتحان بدقة عالية. بصفتك مديراً، يمكنك مراجعة جودة البيانات وتعديل أي أخطاء في الأرشفة من قسم "إدارة الأرشيف".
               </p>
             </div>
             <div className="space-y-4">
@@ -213,8 +207,8 @@ export default function AdminDashboard() {
                 <span className="font-bold">دقة استخراج البيانات (OCR)</span>
                 <span className="font-black text-xl">98%</span>
               </div>
-              <Button className="w-full bg-white text-primary hover:bg-white/90 h-14 rounded-2xl font-black text-lg shadow-xl">
-                توليد تقرير الأداء الشامل
+              <Button className="w-full bg-white text-primary hover:bg-white/90 h-14 rounded-2xl font-black text-lg shadow-xl" onClick={() => window.location.href='/admin/reports'}>
+                عرض التقارير التحليلية
               </Button>
             </div>
           </div>
