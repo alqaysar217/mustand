@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, User, Settings, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2, PanelRight } from "lucide-react";
+import { Menu, Settings, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2, PanelRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import {
@@ -50,24 +51,26 @@ export function AdminNavbar() {
       "h-20 bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 flex items-center justify-between px-6 md:px-10 transition-all duration-300",
       isOpen ? "mr-0 md:mr-64" : "mr-0"
     )} dir="rtl">
-      {/* Right Side: Logo & Name */}
+      {/* Right Side: Toggle Button & Logo/Name (Conditional) */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
-            <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
-          </div>
-          <h2 className="text-xl font-black text-primary">مستند</h2>
-        </div>
-
         <Button 
           variant="ghost" 
           size="icon" 
-          className="hidden md:flex rounded-xl text-primary hover:bg-primary/5"
+          className="rounded-xl text-primary hover:bg-primary/5 shrink-0"
           onClick={toggle}
           title={isOpen ? "إخفاء القائمة" : "إظهار القائمة"}
         >
           <PanelRight className={cn("w-6 h-6 transition-transform duration-300", !isOpen && "rotate-180")} />
         </Button>
+
+        {!isOpen && (
+          <div className="flex items-center gap-3 animate-fade-in">
+            <div className="relative w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
+              <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
+            </div>
+            <h2 className="text-xl font-black text-primary">مستند</h2>
+          </div>
+        )}
       </div>
 
       {/* Left Side: Mobile Menu or Profile */}
@@ -162,3 +165,4 @@ export function AdminNavbar() {
     </header>
   );
 }
+
