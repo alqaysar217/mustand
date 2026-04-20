@@ -48,7 +48,7 @@ export function AdminSidebar() {
     )}>
       <div className="p-8 flex items-center gap-4">
         <div className="relative w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0">
-          <Image src="/logo-mustand.png" alt="Logo" fill className="object-contain p-2" />
+          <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
         </div>
         <div className="flex flex-col">
           <span className="text-xl font-black tracking-tight">مستند</span>
