@@ -200,7 +200,7 @@ export default function AdminDepartmentsPage() {
                     <School className="w-4 h-4 text-secondary" />
                     الكلية التابع لها
                   </Label>
-                  <Select onValueChange={(v) => setNewDept({...newDept, collegeId: v})}>
+                  <Select dir="rtl" onValueChange={(v) => setNewDept({...newDept, collegeId: v})}>
                     <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
                       <SelectValue placeholder="اختر الكلية" />
                     </SelectTrigger>
@@ -378,7 +378,7 @@ export default function AdminDepartmentsPage() {
                   <School className="w-4 h-4 text-secondary" />
                   الكلية التابع لها
                 </Label>
-                <Select value={editingDept?.collegeId || ""} onValueChange={(v) => setEditingDept({...editingDept, collegeId: v})}>
+                <Select dir="rtl" value={editingDept?.collegeId || ""} onValueChange={(v) => setEditingDept({...editingDept, collegeId: v})}>
                   <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
                     <SelectValue placeholder="اختر الكلية" />
                   </SelectTrigger>
