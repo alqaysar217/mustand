@@ -13,7 +13,6 @@ import {
   Loader2,
   TrendingUp,
   School,
-  Building2,
   PieChart as PieChartIcon,
   Activity,
   ShieldCheck,
@@ -34,6 +33,10 @@ import {
   Area
 } from "recharts";
 import { cn } from "@/lib/utils";
+
+// Firebase logic included in imports
+import { useFirestore, useCollection } from "@/firebase";
+import { collection, query, orderBy, limit } from "firebase/firestore";
 
 const COLORS = ['#0B3C5D', '#328CC1', '#4ade80', '#fbbf24'];
 
@@ -89,16 +92,6 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-black text-primary tracking-tight">الرؤية الاستراتيجية</h1>
           </div>
           <p className="text-muted-foreground font-bold text-base pr-4">المركز القيادي لإدارة ومراقبة كافة العمليات الأكاديمية</p>
-        </div>
-        <div className="flex items-center gap-3">
-           <Button variant="outline" className="rounded-[10px] h-11 px-5 border-2 font-black text-primary gap-2">
-             <Clock className="w-4 h-4 text-secondary" />
-             تحديث مباشر
-           </Button>
-           <Button className="rounded-[10px] h-11 px-6 font-black gradient-blue shadow-lg shadow-blue-500/20 gap-2">
-             <Zap className="w-4 h-4" />
-             إجراء سريع
-           </Button>
         </div>
       </div>
 
@@ -270,7 +263,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-// Firebase logic included in imports
-import { useFirestore, useCollection } from "@/firebase";
-import { collection, query, orderBy, limit } from "firebase/firestore";
