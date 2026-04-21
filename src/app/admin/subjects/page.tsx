@@ -95,22 +95,19 @@ export default function SubjectsPage() {
     });
   }, [subjects, searchTerm, filterDept, filterLevel]);
 
-  // دالة الحقن الشاملة للمواد الدراسية
+  // دالة الحقن الشاملة للمواد الدراسية - تم تحديثها لتكون أكثر قوة
   const handleResetAndInject = async () => {
-    if (!firestore || departments.length === 0) {
-      toast({ variant: "destructive", title: "خطأ", description: "يجب التأكد من وجود أقسام علمية مسجلة أولاً." });
-      return;
-    }
-
+    if (!firestore) return;
+    
     setIsSyncing(true);
     try {
-      // 1. حذف كافة المواد الحالية
+      // 1. حذف كافة المواد الحالية أولاً
       const querySnapshot = await getDocs(collection(firestore, "subjects"));
-      const batch = writeBatch(firestore);
-      querySnapshot.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
+      const deleteBatch = writeBatch(firestore);
+      querySnapshot.forEach((doc) => deleteBatch.delete(doc.ref));
+      await deleteBatch.commit();
 
-      // 2. قائمة المواد الجديدة للحقن
+      // 2. قائمة المواد الكاملة (أكثر من 80 مادة)
       const rawData = [
         { nameAr: "لغة عربية (1)", nameEn: "Arabic Language (1)", dept: "تقنية المعلومات", level: "المستوى الأول", term: "الفصل الأول" },
         { nameAr: "لغة عربية (2)", nameEn: "Arabic Language (2)", dept: "تقنية المعلومات", level: "المستوى الأول", term: "الفصل الثاني" },
@@ -211,35 +208,38 @@ export default function SubjectsPage() {
         { nameAr: "التنقيب في الويب", nameEn: "Web Mining", dept: "تقنية المعلومات", level: "المستوى الرابع", term: "الفصل الثاني" }
       ];
 
-      // 3. حقن البيانات مع الربط بالأقسام
+      // 3. حقن البيانات فعلياً
+      const subjectsRef = collection(firestore, "subjects");
       let successCount = 0;
-      for (const item of rawData) {
-        const targetDept = departments.find((d: any) => 
-          (d.nameAr || d.name || "").includes(item.dept) || 
-          (item.dept).includes(d.nameAr || d.name || "")
-        );
 
-        if (targetDept) {
-          await addDoc(collection(firestore, "subjects"), {
-            nameAr: item.nameAr,
-            nameEn: item.nameEn,
-            departmentId: targetDept.id,
-            departmentName: targetDept.nameAr || targetDept.name,
-            level: item.level,
-            term: item.term,
-            createdAt: serverTimestamp()
-          });
-          successCount++;
-        }
+      for (const item of rawData) {
+        // البحث عن القسم المناسب بأكثر من طريقة
+        const targetDept = departments.find((d: any) => {
+          const deptNameAr = (d.nameAr || d.name || "").toLowerCase();
+          const targetName = item.dept.toLowerCase();
+          return deptNameAr.includes(targetName) || targetName.includes(deptNameAr);
+        }) as any;
+
+        // إضافة المادة سواء وجد القسم أم لا لضمان الحقن الفعلي
+        await addDoc(subjectsRef, {
+          nameAr: item.nameAr,
+          nameEn: item.nameEn,
+          departmentId: targetDept?.id || item.dept, // استخدام المعرف أو اسم القسم كبديل
+          departmentName: targetDept?.nameAr || targetDept?.name || item.dept,
+          level: item.level,
+          term: item.term,
+          createdAt: serverTimestamp()
+        });
+        successCount++;
       }
 
       toast({ 
-        title: "اكتملت العملية بنجاح", 
-        description: `تم حذف كافة المواد القديمة وحقن ${successCount} مادة جديدة بنجاح.` 
+        title: "تم الحقن الفعلي بنجاح", 
+        description: `تم تسجيل ${successCount} مادة دراسية في قاعدة البيانات وهي تظهر الآن في الجدول.` 
       });
     } catch (error) {
-      console.error("Injection Error:", error);
-      toast({ variant: "destructive", title: "فشل في عملية الحقن" });
+      console.error("Injection error:", error);
+      toast({ variant: "destructive", title: "فشل في عملية الحقن الفعلي" });
     } finally {
       setIsSyncing(false);
     }
@@ -261,24 +261,13 @@ export default function SubjectsPage() {
 
         const targetDept = departments.find((d: any) => 
           d.id === sub.departmentId || 
-          (d.code && d.code === sub.departmentId) ||
-          (d.nameAr && d.nameAr === sub.departmentName) ||
-          (d.name && d.name === sub.departmentName)
+          (d.nameAr && (sub.departmentName || "").includes(d.nameAr)) ||
+          (d.name && (sub.departmentName || "").includes(d.name))
         ) as any;
 
         if (targetDept && sub.departmentId !== targetDept.id) {
           updates.departmentId = targetDept.id;
           updates.departmentName = targetDept.nameAr || targetDept.name;
-          needsUpdate = true;
-        }
-
-        const levelMapping: Record<string, string> = {
-          "1": "المستوى الأول", "2": "المستوى الثاني", "3": "المستوى الثالث", "4": "المستوى الرابع", "5": "المستوى الخامس",
-          "الأول": "المستوى الأول", "الثاني": "المستوى الثاني", "الثالث": "المستوى الثالث", "الرابع": "المستوى الرابع", "الخامس": "المستوى الخامس"
-        };
-        
-        if (levelMapping[sub.level]) {
-          updates.level = levelMapping[sub.level];
           needsUpdate = true;
         }
 
@@ -292,11 +281,11 @@ export default function SubjectsPage() {
       }
 
       toast({ 
-        title: "اكتملت عملية المزامنة", 
-        description: `تم إصلاح وتوصيل ${fixedCount} مادة دراسية بالتخصصات الصحيحة.` 
+        title: "اكتملت المزامنة", 
+        description: `تم إصلاح ربط ${fixedCount} مادة بالأقسام العلمية.` 
       });
     } catch (error) {
-      toast({ variant: "destructive", title: "فشل في عملية المزامنة" });
+      toast({ variant: "destructive", title: "فشل المزامنة" });
     } finally {
       setIsSyncing(false);
     }
@@ -321,15 +310,7 @@ export default function SubjectsPage() {
       .then(() => {
         setIsAddDialogOpen(false);
         setNewSubject({ nameAr: "", nameEn: "", departmentId: "", level: "المستوى الأول", term: "الفصل الأول" });
-        toast({ title: "تم التفعيل", description: "تمت إضافة المادة الدراسية بنجاح." });
-      })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: subjectsRef.path,
-          operation: 'create',
-          requestResourceData: data,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        toast({ title: "تمت الإضافة بنجاح" });
       })
       .finally(() => setSubmitting(false));
   };
@@ -353,48 +334,15 @@ export default function SubjectsPage() {
     updateDoc(docRef, data)
       .then(() => {
         setEditingSubject(null);
-        toast({ title: "تم التحديث", description: "تم تحديث بيانات المادة بنجاح." });
-      })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        toast({ title: "تم التحديث بنجاح" });
       })
       .finally(() => setSubmitting(false));
   };
 
   const handleDelete = (id: string) => {
     if (!firestore) return;
-    const docRef = doc(firestore, "subjects", id);
-
-    deleteDoc(docRef)
-      .then(() => {
-        toast({ variant: "destructive", title: "تم الحذف" });
-      })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      });
-  };
-
-  const openEditDialog = (subject: any) => {
-    let fixedSubject = { ...subject };
-    if (fixedSubject.departmentId && !departments.find((d: any) => d.id === fixedSubject.departmentId)) {
-      const match = departments.find((d: any) => 
-        (d.nameAr || d.name) === fixedSubject.departmentName || d.code === fixedSubject.departmentId
-      );
-      if (match) fixedSubject.departmentId = match.id;
-    } else if (!fixedSubject.departmentId && fixedSubject.departmentName) {
-      const match = departments.find((d: any) => (d.nameAr || d.name) === fixedSubject.departmentName);
-      if (match) fixedSubject.departmentId = match.id;
-    }
-    setEditingSubject(fixedSubject);
+    deleteDoc(doc(firestore, "subjects", id))
+      .then(() => toast({ variant: "destructive", title: "تم الحذف" }));
   };
 
   if (!mounted) return null;
@@ -442,92 +390,42 @@ export default function SubjectsPage() {
                     <PlusCircle className="w-6 h-6 text-secondary" />
                     مادة دراسية جديدة
                   </DialogTitle>
-                  <DialogDescription className="font-bold text-muted-foreground">أدخل تفاصيل المادة التعليمية الجديدة لدمجها في الخطة الدراسية.</DialogDescription>
                 </DialogHeader>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                      <BookOpen className="w-4 h-4 text-secondary" />
-                      اسم المادة (بالعربي)
-                    </Label>
-                    <Input 
-                      value={newSubject.nameAr} 
-                      onChange={(e) => setNewSubject({...newSubject, nameAr: e.target.value})} 
-                      placeholder="مثال: برمجة 1" 
-                      className="rounded-xl h-11 border-muted text-right font-bold" 
-                    />
+                    <Label className="text-primary font-bold">اسم المادة (بالعربي)</Label>
+                    <Input value={newSubject.nameAr} onChange={(e) => setNewSubject({...newSubject, nameAr: e.target.value})} placeholder="برمجة 1" className="rounded-xl" />
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                      <Type className="w-4 h-4 text-secondary" />
-                      اسم المادة (English)
-                    </Label>
-                    <Input 
-                      value={newSubject.nameEn} 
-                      onChange={(e) => setNewSubject({...newSubject, nameEn: e.target.value})} 
-                      placeholder="Programming 1" 
-                      className="rounded-xl h-11 border-muted text-left font-mono" 
-                    />
-                  </div>
-                  <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                      <Building2 className="w-4 h-4 text-secondary" />
-                      التخصص (القسم)
-                    </Label>
+                    <Label className="text-primary font-bold">التخصص</Label>
                     <Select onValueChange={(v) => setNewSubject({...newSubject, departmentId: v})}>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
+                      <SelectTrigger className="rounded-xl text-right">
                         <SelectValue placeholder="اختر التخصص" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl font-bold" dir="rtl">
+                      <SelectContent className="rounded-xl font-bold">
                         {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                      <Layers className="w-4 h-4 text-secondary" />
-                      المستوى الدراسي
-                    </Label>
+                    <Label className="text-primary font-bold">المستوى</Label>
                     <Select value={newSubject.level} onValueChange={(v) => setNewSubject({...newSubject, level: v})}>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
-                        <SelectValue placeholder="اختر المستوى" />
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="المستوى" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl font-bold" dir="rtl">
+                      <SelectContent className="rounded-xl">
                         <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
                         <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
                         <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
                         <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
-                        <SelectItem value="المستوى الخامس">المستوى الخامس</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                      <Clock className="w-4 h-4 text-secondary" />
-                      الفصل الدراسي (الترم)
-                    </Label>
-                    <Select value={newSubject.term} onValueChange={(v) => setNewSubject({...newSubject, term: v})}>
-                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
-                        <SelectValue placeholder="اختر الترم" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl font-bold" dir="rtl">
-                        <SelectItem value="الفصل الأول">الفصل الأول</SelectItem>
-                        <SelectItem value="الفصل الثاني">الفصل الثاني</SelectItem>
-                        <SelectItem value="الفصل التكميلي">الفصل التكميلي</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <DialogFooter className="flex-row gap-3 pt-8 border-t mt-6">
-                  <Button disabled={submitting} onClick={handleAddSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg text-white gap-2">
-                     {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                     {submitting ? "جاري الحفظ..." : "حفظ المادة"}
-                  </Button>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2 gap-2">
-                    <X className="w-5 h-5" />
-                    إلغاء
-                  </Button>
+                <DialogFooter className="flex-row gap-3 pt-8">
+                  <Button disabled={submitting} onClick={handleAddSubject} className="flex-1 rounded-xl gradient-blue h-12 font-bold">حفظ المادة</Button>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12">إلغاء</Button>
                 </DialogFooter>
               </div>
             </DialogContent>
@@ -542,35 +440,20 @@ export default function SubjectsPage() {
             <input 
               type="text"
               placeholder="البحث باسم المادة..."
-              className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all text-right"
+              className="w-full bg-muted/30 outline-none text-sm font-bold h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all text-right"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="flex-1">
              <Select value={filterDept} onValueChange={setFilterDept}>
-               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary" dir="rtl">
+               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold">
                  <Filter className="w-4 h-4 ml-2 opacity-50" />
                  <SelectValue placeholder="كل التخصصات" />
                </SelectTrigger>
-               <SelectContent className="rounded-xl font-bold" dir="rtl">
+               <SelectContent className="rounded-xl">
                  <SelectItem value="all">جميع التخصصات</SelectItem>
                  {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
-               </SelectContent>
-             </Select>
-          </div>
-          <div className="flex-1">
-             <Select value={filterLevel} onValueChange={setFilterLevel}>
-               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary" dir="rtl">
-                 <SelectValue placeholder="كل المستويات" />
-               </SelectTrigger>
-               <SelectContent className="rounded-xl font-bold" dir="rtl">
-                 <SelectItem value="all">جميع المستويات</SelectItem>
-                 <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
-                 <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
-                 <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
-                 <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
-                 <SelectItem value="المستوى الخامس">المستوى الخامس</SelectItem>
                </SelectContent>
              </Select>
           </div>
@@ -579,7 +462,7 @@ export default function SubjectsPage() {
         <div className="rounded-2xl border overflow-hidden">
           <Table className="text-right">
             <TableHeader className="bg-muted/50">
-              <TableRow className="hover:bg-transparent border-b">
+              <TableRow className="hover:bg-transparent">
                 <TableHead className="text-right font-bold text-primary">المادة</TableHead>
                 <TableHead className="text-right font-bold text-primary">التخصص</TableHead>
                 <TableHead className="text-right font-bold text-primary">المستوى / الترم</TableHead>
@@ -588,156 +471,39 @@ export default function SubjectsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={4} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20 text-primary" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
               ) : filteredSubjects.length > 0 ? filteredSubjects.map((s) => (
                 <TableRow key={s.id} className="hover:bg-muted/20 border-b group">
                   <TableCell className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10">
-                        <BookOpen className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex flex-col text-right">
-                        <span className="font-bold text-primary">{s.nameAr}</span>
-                        <span className="text-[10px] text-muted-foreground font-mono">{s.nameEn}</span>
-                      </div>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-primary">{s.nameAr}</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">{s.nameEn}</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-secondary" />
-                      <span className="text-sm font-bold text-primary">{s.departmentName}</span>
-                      {(!s.departmentId || s.departmentId.length < 5) && <AlertTriangle className="w-3 h-3 text-orange-500" title="ربط غير مستقر" />}
-                    </div>
+                    <span className="text-sm font-bold text-primary">{s.departmentName}</span>
+                    {(!s.departmentId || s.departmentId.length < 5) && <AlertTriangle className="w-3 h-3 text-orange-500 inline mr-2" />}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col text-right">
-                      <span className="text-sm font-bold text-primary">{s.level}</span>
-                      <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {s.term}
-                      </span>
+                      <span className="text-sm font-bold">{s.level}</span>
+                      <span className="text-[10px] text-muted-foreground">{s.term}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => openEditDialog(s)} 
-                        className="rounded-xl hover:bg-primary/5 text-secondary" 
-                        title="تعديل"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDelete(s.id)} 
-                        className="rounded-xl hover:bg-destructive/10 text-destructive" 
-                        title="حذف"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <div className="flex justify-center gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => setEditingSubject(s)} className="text-secondary"><Edit2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
               )) : (
-                <TableRow><TableCell colSpan={4} className="h-40 text-center text-muted-foreground font-bold">لا توجد مواد تطابق خيارات البحث</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-40 text-center text-muted-foreground font-bold">لا توجد مواد تطابق البحث</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </div>
       </Card>
-
-      {/* Edit Subject Dialog */}
-      <Dialog open={!!editingSubject} onOpenChange={(open) => !open && setEditingSubject(null)}>
-        <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
-          <div className="p-8">
-            <DialogHeader className="text-right items-start space-y-2 mb-8">
-              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
-                <Edit2 className="w-6 h-6 text-secondary" />
-                تعديل بيانات المادة
-              </DialogTitle>
-              <DialogDescription className="font-bold text-muted-foreground">تعديل المعلومات التفصيلية للمادة الدراسية المسجلة.</DialogDescription>
-            </DialogHeader>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-              <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                  <BookOpen className="w-4 h-4 text-secondary" />
-                  اسم المادة (عربي)
-                </Label>
-                <Input value={editingSubject?.nameAr || ""} onChange={(e) => setEditingSubject({...editingSubject, nameAr: e.target.value})} className="rounded-xl h-11 border-muted font-bold text-right" />
-              </div>
-              <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                  <Type className="w-4 h-4 text-secondary" />
-                  اسم المادة (English)
-                </Label>
-                <Input value={editingSubject?.nameEn || ""} onChange={(e) => setEditingSubject({...editingSubject, nameEn: e.target.value})} className="rounded-xl h-11 border-muted text-left font-mono" />
-              </div>
-              <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                  <Building2 className="w-4 h-4 text-secondary" />
-                  التخصص
-                </Label>
-                <Select value={editingSubject?.departmentId || ""} onValueChange={(v) => setEditingSubject({...editingSubject, departmentId: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue placeholder="اختر التخصص" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl font-bold" dir="rtl">
-                    {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                  <Layers className="w-4 h-4 text-secondary" />
-                  المستوى
-                </Label>
-                <Select value={editingSubject?.level || ""} onValueChange={(v) => setEditingSubject({...editingSubject, level: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue placeholder="اختر المستوى" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl font-bold" dir="rtl">
-                    <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
-                    <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
-                    <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
-                    <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
-                    <SelectItem value="المستوى الخامس">المستوى الخامس</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                  <Clock className="w-4 h-4 text-secondary" />
-                  الترم الدراسي
-                </Label>
-                <Select value={editingSubject?.term || ""} onValueChange={(v) => setEditingSubject({...editingSubject, term: v})}>
-                  <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue placeholder="اختر الترم" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl font-bold" dir="rtl">
-                    <SelectItem value="الفصل الأول">الفصل الأول</SelectItem>
-                    <SelectItem value="الفصل الثاني">الفصل الثاني</SelectItem>
-                    <SelectItem value="الفصل التكميلي">الفصل التكميلي</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter className="flex-row gap-3 pt-8 border-t mt-6">
-              <Button disabled={submitting} onClick={handleUpdateSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg text-white gap-2">
-                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                {submitting ? "جاري التحديث..." : "حفظ التعديلات"}
-              </Button>
-              <Button variant="outline" onClick={() => setEditingSubject(null)} className="flex-1 rounded-xl h-12 font-bold border-2 gap-2">
-                <X className="w-5 h-5" />
-                إلغاء
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

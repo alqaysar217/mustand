@@ -2,8 +2,8 @@
 "use client";
 
 /**
- * @fileOverview صفحة رفع وأرشفة الاختبارات مع تحسين فائق لتصفية المواد.
- * تم تحديث منطق الفلترة ليكون فائق المرونة لضمان ظهور المواد المحقونة.
+ * @fileOverview صفحة رفع وأرشفة الاختبارات مع تصفية فائقة المرونة للمواد.
+ * تم تحسين منطق الفلترة لضمان ظهور كافة المواد (سواء اليدوية أو المحقونة).
  */
 
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -79,39 +79,33 @@ export default function UploadPage() {
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
   /**
-   * تصفية المواد بناءً على القسم والمستوى المختارين.
-   * تم تحسين المنطق ليكون فائق المرونة لضمان ظهور المواد المحقونة.
+   * تصفية المواد بنظام "المطابقة المرنة" (Flexible Matching).
+   * يضمن ظهور المواد حتى لو كانت مرتبطة باسم القسم بدلاً من الـ ID.
    */
   const filteredSubjects = useMemo(() => {
     if (!formData.deptId || !formData.level) return [];
     
-    // البحث عن القسم الحالي للحصول على اسمه ورمزه
     const currentDept = (departments as any[]).find(d => d.id === formData.deptId);
     if (!currentDept) return [];
 
     const targetDeptId = currentDept.id.toLowerCase();
-    const targetDeptCode = (currentDept.code || "").toLowerCase().trim();
-    const targetDeptNameAr = (currentDept.nameAr || currentDept.name || "").toLowerCase().trim();
-    const targetLevelStr = formData.level.toLowerCase().trim();
+    const targetDeptNameAr = (currentDept.nameAr || currentDept.name || "").toLowerCase();
+    const targetLevelStr = formData.level.toLowerCase();
 
     return (allSubjects as any[]).filter(s => {
-      // 1. مطابقة المستوى (مرنة جداً)
-      const subLevel = (s.level || "").toLowerCase().trim();
-      const levelMatch = subLevel === targetLevelStr || 
-                         subLevel.includes(targetLevelStr) || 
-                         targetLevelStr.includes(subLevel);
-      
+      // مطابقة المستوى (مرنة: تقبل "المستوى الأول" أو "الأول")
+      const subLevel = (s.level || "").toLowerCase();
+      const levelMatch = subLevel.includes(targetLevelStr) || targetLevelStr.includes(subLevel);
       if (!levelMatch) return false;
 
-      // 2. مطابقة القسم (تبحث في المعرف والرمز والاسم)
-      const sDeptId = (s.departmentId || "").toLowerCase().trim();
-      const sDeptName = (s.departmentName || "").toLowerCase().trim();
+      // مطابقة القسم (مرنة جداً: معرف، اسم، أو رمز)
+      const sDeptId = (s.departmentId || "").toLowerCase();
+      const sDeptName = (s.departmentName || "").toLowerCase();
 
-      const isMatchById = sDeptId === targetDeptId;
-      const isMatchByCode = targetDeptCode && (sDeptId === targetDeptCode || sDeptName.includes(targetDeptCode));
-      const isMatchByNameAr = targetDeptNameAr && (sDeptName.includes(targetDeptNameAr) || targetDeptNameAr.includes(sDeptName));
-
-      return isMatchById || isMatchByCode || isMatchByNameAr;
+      return sDeptId === targetDeptId || 
+             sDeptId === currentDept.code?.toLowerCase() ||
+             sDeptName.includes(targetDeptNameAr) || 
+             targetDeptNameAr.includes(sDeptName);
     });
   }, [allSubjects, formData.deptId, formData.level, departments]);
 
@@ -136,90 +130,54 @@ export default function UploadPage() {
     }
   };
 
-  const findStudentByRegId = async (regId: string) => {
-    if (!firestore || !regId) return null;
-    const studentsRef = collection(firestore, "students");
-    const q = query(studentsRef, where("regId", "==", regId));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) return querySnapshot.docs[0].data();
-    return null;
-  };
-
   const handleOCR = async () => {
     if (files.length === 0 || !firestore) return;
-    
     setLoadingText("جاري استخراج البيانات ذكياً...");
     setLoading(true);
     
     try {
-      // ضغط الصورة لسرعة الرفع والتحليل
-      const { data: ocrData } = await compressImage(files[0], 0.3, 600); 
-
       const response = await fetch('/api/ai/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examImageDataUri: ocrData })
+        body: JSON.stringify({ examImageDataUri: files[0] })
       });
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `فشل في استخراج البيانات (Status: ${response.status})`);
-      }
+      if (!response.ok) throw new Error('فشل التحليل الذكي');
 
       const result = await response.json();
-      const cleanRegId = result.studentRegistrationId || '';
       
-      // البحث عن الطالب في قاعدة البيانات لربط البيانات
-      const student = await findStudentByRegId(cleanRegId);
+      // محاولة البحث عن الطالب برقم القيد
+      const studentsRef = collection(firestore, "students");
+      const q = query(studentsRef, where("regId", "==", result.studentRegistrationId || ''));
+      const snap = await getDocs(q);
       
-      setExtractedData({ 
-        id: cleanRegId, 
-        name: student ? student.name : (result.studentName || ''), 
-        found: !!student
-      });
-
-      // محاولة مطابقة المادة المستخرجة مع القائمة المفلترة
-      if (result.subjectName) {
-        const matchedSub = filteredSubjects.find((s: any) => 
-          s.nameAr.includes(result.subjectName!) || result.subjectName!.includes(s.nameAr)
-        );
-        if (matchedSub) {
-          setFormData(prev => ({
-            ...prev,
-            subjectId: matchedSub.id,
-            subjectName: matchedSub.nameAr,
-            term: matchedSub.term
-          }));
-        }
+      if (!snap.empty) {
+        const s = snap.docs[0].data();
+        setExtractedData({ id: s.regId, name: s.name, found: true });
+      } else {
+        setExtractedData({ id: result.studentRegistrationId || '', name: result.studentName || '', found: false });
       }
 
       setStep(5);
     } catch (err: any) {
-      console.error("OCR Error:", err);
-      toast({ 
-        variant: "destructive", 
-        title: "فشل التحليل الذكي", 
-        description: err.message || "حدث خطأ غير متوقع أثناء المعالجة." 
-      });
-      setStep(5); // المتابعة للتعريف اليدوي كخيار بديل
+      toast({ variant: "destructive", title: "فشل التحليل", description: "سننتقل للتعريف اليدوي." });
+      setStep(5);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSaveToArchive = async () => {
-    if (!firestore || !extractedData.id || !formData.subjectId || files.length === 0) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التحقق من رقم القيد واختيار المادة الدراسية." });
+    if (!firestore || !extractedData.id || !formData.subjectId) {
+      toast({ variant: "destructive", title: "بيانات ناقصة" });
       return;
     }
 
-    setLoadingText("جاري الأرشفة السحابية...");
     setLoading(true);
-
     try {
       await addDoc(collection(firestore, "archives"), {
         student_id: extractedData.id,
-        student_name: extractedData.name || "طالب غير معروف",
+        student_name: extractedData.name,
         subject_name: formData.subjectName,
         subjectId: formData.subjectId,
         file_data: files[0],
@@ -232,12 +190,10 @@ export default function UploadPage() {
       });
 
       toast({ title: "تمت الأرشفة بنجاح" });
-      setFiles([]);
-      setExtractedData({ id: '', name: '', found: false });
       setStep(1);
-
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "خطأ في الحفظ السحابي" });
+      setFiles([]);
+    } catch (e) {
+      toast({ variant: "destructive", title: "فشل الحفظ" });
     } finally {
       setLoading(false);
     }
@@ -254,16 +210,7 @@ export default function UploadPage() {
       )} dir="rtl">
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-black text-primary mb-2">نظام الأرشفة الذكي</h1>
-          <p className="text-muted-foreground font-bold text-lg">أرشفة سريعة مع استخراج البيانات بدعم Gemini AI</p>
-        </div>
-
-        <div className="max-w-md mx-auto mb-12">
-          <Tabs value={mode} onValueChange={(v) => { setMode(v as any); setStep(1); }} className="w-full">
-            <TabsList className="bg-white p-1 rounded-2xl h-14 shadow-lg border w-full">
-              <TabsTrigger value="ai" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'ai' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Cpu className="w-4 h-4" />تحليل ذكي</TabsTrigger>
-              <TabsTrigger value="manual" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'manual' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Keyboard className="w-4 h-4" />أرشفة يدوية</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <p className="text-muted-foreground font-bold">أرشفة سريعة مع استخراج البيانات بدعم Gemini AI</p>
         </div>
 
         <div className="flex items-center justify-between mb-16 relative px-4 max-w-3xl mx-auto">
@@ -277,9 +224,6 @@ export default function UploadPage() {
               )}
             >
               {step > s ? <CheckCircle className="w-6 h-6" /> : (s === 5 ? 4 : s === 3 ? 3 : s)}
-              <span className={cn("absolute -bottom-10 whitespace-nowrap text-[11px] font-black", step >= s ? "text-primary" : "text-muted-foreground")}>
-                {s === 1 && 'السياق'} {s === 2 && 'الرفع'} {s === 3 && 'المعاينة'} {s === 5 && 'التأكيد'}
-              </span>
             </div>
           ))}
         </div>
@@ -300,14 +244,14 @@ export default function UploadPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <Label className="text-sm font-black text-primary flex items-center gap-2"><Calendar className="w-4 h-4 text-secondary" />العام الجامعي</Label>
+                  <Label className="font-black text-primary flex items-center gap-2"><Calendar className="w-4 h-4 text-secondary" />العام الجامعي</Label>
                   <select value={formData.year} onChange={(e) => setFormData({...formData, year: e.target.value})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right">
                     <option value="">اختر العام...</option>
                     {academicYears.map((y: any) => <option key={y.id} value={y.label}>{y.label}</option>)}
                   </select>
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-sm font-black text-primary flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />القسم العلمي</Label>
+                  <Label className="font-black text-primary flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />القسم العلمي</Label>
                   <select value={formData.deptId} onChange={(e) => {
                     const sel = departments.find((d: any) => d.id === e.target.value) as any;
                     setFormData({...formData, deptId: e.target.value, deptName: sel?.nameAr || sel?.name || "", subjectId: '', subjectName: ''});
@@ -317,7 +261,7 @@ export default function UploadPage() {
                   </select>
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-sm font-black text-primary flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label>
+                  <Label className="font-black text-primary flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label>
                   <select value={formData.level} onChange={(e) => setFormData({...formData, level: e.target.value, subjectId: '', subjectName: ''})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right">
                     <option value="">اختر المستوى...</option>
                     <option value="المستوى الأول">المستوى الأول</option>
@@ -328,7 +272,7 @@ export default function UploadPage() {
                   </select>
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-sm font-black text-primary flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة الدراسية</Label>
+                  <Label className="font-black text-primary flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة الدراسية</Label>
                   <select 
                     disabled={!formData.deptId || !formData.level} 
                     value={formData.subjectId} 
@@ -348,12 +292,6 @@ export default function UploadPage() {
 
           {step === 2 && (
             <div className="space-y-10 animate-slide-up flex-1 flex flex-col items-center justify-center">
-              <div className="text-center space-y-4 mb-8">
-                <div className="p-4 bg-primary/5 rounded-full inline-block text-primary mb-2"><ImageIcon className="w-12 h-12" /></div>
-                <h2 className="text-3xl font-black text-primary">رفع ورقة الامتحان</h2>
-                <p className="text-muted-foreground font-bold text-sm">يرجى رفع صورة واضحة للجزء العلوي من ورقة الاختبار (رقم القيد والاسم)</p>
-              </div>
-              
               <div 
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full max-w-xl p-16 border-4 border-dashed border-muted rounded-[40px] flex flex-col items-center gap-6 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group"
@@ -361,10 +299,7 @@ export default function UploadPage() {
                 <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-sm">
                   <FileUp className="w-12 h-12" />
                 </div>
-                <div className="text-center">
-                  <p className="text-xl font-black text-primary">اضغط هنا لاختيار الصورة</p>
-                  <p className="text-sm text-muted-foreground font-bold mt-2">يتم تحسين الحجم تلقائياً لضمان استقرار الأرشفة</p>
-                </div>
+                <p className="text-xl font-black text-primary text-center">اضغط هنا لاختيار صورة الاختبار</p>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
               </div>
             </div>
@@ -372,30 +307,19 @@ export default function UploadPage() {
 
           {step === 3 && (
              <div className="animate-slide-up flex-1 space-y-10">
-               <div className="flex items-center justify-between border-b pb-6">
-                  <div><h2 className="text-2xl font-black text-primary">معاينة الملف</h2><p className="text-muted-foreground font-bold text-sm">تأكد من وضوح البيانات قبل بدء المعالجة الذكية</p></div>
-                  <Button variant="ghost" onClick={() => { setFiles([]); setStep(2); }} className="text-destructive font-black gap-2"><Trash2 className="w-5 h-5" />مسح الصورة</Button>
-               </div>
                <div className="flex flex-col md:flex-row gap-10 items-center justify-center">
                   <div className="w-full md:w-80 aspect-[3/4] relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-muted/20">
                     <Image src={files[0]} alt="Preview" fill className="object-contain" />
                   </div>
-                  <div className="flex-1 max-w-md space-y-6 text-center md:text-right">
-                    <div className="p-6 bg-muted/20 rounded-3xl border border-muted">
-                      <p className="font-bold text-primary mb-1 text-sm">حجم الملف المستقر:</p>
-                      <p className="text-3xl font-black text-secondary">{getBase64SizeKB(files[0]).toFixed(0)} KB</p>
-                    </div>
-                    {mode === 'ai' ? (
-                       <Button onClick={handleOCR} className="w-full h-16 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-3">
-                         <Scan className="w-6 h-6" />
-                         بدء التحليل الذكي الفوري
-                       </Button>
-                    ) : (
-                       <Button onClick={() => setStep(5)} className="w-full h-16 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-3">
-                         <ChevronLeft className="w-6 h-6" />
-                         متابعة للتعريف اليدوي
-                       </Button>
-                    )}
+                  <div className="flex-1 max-w-md space-y-6">
+                    <Button onClick={handleOCR} className="w-full h-16 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-3">
+                      <Scan className="w-6 h-6" />
+                      بدء التحليل الذكي الفوري
+                    </Button>
+                    <Button variant="outline" onClick={() => setStep(5)} className="w-full h-16 rounded-2xl text-xl font-black border-2 gap-3">
+                      <Keyboard className="w-6 h-6" />
+                      أرشفة يدوية
+                    </Button>
                   </div>
                </div>
              </div>
@@ -403,49 +327,44 @@ export default function UploadPage() {
 
           {step === 5 && (
             <div className="animate-slide-up flex-1 space-y-10">
-               <div className={cn("flex items-center gap-6 p-8 rounded-[30px] border-2 transition-all shadow-sm", extractedData.found ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200")}>
-                  <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg text-white", extractedData.found ? "bg-green-500" : "bg-orange-500")}>
+               <div className={cn("flex items-center gap-6 p-8 rounded-[30px] border-2 shadow-sm", extractedData.found ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200")}>
+                  <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center text-white", extractedData.found ? "bg-green-500" : "bg-orange-500")}>
                     {extractedData.found ? <UserCheck className="w-9 h-9" /> : <AlertCircle className="w-9 h-9" />}
                   </div>
-                  <div className="text-right flex-1">
-                    <h2 className={cn("text-2xl font-black", extractedData.found ? "text-green-800" : "text-orange-800")}>{extractedData.found ? "تم التعرف على الطالب" : "تنبيه: الطالب غير مسجل"}</h2>
-                    <p className="text-base font-bold opacity-70">{extractedData.found ? `تمت مطابقة رقم القيد (${extractedData.id}) مع السجلات الرسمية.` : "رقم القيد المستخرج لم يطابق أي سجل. يرجى المراجعة يدوياً."}</p>
+                  <div>
+                    <h2 className="text-2xl font-black">{extractedData.found ? "تم التعرف على الطالب" : "تنبيه: الطالب غير مسجل"}</h2>
+                    <p className="text-base font-bold opacity-70">{extractedData.found ? `تمت مطابقة رقم القيد (${extractedData.id}).` : "رقم القيد لم يطابق أي سجل رسمي."}</p>
                   </div>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><Fingerprint className="w-4 h-4 text-secondary" />رقم القيد الجامعي</Label>
+                    <Label className="font-black text-primary">رقم القيد الجامعي</Label>
                     <input 
                       value={extractedData.id} 
-                      onChange={(e) => setExtractedData({...extractedData, id: e.target.value.replace(/\D/g, '')})} 
-                      className="w-full h-16 px-6 rounded-2xl border-2 border-muted focus:border-primary bg-white font-black text-2xl text-right outline-none transition-all shadow-inner" 
-                      placeholder="رقم القيد..." 
+                      onChange={(e) => setExtractedData({...extractedData, id: e.target.value})} 
+                      className="w-full h-16 px-6 rounded-2xl border-2 border-muted focus:border-primary font-black text-2xl text-right outline-none" 
                     />
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><User className="w-4 h-4 text-secondary" />اسم الطالب الكامل</Label>
+                    <Label className="font-black text-primary">اسم الطالب الكامل</Label>
                     <input 
                       value={extractedData.name} 
-                      readOnly={extractedData.found}
                       onChange={(e) => setExtractedData({...extractedData, name: e.target.value})} 
-                      className={cn("w-full h-16 px-6 rounded-2xl border-2 bg-white font-black text-lg text-right outline-none transition-all shadow-inner", extractedData.found ? "bg-muted/10 border-green-200" : "focus:border-primary")} 
-                      placeholder="اسم الطالب..." 
+                      className="w-full h-16 px-6 rounded-2xl border-2 border-muted focus:border-primary font-black text-lg text-right outline-none" 
                     />
                   </div>
                   <div className="space-y-3 md:col-span-2">
-                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />تأكيد المادة المؤرشفة</Label>
+                    <Label className="font-black text-primary">تأكيد المادة المؤرشفة</Label>
                     <select 
                       value={formData.subjectId} 
                       onChange={(e) => { 
                         const sel = allSubjects.find((s: any) => s.id === e.target.value) as any; 
                         setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", term: sel?.term || "" }); 
                       }} 
-                      className="w-full h-16 px-6 rounded-2xl border-2 border-muted focus:border-primary bg-white font-black text-lg text-right outline-none transition-all shadow-inner appearance-none"
+                      className="w-full h-16 px-6 rounded-2xl border-2 border-muted focus:border-primary font-black text-lg text-right outline-none appearance-none"
                     >
-                      <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "لا توجد مواد لهذا السياق"}</option>
-                      {filteredSubjects.map((s: any) => (
-                        <option key={s.id} value={s.id}>{s.nameAr}</option>
-                      ))}
+                      <option value="">اختر المادة...</option>
+                      {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
                     </select>
                   </div>
                </div>
@@ -453,15 +372,13 @@ export default function UploadPage() {
           )}
 
           <div className="mt-auto pt-10 flex items-center justify-between border-t-2 border-muted/30">
-            <Button variant="outline" onClick={() => setStep(prev => prev === 5 ? 3 : Math.max(prev - 1, 1))} disabled={step === 1 || loading} className="h-16 px-10 rounded-2xl border-2 border-muted font-black gap-4 hover:bg-muted/10 transition-all flex items-center">السابق<ChevronRight className="w-6 h-6" /></Button>
-            <div className="flex gap-4">
-              {step === 1 && (
-                <Button onClick={() => setStep(2)} disabled={!formData.year || !formData.deptId || !formData.level} className="h-16 px-16 rounded-2xl font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"><ChevronLeft className="w-6 h-6" />متابعة للرفع</Button>
-              )}
-              {step === 5 && (
-                <Button onClick={handleSaveToArchive} disabled={loading || !extractedData.id || !formData.subjectId} className="h-16 px-16 rounded-2xl font-black gap-4 bg-green-600 text-white shadow-xl hover:bg-green-700 hover:scale-105 transition-all"><CloudUpload className="w-6 h-6" />إكمال الأرشفة</Button>
-              )}
-            </div>
+            <Button variant="outline" onClick={() => setStep(prev => prev === 5 ? 3 : Math.max(prev - 1, 1))} disabled={step === 1 || loading} className="h-16 px-10 rounded-2xl font-black gap-4 flex items-center">السابق<ChevronRight className="w-6 h-6" /></Button>
+            {step === 1 && (
+              <Button onClick={() => setStep(2)} disabled={!formData.year || !formData.deptId || !formData.level} className="h-16 px-16 rounded-2xl font-black gap-4 gradient-blue shadow-lg flex items-center"><ChevronLeft className="w-6 h-6" />متابعة للرفع</Button>
+            )}
+            {step === 5 && (
+              <Button onClick={handleSaveToArchive} disabled={loading || !extractedData.id || !formData.subjectId} className="h-16 px-16 rounded-2xl font-black gap-4 bg-green-600 text-white shadow-xl flex items-center"><CloudUpload className="w-6 h-6" />إكمال الأرشفة</Button>
+            )}
           </div>
         </Card>
       </main>
