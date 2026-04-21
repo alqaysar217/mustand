@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview نظام استخراج بيانات الامتحانات المطور.
- * تم تحسينه لاستقبال صور مصغرة (Thumbnails) لتجنب أخطاء Timeout و Payload Too Large.
+ * تم تحسينه لاستقبال صور مصغرة (Thumbnails) وتحديث الموديل للإصدار المستقر.
  */
 
 import {ai} from '@/ai/genkit';
@@ -30,8 +30,8 @@ const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
   input: {schema: ExtractExamDetailsInputSchema},
   output: {schema: ExtractExamDetailsOutputSchema},
-  // استخدام النسخة الأحدث لضمان التوافق وتجنب أخطاء 404
-  model: 'googleai/gemini-1.5-flash-latest',
+  // استخدام النسخة المستقرة لضمان التوافق وتجنب أخطاء 404 في v1beta
+  model: 'googleai/gemini-1.5-flash',
   config: {
     safetySettings: [
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
