@@ -80,7 +80,7 @@ export default function AdminStudentsPage() {
     regId: "",
     collegeId: "",
     departmentId: "",
-    level: "المستوى الأول",
+    level: "المستوى الثاني",
     admissionType: "عام",
     academicYear: ""
   });
@@ -132,7 +132,7 @@ export default function AdminStudentsPage() {
       });
 
       setIsAddDialogOpen(false);
-      setNewStudent({ name: "", regId: "", collegeId: "", departmentId: "", level: "المستوى الأول", admissionType: "عام", academicYear: "" });
+      setNewStudent({ name: "", regId: "", collegeId: "", departmentId: "", level: "المستوى الثاني", admissionType: "عام", academicYear: "" });
       toast({ title: "تم تسجيل الطالب بنجاح" });
     } catch (error) {
       toast({ variant: "destructive", title: "فشل الحفظ" });
@@ -157,7 +157,7 @@ export default function AdminStudentsPage() {
         collegeName: selectedCollege?.name || editingStudent.collegeName || "",
         departmentId: editingStudent.departmentId || "",
         departmentName: selectedDept?.nameAr || selectedDept?.name || editingStudent.departmentName || "",
-        level: editingStudent.level || "المستوى الأول",
+        level: editingStudent.level || "المستوى الثاني",
         admissionType: editingStudent.admissionType || "عام",
         academicYear: editingStudent.academicYear || "",
         updatedAt: serverTimestamp()
@@ -420,7 +420,7 @@ export default function AdminStudentsPage() {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="text-xs font-black text-primary">{student.academicYear || '---'}</span>
-                      <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" />{student.level || 'المستوى الأول'}</span>
+                      <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" />{student.level || 'المستوى الثاني'}</span>
                     </div>
                   </TableCell>
                   <TableCell>
