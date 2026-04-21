@@ -20,7 +20,9 @@ import {
   Users,
   Layers,
   Zap,
-  Trash2
+  Trash2,
+  Wrench,
+  AlertTriangle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -63,6 +65,7 @@ const STUDENTS_IMPORT_LIST = [
 export default function AdminSettingsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [repairing, setRepairing] = useState(false);
   const [importingCS, setImportingCS] = useState(false);
   const [importingIT, setImportingIT] = useState(false);
   const [importingStudents, setImportingStudents] = useState(false);
@@ -76,6 +79,79 @@ export default function AdminSettingsPage() {
       setLoading(false);
       toast({ title: "تم الحفظ بنجاح", description: `تم تحديث إعدادات ${section} بنجاح.` });
     }, 1000);
+  };
+
+  const handleAutoRepairStudents = async () => {
+    if (!firestore) return;
+    setRepairing(true);
+    try {
+      // 1. جلب كافة التخصصات والسنوات للمطابقة
+      const deptsSnap = await getDocs(collection(firestore, "departments"));
+      const depts = deptsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      const yearsSnap = await getDocs(collection(firestore, "academicYears"));
+      const latestYear = yearsSnap.docs[0]?.data()?.label || "2023 / 2024";
+
+      // 2. جلب كافة الطلاب
+      const studentsSnap = await getDocs(collection(firestore, "students"));
+      const batch = writeBatch(firestore);
+      let count = 0;
+
+      studentsSnap.docs.forEach((studentDoc) => {
+        const data = studentDoc.data();
+        let needsUpdate = false;
+        const updateData: any = {};
+
+        // تحديث السنة الدراسية إذا كانت مفقودة
+        if (!data.academicYear) {
+          updateData.academicYear = latestYear;
+          needsUpdate = true;
+        }
+
+        // تحديث الكلية والقسم إذا كانت المعرفات مفقودة
+        if (!data.collegeId || !data.departmentId) {
+          const matchedDept = depts.find((d: any) => 
+            d.nameAr === data.departmentName || 
+            d.nameEn === data.departmentName || 
+            d.name === data.departmentName
+          );
+
+          if (matchedDept) {
+            updateData.departmentId = matchedDept.id;
+            updateData.departmentName = (matchedDept as any).nameAr || (matchedDept as any).name;
+            updateData.collegeId = (matchedDept as any).collegeId;
+            updateData.collegeName = (matchedDept as any).collegeName;
+            needsUpdate = true;
+          }
+        }
+
+        // تحديث المستوى ونوع القبول كقيم افتراضية إذا كانت مفقودة
+        if (!data.level) {
+          updateData.level = "المستوى الأول";
+          needsUpdate = true;
+        }
+        if (!data.admissionType) {
+          updateData.admissionType = "عام";
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          batch.update(studentDoc.ref, updateData);
+          count++;
+        }
+      });
+
+      if (count > 0) {
+        await batch.commit();
+        toast({ title: "اكتمل التحديث الجماعي", description: `تم تصحيح بيانات ${count} طالب بنجاح وبشكل فوري.` });
+      } else {
+        toast({ title: "البيانات مكتملة", description: "كافة سجلات الطلاب الحالية محدثة ولا تحتاج لإصلاح." });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "فشل التحديث الجماعي", description: "حدث خطأ أثناء محاولة معالجة البيانات." });
+    } finally {
+      setRepairing(false);
+    }
   };
 
   const handleClearArchives = async () => {
@@ -106,7 +182,6 @@ export default function AdminSettingsPage() {
       const subs = subSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       let count = 0;
-      // الحقن بـ 10 سجلات باستخدام صور exam-1.png إلى exam-10.png من مجلد public
       for (let i = 1; i <= 10; i++) {
         const student = STUDENTS_IMPORT_LIST[(i - 1) % STUDENTS_IMPORT_LIST.length];
         const subject = subs.length > 0 ? subs[(i - 1) % subs.length] : { nameAr: "مادة تجريبية " + i, id: "mock_" + i, level: "المستوى الأول", departmentId: "central_dept", departmentName: "تقنية المعلومات", collegeName: "كلية الحاسبات" };
@@ -122,7 +197,7 @@ export default function AdminSettingsPage() {
           departmentName: (subject as any).departmentName || "تقنية المعلومات",
           collegeName: (subject as any).collegeName || "كلية الحاسبات",
           level: (subject as any).level || "المستوى الأول",
-          fileUrl: `/exam-${i}.png`, // الإشارة للصور في مجلد public
+          fileUrl: `/exam-${i}.png`, 
           pages: 1,
           uploadedAt: serverTimestamp()
         });
@@ -232,6 +307,31 @@ export default function AdminSettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
+          {/* أداة التحديث الجماعي السريع */}
+          <Card className="p-8 border-none shadow-xl rounded-3xl bg-emerald-50 border-r-4 border-emerald-500">
+             <div className="flex items-center gap-3 mb-6">
+               <div className="p-2 bg-emerald-500 rounded-xl text-white shadow-lg"><Wrench className="w-6 h-6" /></div>
+               <div>
+                 <h2 className="text-xl font-black text-emerald-900">أداة التحديث الجماعي الذكي</h2>
+                 <p className="text-xs font-bold text-emerald-700">تحديث كافة بيانات الطلاب المفقودة (الكلية، السنة، المستوى) بضغطة زر</p>
+               </div>
+             </div>
+             <div className="space-y-4">
+               <div className="flex items-start gap-3 bg-white/50 p-4 rounded-2xl border border-emerald-100">
+                 <AlertTriangle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                 <p className="text-sm font-bold text-emerald-800 leading-relaxed">هذه الأداة مخصصة لمعالجة أعداد كبيرة من الطلاب. ستقوم تلقائياً بربط الطلاب بالتخصصات الصحيحة وملء السنوات الدراسية المفقودة بناءً على آخر الإعدادات، مما يوفر عليك ساعات من التحديث اليدوي.</p>
+               </div>
+               <Button 
+                disabled={repairing} 
+                onClick={handleAutoRepairStudents}
+                className="w-full h-14 rounded-2xl font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl gap-3 text-lg transition-all active:scale-95"
+               >
+                 {repairing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Sparkles className="w-6 h-6" />}
+                 {repairing ? "جاري المعالجة الجماعية..." : "بدء تحديث كافة الطلاب الآن"}
+               </Button>
+             </div>
+          </Card>
+
           <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
             <div className="flex items-center gap-3 mb-8 border-b pb-4">
               <div className="p-2 bg-primary/5 rounded-xl"><UserCog className="w-6 h-6 text-primary" /></div>
