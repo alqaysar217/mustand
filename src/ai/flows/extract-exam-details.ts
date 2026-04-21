@@ -7,6 +7,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { gemini15Flash } from '@genkit-ai/google-genai';
 
 const ExtractExamDetailsInputSchema = z.object({
   examImageDataUri: z
@@ -31,7 +32,7 @@ const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
   input: {schema: ExtractExamDetailsInputSchema},
   output: {schema: ExtractExamDetailsOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
+  model: gemini15Flash,
   config: {
     safetySettings: [
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
