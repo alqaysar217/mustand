@@ -19,7 +19,8 @@ import {
   Layers,
   CheckCircle,
   Save,
-  X
+  X,
+  ChevronLeft
 } from "lucide-react";
 import {
   Table,
@@ -170,6 +171,24 @@ export default function SubjectsPage() {
         });
         errorEmitter.emit('permission-error', permissionError);
       });
+  };
+
+  // دالة لضبط البيانات عند فتح واجهة التعديل لضمان مطابقة التخصص
+  const openEditDialog = (subject: any) => {
+    let fixedSubject = { ...subject };
+    
+    // إذا كان التخصص غير موجود في القائمة الحالية (بسبب اختلاف الـ IDs)، نحاول مطابقته بالاسم
+    if (fixedSubject.departmentId && !departments.find((d: any) => d.id === fixedSubject.departmentId)) {
+      const match = departments.find((d: any) => 
+        (d.nameAr || d.name) === fixedSubject.departmentName || d.code === fixedSubject.departmentId
+      );
+      if (match) fixedSubject.departmentId = match.id;
+    } else if (!fixedSubject.departmentId && fixedSubject.departmentName) {
+      const match = departments.find((d: any) => (d.nameAr || d.name) === fixedSubject.departmentName);
+      if (match) fixedSubject.departmentId = match.id;
+    }
+    
+    setEditingSubject(fixedSubject);
   };
 
   if (!mounted) return null;
@@ -375,7 +394,7 @@ export default function SubjectsPage() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => setEditingSubject(s)} 
+                        onClick={() => openEditDialog(s)} 
                         className="rounded-xl hover:bg-primary/5 text-secondary" 
                         title="تعديل"
                       >
