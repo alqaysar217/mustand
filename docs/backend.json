@@ -28,13 +28,14 @@
       "description": "يمثل القسم العلمي التابع لكلية معينة.",
       "type": "object",
       "properties": {
-        "name": { "type": "string", "description": "اسم القسم" },
+        "nameAr": { "type": "string", "description": "اسم القسم بالعربية" },
+        "nameEn": { "type": "string", "description": "اسم القسم بالإنجليزية" },
         "code": { "type": "string", "description": "رمز القسم" },
         "collegeId": { "type": "string", "description": "معرف الكلية التابع لها" },
         "collegeName": { "type": "string", "description": "اسم الكلية للسهولة" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "code", "collegeId"]
+      "required": ["nameAr", "code", "collegeId"]
     },
     "Student": {
       "title": "الطالب",

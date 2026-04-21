@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   School,
   Loader2,
-  Filter
+  Filter,
+  Type
 } from "lucide-react";
 import {
   Table,
@@ -63,13 +64,14 @@ export default function AdminDepartmentsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [newDept, setNewDept] = useState({ name: '', code: '', collegeId: '' });
+  const [newDept, setNewDept] = useState({ nameAr: '', nameEn: '', code: '', collegeId: '' });
   
   const { toast } = useToast();
 
   const filteredDepartments = useMemo(() => {
     return (departments as any[]).filter(dept => {
-      const matchesSearch = dept.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      const matchesSearch = dept.nameAr?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           dept.nameEn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            dept.code?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCollege = filterCollege === "all" || dept.collegeId === filterCollege;
       return matchesSearch && matchesCollege;
@@ -77,7 +79,7 @@ export default function AdminDepartmentsPage() {
   }, [departments, searchTerm, filterCollege]);
 
   const handleAddDept = () => {
-    if (!firestore || !newDept.name || !newDept.code || !newDept.collegeId) {
+    if (!firestore || !newDept.nameAr || !newDept.code || !newDept.collegeId) {
       toast({ variant: "destructive", title: "بيانات ناقصة" });
       return;
     }
@@ -94,7 +96,7 @@ export default function AdminDepartmentsPage() {
     addDoc(deptsRef, data)
       .then(() => {
         setIsAddDialogOpen(false);
-        setNewDept({ name: '', code: '', collegeId: '' });
+        setNewDept({ nameAr: '', nameEn: '', code: '', collegeId: '' });
         toast({ title: "تم التفعيل", description: "تم إنشاء القسم وتفعيله بنجاح." });
       })
       .catch(async (error) => {
@@ -109,13 +111,14 @@ export default function AdminDepartmentsPage() {
   };
 
   const handleUpdateDept = () => {
-    if (!firestore || !editingDept?.name || !editingDept?.code || !editingDept?.collegeId) return;
+    if (!firestore || !editingDept?.nameAr || !editingDept?.code || !editingDept?.collegeId) return;
 
     setSubmitting(true);
     const selectedCollege = (colleges as any[]).find(c => c.id === editingDept.collegeId);
     const docRef = doc(firestore, "departments", editingDept.id);
     const data = {
-      name: editingDept.name,
+      nameAr: editingDept.nameAr,
+      nameEn: editingDept.nameEn || "",
       code: editingDept.code,
       collegeId: editingDept.collegeId,
       collegeName: selectedCollege?.name || "",
@@ -174,7 +177,7 @@ export default function AdminDepartmentsPage() {
               إضافة قسم إداري
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
             <div className="p-8">
               <DialogHeader className="text-right items-start space-y-2 mb-8">
                 <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
@@ -182,12 +185,12 @@ export default function AdminDepartmentsPage() {
                   إضافة قسم جديد
                 </DialogTitle>
                 <DialogDescription className="font-bold text-muted-foreground text-sm">
-                  إنشاء قسم علمي جديد في السجلات المركزية للنظام.
+                  إنشاء قسم علمي جديد في السجلات المركزية للنظام مع تحديد المسميات العربية والإنجليزية.
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="grid gap-6 py-4">
-                <div className="space-y-2 text-right">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="space-y-2 text-right md:col-span-2">
                   <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                     <School className="w-4 h-4 text-secondary" />
                     الكلية التابع لها
@@ -204,17 +207,31 @@ export default function AdminDepartmentsPage() {
 
                 <div className="space-y-2 text-right">
                   <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                    <Building2 className="w-4 h-4 text-secondary" />
-                    اسم القسم العلمي
+                    <Type className="w-4 h-4 text-secondary" />
+                    اسم القسم (بالعربي)
                   </Label>
                   <Input 
-                    value={newDept.name}
-                    onChange={(e) => setNewDept({...newDept, name: e.target.value})}
+                    value={newDept.nameAr}
+                    onChange={(e) => setNewDept({...newDept, nameAr: e.target.value})}
                     placeholder="مثال: هندسة الحاسوب" 
-                    className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20" 
+                    className="rounded-xl h-11 border-muted text-right font-bold" 
                   />
                 </div>
+
                 <div className="space-y-2 text-right">
+                  <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                    <Type className="w-4 h-4 text-secondary" />
+                    اسم القسم (English)
+                  </Label>
+                  <Input 
+                    value={newDept.nameEn}
+                    onChange={(e) => setNewDept({...newDept, nameEn: e.target.value})}
+                    placeholder="Computer Engineering" 
+                    className="rounded-xl h-11 border-muted text-left font-mono" 
+                  />
+                </div>
+
+                <div className="space-y-2 text-right md:col-span-2">
                   <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                     <FileText className="w-4 h-4 text-secondary" />
                     رمز القسم المختصر
@@ -223,7 +240,7 @@ export default function AdminDepartmentsPage() {
                     value={newDept.code}
                     onChange={(e) => setNewDept({...newDept, code: e.target.value})}
                     placeholder="مثال: CE" 
-                    className="rounded-xl h-11 border-muted text-right font-bold focus:ring-secondary/20 uppercase" 
+                    className="rounded-xl h-11 border-muted text-right font-bold uppercase" 
                   />
                 </div>
               </div>
@@ -248,7 +265,7 @@ export default function AdminDepartmentsPage() {
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input 
               type="text"
-              placeholder="البحث باسم القسم، الرمز..."
+              placeholder="البحث باسم القسم (عربي/انجليزي)، الرمز..."
               className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all text-right"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -288,7 +305,10 @@ export default function AdminDepartmentsPage() {
                       <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10">
                         <Building2 className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-bold text-primary">{dept.name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-primary">{dept.nameAr}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{dept.nameEn}</span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -334,18 +354,18 @@ export default function AdminDepartmentsPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editingDept} onOpenChange={(open) => !open && setEditingDept(null)}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+        <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
           <div className="p-8">
             <DialogHeader className="text-right items-start space-y-2 mb-8">
               <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
                 <Edit2 className="w-6 h-6 text-secondary" />
                 تعديل بيانات القسم
               </DialogTitle>
-              <DialogDescription className="sr-only">تحديث معلومات القسم المختار</DialogDescription>
+              <DialogDescription className="font-bold text-muted-foreground">تحديث معلومات القسم المختار في السجلات المركزية.</DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-6 py-4">
-              <div className="space-y-2 text-right">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+              <div className="space-y-2 text-right md:col-span-2">
                 <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                   <School className="w-4 h-4 text-secondary" />
                   الكلية التابع لها
@@ -362,16 +382,29 @@ export default function AdminDepartmentsPage() {
 
               <div className="space-y-2 text-right">
                 <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
-                  <Building2 className="w-4 h-4 text-secondary" />
-                  اسم القسم العلمي
+                  <Type className="w-4 h-4 text-secondary" />
+                  اسم القسم (بالعربي)
                 </Label>
                 <Input 
-                  value={editingDept?.name || ""}
-                  onChange={(e) => setEditingDept({...editingDept, name: e.target.value})}
+                  value={editingDept?.nameAr || ""}
+                  onChange={(e) => setEditingDept({...editingDept, nameAr: e.target.value})}
                   className="rounded-xl h-11 border-muted text-right font-bold" 
                 />
               </div>
+
               <div className="space-y-2 text-right">
+                <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                  <Type className="w-4 h-4 text-secondary" />
+                  اسم القسم (English)
+                </Label>
+                <Input 
+                  value={editingDept?.nameEn || ""}
+                  onChange={(e) => setEditingDept({...editingDept, nameEn: e.target.value})}
+                  className="rounded-xl h-11 border-muted text-left font-mono" 
+                />
+              </div>
+
+              <div className="space-y-2 text-right md:col-span-2">
                 <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                   <FileText className="w-4 h-4 text-secondary" />
                   رمز القسم المختصر
