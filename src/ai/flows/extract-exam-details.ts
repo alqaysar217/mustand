@@ -1,13 +1,14 @@
 'use server';
 
 /**
- * @fileOverview نظام تشخيص واستخراج بيانات الامتحانات (Diagnostic v3.0).
- * مصمم لتتبع أخطاء الاتصال بالـ API وتجاوز مشاكل الـ Timeout و Regional Blocking.
+ * @fileOverview نظام تشخيص واستخراج بيانات الامتحانات (Diagnostic v4.0).
+ * يعتمد على الـ SDK الرسمي مع طبقة تشخيصية ومحرك OCR بديل (Tesseract).
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import Tesseract from 'tesseract.js';
 
 const ExtractExamDetailsInputSchema = z.object({
   examImageDataUri: z.string(),
@@ -21,6 +22,7 @@ const ExtractExamDetailsOutputSchema = z.object({
   academicYear: z.string().optional(),
   semester: z.string().optional(),
   level: z.string().optional(),
+  diagnostics: z.string().optional(),
 });
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
@@ -39,56 +41,55 @@ const extractExamDetailsFlow = ai.defineFlow(
     const maskedKey = apiKey.slice(0, 4) + '...' + apiKey.slice(-4);
     
     console.log('--- [START AI DIAGNOSTICS] ---');
-    console.log(`Step 1: Checking API Configuration...`);
+    console.log(`Step 1: Environment Check...`);
     console.log(`- API Key (Masked): ${maskedKey}`);
-    console.log(`- Payload Size: ${Math.round(input.examImageDataUri.length / 1024)} KB`);
+    console.log(`- Image Payload Size: ${Math.round(input.examImageDataUri.length / 1024)} KB`);
 
-    // 1. التشخيص المبدئي: فحص الشبكة والمفتاح (Handshake)
+    // 1. Network Handshake Diagnostic
     try {
-      console.log('Step 2: Network Handshake (Pinging Google AI)...');
-      const ping = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
-      console.log(`- Network Status: ${ping.status} ${ping.statusText}`);
+      console.log('Step 2: Network Ping (Google AI Services)...');
+      const ping = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      console.log(`- Status: ${ping.status} ${ping.statusText}`);
       
       if (!ping.ok) {
-        const errorDetails = await ping.json().catch(() => ({}));
-        console.error('Handshake Failed. Google Response:', JSON.stringify(errorDetails));
-        if (ping.status === 403) throw new Error('API_KEY_RESTRICTED_OR_REGIONAL_BLOCK');
+        const errJson = await ping.json().catch(() => ({}));
+        console.error('Network Handshake Failed:', JSON.stringify(errJson));
+        if (ping.status === 403) {
+          console.warn('CRITICAL: API Key is likely restricted to certain IPs or Regions.');
+        }
+      } else {
+        console.log('Handshake OK: Network connection to Google AI is active.');
       }
-    } catch (e: any) {
-      console.warn('Step 2 Warning: Handshake check failed, continuing anyway...');
+    } catch (e) {
+      console.warn('Handshake Alert: Network check timed out or blocked, proceeding with SDK attempt.');
     }
 
-    // 2. محاولة التحليل عبر النماذج بالترتيب (Flash -> Pro)
+    // 2. Pure SDK Implementation (Primary Strategy)
     const genAI = new GoogleGenerativeAI(apiKey);
     const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro'];
     let lastError: any = null;
 
     for (const modelName of modelsToTry) {
       try {
-        console.log(`Step 3: Handshaking with Model: ${modelName}...`);
+        console.log(`Step 3: Attempting Analysis with Model: ${modelName}...`);
         const model = genAI.getGenerativeModel({ model: modelName });
 
-        // تجهيز البيانات
         const base64Data = input.examImageDataUri.split(',')[1];
         const mimeType = input.examImageDataUri.split(',')[0].split(':')[1].split(';')[0];
 
         const prompt = `
-          Analyze this exam paper header. 
-          Return ONLY a JSON object (no markdown, no preamble) with: 
+          Analyze this exam paper image.
+          Return ONLY a JSON object with:
           {
-            "studentRegistrationId": "string",
-            "studentName": "string",
-            "subjectName": "string",
-            "academicYear": "string",
-            "semester": "string",
-            "level": "string"
+            "studentRegistrationId": "numeric digits",
+            "studentName": "Arabic name",
+            "subjectName": "Arabic subject name"
           }
-          Focus on Arabic text accuracy for student and subject names.
+          Be extremely accurate with Arabic text. No markdown, just JSON.
         `;
 
-        console.log(`Step 4: Sending Data to ${modelName}...`);
         const result = await model.generateContent([
-          { text: prompt },
+          prompt,
           {
             inlineData: {
               data: base64Data,
@@ -99,34 +100,50 @@ const extractExamDetailsFlow = ai.defineFlow(
 
         const response = await result.response;
         const text = response.text();
-        console.log(`- Response received from ${modelName}.`);
+        console.log(`- Received response from ${modelName}`);
 
-        // تنظيف وتحويل الـ JSON
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         const cleanJson = jsonMatch ? jsonMatch[0] : text;
         const parsed = JSON.parse(cleanJson);
 
-        console.log('--- [DIAGNOSTICS SUCCESS] ---');
+        console.log('--- [SUCCESS: AI STRATEGY] ---');
         return {
           studentRegistrationId: parsed.studentRegistrationId?.toString().replace(/\D/g, '') || '',
           studentName: parsed.studentName?.trim() || '',
           subjectName: parsed.subjectName?.trim() || '',
-          academicYear: parsed.academicYear?.trim() || '',
-          semester: parsed.semester?.trim() || '',
-          level: parsed.level?.trim() || ''
         };
 
       } catch (err: any) {
-        console.error(`- Error with model ${modelName}:`, err.message);
+        console.error(`- Error with ${modelName}:`, err.message);
         lastError = err;
-        continue; // تجربة النموذج التالي
+        // Continue to next model
       }
     }
 
-    console.error('--- [DIAGNOSTICS CRITICAL FAILURE] ---');
-    console.error('Handshake failed on all models. Last Error:', lastError?.message);
+    // 3. Plan B: Emergency Fallback (Local OCR via Tesseract.js)
+    console.warn('Step 4: AI Failed. Executing Plan B (Local OCR Fallback)...');
+    try {
+      const buffer = Buffer.from(input.examImageDataUri.split(',')[1], 'base64');
+      const ocrResult = await Tesseract.recognize(buffer, 'ara', {
+        logger: m => console.log(`- OCR Progress: ${Math.round(m.progress * 100)}%`)
+      });
+      
+      const fullText = ocrResult.data.text;
+      console.log('- Raw OCR Text:', fullText);
 
-    // الرد النهائي في حال فشل كافة المحاولات
-    throw new Error(`تعذر الاتصال بخوادم الذكاء الاصطناعي. التشخيص: ${lastError?.message || 'مشكلة في الشبكة أو الـ API Key'}`);
+      // Simple Regex attempt
+      const idMatch = fullText.match(/\d{5,10}/);
+      const nameMatch = fullText.match(/اسم الطالب[:\s]+([^\n\d]+)/);
+      
+      console.log('--- [SUCCESS: PLAN B STRATEGY] ---');
+      return {
+        studentRegistrationId: idMatch ? idMatch[0] : '',
+        studentName: nameMatch ? nameMatch[1].trim() : '',
+        diagnostics: 'Extracted via Plan B (Local OCR) due to AI timeout.'
+      };
+    } catch (ocrErr: any) {
+      console.error('Plan B Failed:', ocrErr.message);
+      throw new Error(`تعذر الاتصال بالذكاء الاصطناعي وفشل المحرك البديل. التشخيص: ${lastError?.message || 'مشكلة في الشبكة'}`);
+    }
   }
 );
