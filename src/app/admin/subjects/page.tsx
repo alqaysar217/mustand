@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -45,6 +45,7 @@ import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
 export default function SubjectsPage() {
+  const [mounted, setMounted] = useState(false);
   const firestore = useFirestore();
   const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
   const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
@@ -70,6 +71,10 @@ export default function SubjectsPage() {
 
   const { toast } = useToast();
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const filteredSubjects = useMemo(() => {
     return (subjects as any[]).filter(s => {
       const matchesSearch = s.nameAr?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -92,7 +97,7 @@ export default function SubjectsPage() {
     const subjectsRef = collection(firestore, "subjects");
     const data = {
       ...newSubject,
-      departmentName: selectedDeptObj?.name || "",
+      departmentName: selectedDeptObj?.nameAr || selectedDeptObj?.name || "",
       createdAt: serverTimestamp()
     };
 
@@ -123,7 +128,7 @@ export default function SubjectsPage() {
       nameAr: editingSubject.nameAr,
       nameEn: editingSubject.nameEn,
       departmentId: editingSubject.departmentId,
-      departmentName: selectedDeptObj?.name || "",
+      departmentName: selectedDeptObj?.nameAr || selectedDeptObj?.name || "",
       level: editingSubject.level,
       term: editingSubject.term,
       updatedAt: serverTimestamp()
@@ -162,6 +167,8 @@ export default function SubjectsPage() {
       });
   };
 
+  if (!mounted) return null;
+
   return (
     <div className="space-y-8 text-right" dir="rtl">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -172,7 +179,7 @@ export default function SubjectsPage() {
         
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2">
+            <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2 text-white">
               <Plus className="w-5 h-5" />
               إضافة مادة جديدة
             </Button>
@@ -213,7 +220,7 @@ export default function SubjectsPage() {
                       <SelectValue placeholder="اختر التخصص" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl font-bold">
-                      {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -228,6 +235,7 @@ export default function SubjectsPage() {
                       <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
                       <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
                       <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                      <SelectItem value="المستوى الخامس">المستوى الخامس</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -246,7 +254,7 @@ export default function SubjectsPage() {
                 </div>
               </div>
               <DialogFooter className="flex-row gap-3 pt-8">
-                <Button disabled={submitting} onClick={handleAddSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">
+                <Button disabled={submitting} onClick={handleAddSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg text-white">
                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ المادة"}
                 </Button>
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
@@ -276,7 +284,7 @@ export default function SubjectsPage() {
                </SelectTrigger>
                <SelectContent className="rounded-xl font-bold">
                  <SelectItem value="all">جميع التخصصات</SelectItem>
-                 {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                 {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
                </SelectContent>
              </Select>
           </div>
@@ -291,6 +299,7 @@ export default function SubjectsPage() {
                  <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
                  <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
                  <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                 <SelectItem value="المستوى الخامس">المستوى الخامس</SelectItem>
                </SelectContent>
              </Select>
           </div>
@@ -308,7 +317,7 @@ export default function SubjectsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={4} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20 text-primary" /></TableCell></TableRow>
               ) : filteredSubjects.length > 0 ? filteredSubjects.map((s) => (
                 <TableRow key={s.id} className="hover:bg-muted/20 border-b group">
                   <TableCell className="p-4">
@@ -396,7 +405,7 @@ export default function SubjectsPage() {
                     <SelectValue placeholder="اختر التخصص" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
-                    {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -411,6 +420,7 @@ export default function SubjectsPage() {
                     <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
                     <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
                     <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                    <SelectItem value="المستوى الخامس">المستوى الخامس</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -429,7 +439,7 @@ export default function SubjectsPage() {
               </div>
             </div>
             <DialogFooter className="flex-row gap-3 pt-8">
-              <Button disabled={submitting} onClick={handleUpdateSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg">
+              <Button disabled={submitting} onClick={handleUpdateSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg text-white">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ التعديلات"}
               </Button>
               <Button variant="outline" onClick={() => setEditingSubject(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
