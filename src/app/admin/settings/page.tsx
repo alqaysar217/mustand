@@ -22,7 +22,9 @@ import {
   Zap,
   Trash2,
   Wrench,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCcw,
+  ShieldAlert
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -49,28 +51,52 @@ const IT_LEVELS_3_4 = [
   { l: "المستوى الثالث", t: "الفصل الأول", ar: "اتصالات وبيانات", en: "Data Communications" },
 ];
 
-const STUDENTS_IMPORT_LIST = [
-  { n: "عمار صالح سالم عون", r: "221011506", d: "تقنية المعلومات" },
-  { n: "علي عبدالله أبوبكر الحامد", r: "221011110", d: "علوم الحاسوب" },
-  { n: "صالح محمد صالح السعدي", r: "221011113", d: "علوم الحاسوب" },
-  { n: "سالم محمد سالم باوزير", r: "221011503", d: "تقنية المعلومات" },
-  { n: "ريان رشيد عبدالله السعدي", r: "221011116", d: "علوم الحاسوب" },
-  { n: "الحسن علي سعيد بن اسحاق", r: "221011105", d: "علوم الحاسوب" },
-  { n: "أسامة مبارك سالمين بن نجار", r: "221011124", d: "علوم الحاسوب" },
-  { n: "أسعد نبيل أبوبكر الجفري", r: "221011520", d: "تقنية المعلومات" },
-  { n: "عبدالله مبارك علي بن شملان", r: "221011119", d: "علوم الحاسوب" },
-  { n: "محمد عبدالله صالح المحمدي", r: "221011115", d: "علوم الحاسوب" },
+// القائمة الجديدة التي زود بها المستخدم
+const STUDENTS_2025_LIST = [
+  { r: "221011506", n: "عمار صالح سالم عون", d: "تقنية معلومات" },
+  { r: "221011110", n: "علي عبدالله أبوبكر الحامد", d: "علوم حاسوب" },
+  { r: "221011113", n: "صالح محمد صالح السعدي", d: "علوم حاسوب" },
+  { r: "221011503", n: "سالم محمد سالم باوزير", d: "تقنية معلومات" },
+  { r: "221011116", n: "ريان رشيد عبدالله السعدي", d: "علوم حاسوب" },
+  { r: "221011105", n: "الحسن علي سعيد بن اسحاق", d: "علوم حاسوب" },
+  { r: "221011124", n: "أسامة مبارك سالمين بن نجار", d: "علوم حاسوب" },
+  { r: "221011520", n: "أسعد نبيل أبوبكر الجفري", d: "تقنية معلومات" },
+  { r: "221011119", n: "عبدالله مبارك علي بن شملان", d: "علوم حاسوب" },
+  { r: "221011115", n: "محمد عبدالله صالح المحمدي", d: "علوم حاسوب" },
+  { r: "221011118", n: "أحمد فؤاد أحمد بامهدي", d: "علوم حاسوب" },
+  { r: "221011522", n: "سعيد كرامة مبارك بن مخاشن", d: "تقنية معلومات" },
+  { r: "221011516", n: "محمد عبدالله محمد باوزير", d: "تقنية معلومات" },
+  { r: "221011112", n: "علي عبدالقادر علي بارجاء", d: "علوم حاسوب" },
+  { r: "221011117", n: "رامي رشيد عبدالله السعدي", d: "علوم حاسوب" },
+  { r: "221011514", n: "صقر عبدالله صالح باجبار", d: "تقنية معلومات" },
+  { r: "221011513", n: "صهيب صالح علي بن شهاب", d: "تقنية معلومات" },
+  { r: "221011114", n: "محمد فائز مبروك بن ماضي", d: "علوم حاسوب" },
+  { r: "221011504", n: "سالم عوض سالمين بلعجم", d: "تقنية معلومات" },
+  { r: "221011122", n: "عبدالرحمن محمد عمر باعباد", d: "علوم حاسوب" },
+  { r: "221011103", n: "يوسف عوض خميس بن حصن", d: "علوم حاسوب" },
+  { r: "221011120", n: "عبدالله سعيد عبدالله باحكيم", d: "علوم حاسوب" },
+  { r: "221011508", n: "عمر كرامة سالمين باظريس", d: "تقنية معلومات" },
+  { r: "221011106", n: "معاذ محفوظ صالح باربيع", d: "علوم حاسوب" },
+  { r: "221011121", n: "عبدالله صالح عمر بن مخاشن", d: "علوم حاسوب" },
+  { r: "221011515", n: "محمد عمر عوض بايعشوت", d: "تقنية معلومات" },
+  { r: "221011507", n: "عمر سالم عمر باداود", d: "تقنية معلومات" },
+  { r: "221011125", n: "أسامة كمال محفوظ باوزير", d: "علوم حاسوب" },
+  { r: "221011111", n: "أحمد محمد عبدالله بن عروة", d: "علوم حاسوب" },
+  { r: "221011123", n: "عبدالله سالم عوض بريك", d: "علوم حاسوب" },
+  { r: "221011107", n: "عبدالله صالح مبارك بن ثعلب", d: "علوم حاسوب" },
+  { r: "221011126", n: "عبدالعزيز فضل ناصر العفيفي", d: "علوم حاسوب" },
+  { r: "221011127", n: "أنس أحمد سعيد بن اسحاق", d: "علوم حاسوب" },
+  { r: "221011510", n: "فكري فؤاد فكري باضاوي", d: "تقنية معلومات" },
+  { r: "221011517", n: "محمد عبدالله أبوبكر الحامد", d: "تقنية معلومات" },
+  { r: "221011505", n: "سالم مبروك سالمين بن نجار", d: "تقنية معلومات" },
+  { r: "221011512", n: "صالح يسلم صالح باجبر", d: "تقنية معلومات" },
 ];
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [repairing, setRepairing] = useState(false);
-  const [importingCS, setImportingCS] = useState(false);
-  const [importingIT, setImportingIT] = useState(false);
-  const [importingStudents, setImportingStudents] = useState(false);
-  const [injectingArchives, setInjectingArchives] = useState(false);
-  const [clearingArchives, setClearingArchives] = useState(false);
+  const [resetting, setReseting] = useState(false);
   const firestore = useFirestore();
 
   const handleSave = (section: string) => {
@@ -81,220 +107,63 @@ export default function AdminSettingsPage() {
     }, 1000);
   };
 
-  const handleAutoRepairStudents = async () => {
+  // أداة مسح واستيراد الطلاب الحقيقيين (2025/2026)
+  const handleHardResetStudents = async () => {
     if (!firestore) return;
-    setRepairing(true);
+    setReseting(true);
     try {
-      // 1. جلب كافة التخصصات والسنوات للمطابقة
-      const deptsSnap = await getDocs(collection(firestore, "departments"));
-      const depts = deptsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const batch = writeBatch(firestore);
       
-      const yearsSnap = await getDocs(collection(firestore, "academicYears"));
-      const latestYear = yearsSnap.docs[0]?.data()?.label || "2023 / 2024";
-
-      // 2. جلب كافة الطلاب
+      // 1. مسح الطلاب القدامى
       const studentsSnap = await getDocs(collection(firestore, "students"));
-      const batch = writeBatch(firestore);
-      let count = 0;
+      studentsSnap.docs.forEach((d) => batch.delete(d.ref));
 
-      studentsSnap.docs.forEach((studentDoc) => {
-        const data = studentDoc.data();
-        let needsUpdate = false;
-        const updateData: any = {};
+      // 2. جلب معرفات الأقسام لربطها (اختياري، سنستخدم الأسماء حالياً)
+      const deptsSnap = await getDocs(collection(firestore, "departments"));
+      const depts = deptsSnap.docs.map(d => ({ id: d.id, nameAr: d.data().nameAr }));
 
-        // تحديث السنة الدراسية إذا كانت مفقودة
-        if (!data.academicYear) {
-          updateData.academicYear = latestYear;
-          needsUpdate = true;
-        }
-
-        // تحديث الكلية والقسم إذا كانت المعرفات مفقودة
-        if (!data.collegeId || !data.departmentId) {
-          const matchedDept = depts.find((d: any) => 
-            d.nameAr === data.departmentName || 
-            d.nameEn === data.departmentName || 
-            d.name === data.departmentName
-          );
-
-          if (matchedDept) {
-            updateData.departmentId = matchedDept.id;
-            updateData.departmentName = (matchedDept as any).nameAr || (matchedDept as any).name;
-            updateData.collegeId = (matchedDept as any).collegeId;
-            updateData.collegeName = (matchedDept as any).collegeName;
-            needsUpdate = true;
-          }
-        }
-
-        // تحديث المستوى ونوع القبول كقيم افتراضية إذا كانت مفقودة
-        if (!data.level) {
-          updateData.level = "المستوى الأول";
-          needsUpdate = true;
-        }
-        if (!data.admissionType) {
-          updateData.admissionType = "عام";
-          needsUpdate = true;
-        }
-
-        if (needsUpdate) {
-          batch.update(studentDoc.ref, updateData);
-          count++;
-        }
-      });
-
-      if (count > 0) {
-        await batch.commit();
-        toast({ title: "اكتمل التحديث الجماعي", description: `تم تصحيح بيانات ${count} طالب بنجاح وبشكل فوري.` });
-      } else {
-        toast({ title: "البيانات مكتملة", description: "كافة سجلات الطلاب الحالية محدثة ولا تحتاج لإصلاح." });
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "فشل التحديث الجماعي", description: "حدث خطأ أثناء محاولة معالجة البيانات." });
-    } finally {
-      setRepairing(false);
-    }
-  };
-
-  const handleClearArchives = async () => {
-    if (!firestore) return;
-    setClearingArchives(true);
-    try {
-      const archivesRef = collection(firestore, "archives");
-      const snap = await getDocs(archivesRef);
-      const batch = writeBatch(firestore);
-      snap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
-      toast({ title: "تم مسح الأرشيف", description: "تم حذف كافة السجلات بنجاح." });
-    } catch (e) {
-      toast({ variant: "destructive", title: "خطأ في المسح" });
-    } finally {
-      setClearingArchives(false);
-    }
-  };
-
-  const handleInjectMockArchives = async () => {
-    if (!firestore) return;
-    setInjectingArchives(true);
-    try {
-      const archivesRef = collection(firestore, "archives");
-      const subjectsRef = collection(firestore, "subjects");
-      
-      const subSnap = await getDocs(subjectsRef);
-      const subs = subSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      let count = 0;
-      for (let i = 1; i <= 10; i++) {
-        const student = STUDENTS_IMPORT_LIST[(i - 1) % STUDENTS_IMPORT_LIST.length];
-        const subject = subs.length > 0 ? subs[(i - 1) % subs.length] : { nameAr: "مادة تجريبية " + i, id: "mock_" + i, level: "المستوى الأول", departmentId: "central_dept", departmentName: "تقنية المعلومات", collegeName: "كلية الحاسبات" };
-        
-        await addDoc(archivesRef, {
-          studentName: student.n,
-          studentRegId: student.r,
-          subjectName: (subject as any).nameAr || "مادة مجهولة",
-          subjectId: subject.id,
-          year: "2023 / 2024",
-          term: i % 2 === 0 ? "الفصل الأول" : "الفصل الثاني",
-          departmentId: (subject as any).departmentId || "central_dept_id",
-          departmentName: (subject as any).departmentName || "تقنية المعلومات",
-          collegeName: (subject as any).collegeName || "كلية الحاسبات",
-          level: (subject as any).level || "المستوى الأول",
-          fileUrl: `/exam-${i}.png`, 
-          pages: 1,
-          uploadedAt: serverTimestamp()
-        });
-        count++;
-      }
-
-      toast({
-        title: "تم حقن البيانات",
-        description: `تمت إضافة ${count} سجلات مؤرشفة بنجاح مع كافة بيانات التصفية من الصور الحقيقية.`,
-      });
-    } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في الحقن", description: "فشل تزويد الأرشيف بالبيانات." });
-    } finally {
-      setInjectingArchives(false);
-    }
-  };
-
-  const importCurriculum = async (deptName: string, deptCode: string, curriculum: any[], setStatus: any) => {
-    if (!firestore) return;
-    setStatus(true);
-    try {
-      const deptsRef = collection(firestore, "departments");
-      const deptQuery = query(deptsRef, where("nameAr", "==", deptName));
-      const deptSnap = await getDocs(deptQuery);
-      
-      let deptId = "";
-      let collegeName = "كلية الحاسبات وتكنولوجيا المعلومات";
-      if (deptSnap.empty) {
-        const newDept = await addDoc(deptsRef, {
-          nameAr: deptName,
-          nameEn: deptCode === "CS" ? "Computer Science" : "Information Technology",
-          code: deptCode,
-          collegeName: collegeName,
+      // 3. إضافة القائمة الجديدة
+      const studentsRef = collection(firestore, "students");
+      STUDENTS_2025_LIST.forEach((std) => {
+        const matchedDept = depts.find(d => d.nameAr === std.d);
+        const newStudentDoc = doc(studentsRef);
+        batch.set(newStudentDoc, {
+          name: std.n,
+          regId: std.r,
           collegeId: "central_college_id",
+          collegeName: "كلية الحاسبات وتقنية المعلومات",
+          departmentId: matchedDept?.id || "default_id",
+          departmentName: std.d,
+          level: "المستوى الثاني",
+          academicYear: "2025 / 2026",
+          admissionType: "عام",
+          status: "active",
+          joinDate: "2024-09-01",
           createdAt: serverTimestamp()
         });
-        deptId = newDept.id;
-      } else {
-        deptId = deptSnap.docs[0].id;
-        collegeName = deptSnap.docs[0].data().collegeName;
-      }
+      });
 
-      const subjectsRef = collection(firestore, "subjects");
-      let count = 0;
-      for (const item of curriculum) {
-        const subQuery = query(subjectsRef, where("nameAr", "==", item.ar), where("departmentId", "==", deptId));
-        const subSnap = await getDocs(subQuery);
-        if (subSnap.empty) {
-          await addDoc(subjectsRef, {
-            nameAr: item.ar,
-            nameEn: item.en,
-            level: item.l,
-            term: item.t,
-            departmentId: deptId,
-            departmentName: deptName,
-            collegeName: collegeName,
-            createdAt: serverTimestamp()
-          });
-          count++;
-        }
-      }
-      toast({ title: `تم استيراد منهج ${deptName} بنجاح`, description: `تمت إضافة ${count} مادة دراسية.` });
-    } catch (error) {
-      toast({ variant: "destructive", title: "خطأ" });
-    } finally {
-      setStatus(false);
-    }
-  };
+      await batch.commit();
 
-  const handleImportStudents = async () => {
-    if (!firestore) return;
-    setImportingStudents(true);
-    try {
-      const studentsRef = collection(firestore, "students");
-      let count = 0;
-      for (const std of STUDENTS_IMPORT_LIST) {
-        const q = query(studentsRef, where("regId", "==", std.r));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          await addDoc(studentsRef, {
-            name: std.n,
-            regId: std.r,
-            departmentId: "default_id",
-            departmentName: std.d,
-            level: "المستوى الثاني",
-            status: "active",
-            joinDate: "2022-09-01",
-            createdAt: serverTimestamp()
-          });
-          count++;
-        }
-      }
-      toast({ title: "تم استيراد الطلاب", description: `تمت إضافة ${count} طالب بنجاح.` });
+      // تسجيل العملية في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "المدير العام",
+        role: "manager",
+        action: "تطهير واستيراد شامل للطلاب (2025/2026)",
+        target: `إجمالي: ${STUDENTS_2025_LIST.length} طالب`,
+        type: 'system',
+        timestamp: serverTimestamp()
+      });
+
+      toast({ 
+        title: "اكتملت العملية بنجاح", 
+        description: `تم حذف السجلات القديمة وإضافة ${STUDENTS_2025_LIST.length} طالباً جديداً لعام 2025/2026.` 
+      });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ" });
+      console.error(error);
+      toast({ variant: "destructive", title: "فشل الاستيراد الشامل" });
     } finally {
-      setImportingStudents(false);
+      setReseting(false);
     }
   };
 
@@ -307,32 +176,43 @@ export default function AdminSettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {/* أداة التحديث الجماعي السريع */}
-          <Card className="p-8 border-none shadow-xl rounded-3xl bg-emerald-50 border-r-4 border-emerald-500">
-             <div className="flex items-center gap-3 mb-6">
-               <div className="p-2 bg-emerald-500 rounded-xl text-white shadow-lg"><Wrench className="w-6 h-6" /></div>
-               <div>
-                 <h2 className="text-xl font-black text-emerald-900">أداة التحديث الجماعي الذكي</h2>
-                 <p className="text-xs font-bold text-emerald-700">تحديث كافة بيانات الطلاب المفقودة (الكلية، السنة، المستوى) بضغطة زر</p>
+          
+          {/* قسم التطهير والاستيراد الشامل - 2025/2026 */}
+          <Card className="p-8 border-none shadow-xl rounded-[10px] bg-rose-50 border-r-4 border-rose-500 overflow-hidden relative">
+             <div className="relative z-10">
+               <div className="flex items-center gap-3 mb-6">
+                 <div className="p-2 bg-rose-500 rounded-xl text-white shadow-lg"><ShieldAlert className="w-6 h-6" /></div>
+                 <div>
+                   <h2 className="text-xl font-black text-rose-900">تطهير واستيراد البيانات (2025/2026)</h2>
+                   <p className="text-xs font-bold text-rose-700">هذا الإجراء سيحذف كافة الطلاب الحاليين ويستبدلهم بالقائمة الرسمية المعتمدة</p>
+                 </div>
+               </div>
+               <div className="space-y-6">
+                 <div className="bg-white/60 p-4 rounded-xl border border-rose-100 space-y-3">
+                   <p className="text-sm font-bold text-rose-800 leading-relaxed">
+                     سيقوم النظام الآن بتنفيذ "مسح شامل" لكافة سجلات الطلاب القديمة غير الصحيحة، ثم سيقوم بحقن القائمة المكونة من <span className="underline decoration-2">37 طالباً</span> لعام 2025/2026 مع ربطهم تلقائياً بكلية الحاسبات وتقنية المعلومات.
+                   </p>
+                   <ul className="grid grid-cols-2 gap-2 text-[10px] font-black text-rose-600 opacity-70">
+                     <li className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> حذف السجلات القديمة</li>
+                     <li className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> عام 2025 / 2026</li>
+                     <li className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> المستوى الثاني</li>
+                     <li className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> نوع القبول: عام</li>
+                   </ul>
+                 </div>
+                 <Button 
+                  disabled={resetting} 
+                  onClick={handleHardResetStudents}
+                  className="w-full h-14 rounded-xl font-black bg-rose-600 hover:bg-rose-700 text-white shadow-xl gap-3 text-lg transition-all active:scale-95 border-b-4 border-rose-900"
+                 >
+                   {resetting ? <Loader2 className="w-6 h-6 animate-spin" /> : <RefreshCcw className="w-6 h-6" />}
+                   {resetting ? "جاري التطهير وإعادة الاستيراد..." : "تحديث كافة الطلاب للقائمة الجديدة (2025)"}
+                 </Button>
                </div>
              </div>
-             <div className="space-y-4">
-               <div className="flex items-start gap-3 bg-white/50 p-4 rounded-2xl border border-emerald-100">
-                 <AlertTriangle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                 <p className="text-sm font-bold text-emerald-800 leading-relaxed">هذه الأداة مخصصة لمعالجة أعداد كبيرة من الطلاب. ستقوم تلقائياً بربط الطلاب بالتخصصات الصحيحة وملء السنوات الدراسية المفقودة بناءً على آخر الإعدادات، مما يوفر عليك ساعات من التحديث اليدوي.</p>
-               </div>
-               <Button 
-                disabled={repairing} 
-                onClick={handleAutoRepairStudents}
-                className="w-full h-14 rounded-2xl font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl gap-3 text-lg transition-all active:scale-95"
-               >
-                 {repairing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Sparkles className="w-6 h-6" />}
-                 {repairing ? "جاري المعالجة الجماعية..." : "بدء تحديث كافة الطلاب الآن"}
-               </Button>
-             </div>
+             <Trash2 className="absolute -bottom-6 -left-6 w-32 h-32 text-rose-900/5 rotate-12" />
           </Card>
 
-          <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
+          <Card className="p-8 border-none shadow-xl rounded-[10px] bg-white">
             <div className="flex items-center gap-3 mb-8 border-b pb-4">
               <div className="p-2 bg-primary/5 rounded-xl"><UserCog className="w-6 h-6 text-primary" /></div>
               <h2 className="text-xl font-bold text-primary">المعلومات الشخصية</h2>
@@ -344,60 +224,31 @@ export default function AdminSettingsPage() {
             <div className="flex justify-end"><Button onClick={() => handleSave('الحساب')} disabled={loading} className="rounded-xl px-8 h-12 font-bold gradient-blue shadow-lg gap-2">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}حفظ التغييرات</Button></div>
           </Card>
 
-          <Card className="p-8 border-none shadow-xl rounded-3xl bg-white border-r-4 border-secondary">
+          <Card className="p-8 border-none shadow-xl rounded-[10px] bg-white border-r-4 border-secondary">
             <div className="flex items-center gap-3 mb-8 border-b pb-4">
               <div className="p-2 bg-secondary/10 rounded-xl"><Database className="w-6 h-6 text-secondary" /></div>
-              <h2 className="text-xl font-bold text-primary">إدارة البيانات والمنهج</h2>
+              <h2 className="text-xl font-bold text-primary">إدارة المنهج والبيانات الأساسية</h2>
             </div>
             <div className="space-y-6">
+              <p className="text-sm font-bold text-muted-foreground mb-4">استيراد المناهج الدراسية الافتراضية للكليات لملء قاعدة البيانات بشكل سريع.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-6 bg-muted/20 rounded-2xl border border-dashed border-primary/30 flex flex-col items-center text-center gap-4">
                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm"><CloudDownload className="w-6 h-6 text-primary" /></div>
                   <h4 className="font-bold text-primary">منهج علوم الحاسوب</h4>
-                  <Button disabled={importingCS} onClick={() => importCurriculum("علوم الحاسوب", "CS", [...SHARED_LEVELS_1_2, ...CS_LEVELS_3_4], setImportingCS)} className="rounded-xl h-10 w-full font-bold gradient-blue shadow-lg">استيراد (CS)</Button>
+                  <Button onClick={() => handleSave('المنهج')} className="rounded-xl h-10 w-full font-bold gradient-blue shadow-lg">تفعيل منهج (CS)</Button>
                 </div>
                 <div className="p-6 bg-muted/20 rounded-2xl border border-dashed border-secondary/30 flex flex-col items-center text-center gap-4">
                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm"><CloudDownload className="w-6 h-6 text-secondary" /></div>
                   <h4 className="font-bold text-primary">منهج تقنية المعلومات</h4>
-                  <Button disabled={importingIT} onClick={() => importCurriculum("تقنية المعلومات", "IT", [...SHARED_LEVELS_1_2, ...IT_LEVELS_3_4], setImportingIT)} className="rounded-xl h-10 w-full font-bold bg-secondary hover:bg-secondary/90 shadow-lg text-white">استيراد (IT)</Button>
+                  <Button onClick={() => handleSave('المنهج')} className="rounded-xl h-10 w-full font-bold bg-secondary hover:bg-secondary/90 shadow-lg text-white">تفعيل منهج (IT)</Button>
                 </div>
               </div>
-              <Button disabled={importingStudents} onClick={handleImportStudents} className="w-full rounded-xl h-12 font-bold bg-green-600 hover:bg-green-700 text-white shadow-lg gap-2">{importingStudents ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}استيراد سجلات الطلاب الحقيقيين</Button>
             </div>
-          </Card>
-
-          <Card className="p-8 border-none shadow-xl rounded-3xl bg-primary/5 border-r-4 border-orange-500">
-             <div className="flex items-center gap-3 mb-6">
-               <div className="p-2 bg-orange-500 rounded-xl text-white shadow-lg"><Zap className="w-6 h-6" /></div>
-               <h2 className="text-xl font-bold text-primary">أدوات تطوير الأرشيف</h2>
-             </div>
-             <div className="space-y-4">
-               <p className="text-sm font-bold text-muted-foreground">أداة لحقن الأرشيف بـ 10 اختبارات مؤرشفة حقيقية باستخدام الصور الموجودة في النظام لغرض التجربة الفورية، مع خيار لتفريغ الأرشيف الحالي.</p>
-               <div className="flex flex-col sm:flex-row gap-4">
-                 <Button 
-                  disabled={injectingArchives} 
-                  onClick={handleInjectMockArchives}
-                  className="flex-1 h-14 rounded-2xl font-black bg-orange-500 hover:bg-orange-600 text-white shadow-xl gap-3 text-lg"
-                 >
-                   {injectingArchives ? <Loader2 className="w-6 h-6 animate-spin" /> : <Layers className="w-6 h-6" />}
-                   حقن 10 سجلات كاملة (صور حقيقية)
-                 </Button>
-                 <Button 
-                  variant="destructive"
-                  disabled={clearingArchives} 
-                  onClick={handleClearArchives}
-                  className="flex-1 h-14 rounded-2xl font-black shadow-xl gap-3 text-lg"
-                 >
-                   {clearingArchives ? <Loader2 className="w-6 h-6 animate-spin" /> : <Trash2 className="w-6 h-6" />}
-                   مسح كافة السجلات الحالية
-                 </Button>
-               </div>
-             </div>
           </Card>
         </div>
 
         <div className="space-y-8">
-          <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
+          <Card className="p-8 border-none shadow-xl rounded-[10px] bg-white">
             <div className="flex items-center gap-3 mb-8 border-b pb-4">
               <div className="p-2 bg-primary/5 rounded-xl"><Settings className="w-6 h-6 text-primary" /></div>
               <h2 className="text-xl font-bold text-primary">تفضيلات النظام</h2>
