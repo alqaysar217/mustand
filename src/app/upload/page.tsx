@@ -1,9 +1,8 @@
-
 "use client";
 
 /**
  * @fileOverview صفحة رفع وأرشفة الاختبارات المطورة.
- * تم حل مشكلة Error 500 عبر تقليص حجم الحمولة المرسلة للـ AI (Thumbnail Processing).
+ * تم إصلاح مشكلة تصفية المواد لضمان ظهورها بناءً على القسم والمستوى.
  */
 
 import { useState, useMemo, useRef } from "react";
@@ -79,13 +78,31 @@ export default function UploadPage() {
   const { data: allSubjects = [] } = useCollection(subjectsQuery);
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
+  /**
+   * منطق تصفية المواد المطور:
+   * يقوم بالمطابقة بناءً على المعرف، الاسم، أو الرمز لضمان المرونة.
+   */
   const filteredSubjects = useMemo(() => {
     if (!formData.deptId || !formData.level) return [];
-    return (allSubjects as any[]).filter(s => 
-      s.departmentId === formData.deptId && 
-      s.level === formData.level
-    );
-  }, [allSubjects, formData.deptId, formData.level]);
+    
+    const currentDept = (departments as any[]).find(d => d.id === formData.deptId);
+    const targetDeptName = (currentDept?.nameAr || currentDept?.name || "").toLowerCase();
+    const targetDeptCode = (currentDept?.code || "").toLowerCase();
+
+    return (allSubjects as any[]).filter(s => {
+      // مطابقة المستوى أولاً
+      const levelMatch = s.level === formData.level;
+      if (!levelMatch) return false;
+
+      // مطابقة القسم (ID أو اسم أو رمز)
+      const subDeptId = (s.departmentId || "").toLowerCase();
+      const subDeptName = (s.departmentName || "").toLowerCase();
+
+      return subDeptId === formData.deptId.toLowerCase() || 
+             subDeptName === targetDeptName || 
+             subDeptId === targetDeptCode;
+    });
+  }, [allSubjects, formData.deptId, formData.level, departments]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
@@ -98,7 +115,6 @@ export default function UploadPage() {
       const reader = new FileReader();
       reader.onload = async (event) => {
         if (event.target?.result) {
-          // ضغط نسخة الأرشفة (عالية الجودة ولكن تحت 800KB)
           const { data, size } = await compressImage(event.target.result as string, 0.6, 1200);
           const sizeKB = size / 1024;
 
@@ -133,14 +149,12 @@ export default function UploadPage() {
   const handleOCR = async () => {
     if (files.length === 0 || !firestore) return;
     
-    setLoadingText("جاري تحسين الصورة للتحليل الفوري...");
+    setLoadingText("جاري استخراج البيانات ذكياً...");
     setLoading(true);
     
     try {
-      // استراتيجية "النسخة المصغرة": نرسل نسخة صغيرة جداً للذكاء الاصطناعي لتجنب Error 500
+      // إرسال نسخة مصغرة للذكاء الاصطناعي لتوفير الباندويث ومنع الـ 500 error
       const { data: ocrData } = await compressImage(files[0], 0.3, 500); 
-      
-      setLoadingText("جاري استخراج البيانات (Gemini AI)...");
       const result = await extractExamDetails({ examImageDataUri: ocrData });
       
       if (!result) throw new Error("فشل استخراج البيانات");
@@ -217,7 +231,7 @@ export default function UploadPage() {
       setStep(1);
 
     } catch (error: any) {
-      toast({ variant: "destructive", title: "فشل الحفظ النهائي", description: "تأكد من استقرار الاتصال بالإنترنت." });
+      toast({ variant: "destructive", title: "فشل الحفظ النهائي" });
     } finally {
       setLoading(false);
     }
@@ -234,7 +248,7 @@ export default function UploadPage() {
       )} dir="rtl">
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-black text-primary mb-2">نظام الأرشفة الذكي</h1>
-          <p className="text-muted-foreground font-bold text-lg">تحليل واستخراج البيانات محلياً مع التخزين السحابي المباشر</p>
+          <p className="text-muted-foreground font-bold text-lg">تحليل واستخراج البيانات مع تخزين سحابي فوري</p>
         </div>
 
         <div className="max-w-md mx-auto mb-12">
@@ -298,15 +312,23 @@ export default function UploadPage() {
                 </div>
                 <div className="space-y-3">
                   <Label className="text-sm font-black text-primary flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى</Label>
-                  <select value={formData.level} onChange={(e) => setFormData({...formData, level: e.target.value})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right">
+                  <select value={formData.level} onChange={(e) => setFormData({...formData, level: e.target.value, subjectId: '', subjectName: ''})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right">
                     <option value="">اختر المستوى...</option>
                     <option value="المستوى الأول">المستوى الأول</option><option value="المستوى الثاني">المستوى الثاني</option><option value="المستوى الثالث">المستوى الثالث</option><option value="المستوى الرابع">المستوى الرابع</option>
                   </select>
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-sm font-black text-primary flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة</Label>
-                  <select disabled={!formData.deptId || !formData.level} value={formData.subjectId} onChange={(e) => { const sel = filteredSubjects.find((s: any) => s.id === e.target.value) as any; setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", term: sel?.term || "" }); }} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right disabled:opacity-50">
-                    <option value="">اختر المادة...</option>
+                  <Label className="text-sm font-black text-primary flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة الدراسية</Label>
+                  <select 
+                    disabled={!formData.deptId || !formData.level} 
+                    value={formData.subjectId} 
+                    onChange={(e) => { 
+                      const sel = filteredSubjects.find((s: any) => s.id === e.target.value) as any; 
+                      setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", term: sel?.term || "" }); 
+                    }} 
+                    className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right disabled:opacity-50"
+                  >
+                    <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "لا توجد مواد لهذا القسم والمستوى"}</option>
                     {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
                   </select>
                 </div>
@@ -401,6 +423,22 @@ export default function UploadPage() {
                       placeholder="اسم الطالب..." 
                     />
                   </div>
+                  <div className="space-y-3 md:col-span-2">
+                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />تأكيد المادة الدراسية</Label>
+                    <select 
+                      value={formData.subjectId} 
+                      onChange={(e) => { 
+                        const sel = allSubjects.find((s: any) => s.id === e.target.value) as any; 
+                        setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", term: sel?.term || "" }); 
+                      }} 
+                      className="w-full h-16 px-6 rounded-2xl border-2 border-muted focus:border-primary bg-white font-black text-lg text-right outline-none transition-all shadow-inner appearance-none"
+                    >
+                      <option value="">اختر المادة...</option>
+                      {allSubjects.filter((s: any) => !formData.deptId || s.departmentId === formData.deptId).map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.nameAr}</option>
+                      ))}
+                    </select>
+                  </div>
                </div>
             </div>
           )}
@@ -409,10 +447,10 @@ export default function UploadPage() {
             <Button variant="outline" onClick={() => setStep(prev => prev === 5 ? 3 : Math.max(prev - 1, 1))} disabled={step === 1 || loading} className="h-16 px-10 rounded-2xl border-2 border-muted font-black gap-4 hover:bg-muted/10 transition-all flex items-center">السابق<ChevronRight className="w-6 h-6" /></Button>
             <div className="flex gap-4">
               {step === 1 && (
-                <Button onClick={() => setStep(2)} className="h-16 px-16 rounded-2xl font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"><ChevronLeft className="w-6 h-6" />متابعة للرفع</Button>
+                <Button onClick={() => setStep(2)} disabled={!formData.year || !formData.deptId || !formData.level} className="h-16 px-16 rounded-2xl font-black gap-4 gradient-blue shadow-lg hover:scale-105 transition-all flex items-center"><ChevronLeft className="w-6 h-6" />متابعة للرفع</Button>
               )}
               {step === 5 && (
-                <Button onClick={handleSaveToArchive} disabled={loading || !extractedData.id} className="h-16 px-16 rounded-2xl font-black gap-4 bg-green-600 text-white shadow-xl hover:bg-green-700 hover:scale-105 transition-all"><CloudUpload className="w-6 h-6" />إكمال الأرشفة السحابية</Button>
+                <Button onClick={handleSaveToArchive} disabled={loading || !extractedData.id || !formData.subjectId} className="h-16 px-16 rounded-2xl font-black gap-4 bg-green-600 text-white shadow-xl hover:bg-green-700 hover:scale-105 transition-all"><CloudUpload className="w-6 h-6" />إكمال الأرشفة السحابية</Button>
               )}
             </div>
           </div>
