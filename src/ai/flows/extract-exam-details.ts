@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview نظام استخراج بيانات الامتحانات المطور.
@@ -7,7 +6,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { gemini15Flash } from '@genkit-ai/google-genai';
 
 const ExtractExamDetailsInputSchema = z.object({
   examImageDataUri: z
@@ -32,7 +30,7 @@ const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
   input: {schema: ExtractExamDetailsInputSchema},
   output: {schema: ExtractExamDetailsOutputSchema},
-  model: gemini15Flash,
+  model: 'googleai/gemini-1.5-flash',
   config: {
     safetySettings: [
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
