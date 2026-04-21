@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -50,6 +50,7 @@ import { useFirestore, useCollection } from "@/firebase";
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 
 export default function AdminStudentsPage() {
+  const [mounted, setMounted] = useState(false);
   const firestore = useFirestore();
   const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
   const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
@@ -74,6 +75,10 @@ export default function AdminStudentsPage() {
   });
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const filteredStudents = useMemo(() => {
     return (students as any[]).filter(student => {
@@ -196,6 +201,8 @@ export default function AdminStudentsPage() {
       ? <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-lg gap-1 font-black"><CheckCircle2 className="w-3 h-3" /> نشط</Badge>
       : <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-100 border-none rounded-lg gap-1 font-black"><XCircle className="w-3 h-3" /> موقوف</Badge>;
   };
+
+  if (!mounted) return null;
 
   return (
     <div className="space-y-8 text-right" dir="rtl">
