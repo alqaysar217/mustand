@@ -30,7 +30,8 @@ const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
   input: {schema: ExtractExamDetailsInputSchema},
   output: {schema: ExtractExamDetailsOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
+  // استخدام النسخة الأحدث لضمان التوافق وتجنب أخطاء 404
+  model: 'googleai/gemini-1.5-flash-latest',
   config: {
     safetySettings: [
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
@@ -77,6 +78,7 @@ const extractExamDetailsFlow = ai.defineFlow(
       };
     } catch (error: any) {
       console.error('OCR Flow Error:', error);
+      // في حال استمرار الخطأ، نمرر رسالة توضح نوع المشكلة (مثل المنطقة الجغرافية أو مفتاح API)
       throw new Error('فشل التحليل الذكي للوثيقة: ' + (error.message || 'Error'));
     }
   }
