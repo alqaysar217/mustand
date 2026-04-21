@@ -20,7 +20,8 @@ import {
   CheckCircle,
   Save,
   X,
-  ChevronLeft
+  RefreshCw,
+  AlertTriangle
 } from "lucide-react";
 import {
   Table,
@@ -66,6 +67,7 @@ export default function SubjectsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   const [newSubject, setNewSubject] = useState({
     nameAr: "",
@@ -91,6 +93,66 @@ export default function SubjectsPage() {
       return matchesSearch && matchesDept && matchesLevel;
     });
   }, [subjects, searchTerm, filterDept, filterLevel]);
+
+  // دالة لإعادة ربط المواد المحقونة بالتخصصات الصحيحة
+  const handleSyncSubjects = async () => {
+    if (!firestore || subjects.length === 0 || departments.length === 0) {
+      toast({ variant: "destructive", title: "لا توجد بيانات كافية للمزامنة" });
+      return;
+    }
+
+    setIsSyncing(true);
+    let fixedCount = 0;
+    
+    try {
+      for (const sub of subjects as any[]) {
+        let needsUpdate = false;
+        const updates: any = {};
+
+        // 1. محاولة إيجاد القسم الصحيح (بناءً على ID أو الرمز أو الاسم)
+        const targetDept = departments.find((d: any) => 
+          d.id === sub.departmentId || 
+          (d.code && d.code === sub.departmentId) ||
+          (d.nameAr && d.nameAr === sub.departmentName) ||
+          (d.name && d.name === sub.departmentName)
+        ) as any;
+
+        if (targetDept && sub.departmentId !== targetDept.id) {
+          updates.departmentId = targetDept.id;
+          updates.departmentName = targetDept.nameAr || targetDept.name;
+          needsUpdate = true;
+        }
+
+        // 2. توحيد مسميات المستويات
+        const levelMapping: Record<string, string> = {
+          "1": "المستوى الأول", "2": "المستوى الثاني", "3": "المستوى الثالث", "4": "المستوى الرابع", "5": "المستوى الخامس",
+          "الأول": "المستوى الأول", "الثاني": "المستوى الثاني", "الثالث": "المستوى الثالث", "الرابع": "المستوى الرابع", "الخامس": "المستوى الخامس"
+        };
+        
+        if (levelMapping[sub.level]) {
+          updates.level = levelMapping[sub.level];
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          await updateDoc(doc(firestore, "subjects", sub.id), {
+            ...updates,
+            syncedAt: serverTimestamp()
+          });
+          fixedCount++;
+        }
+      }
+
+      toast({ 
+        title: "اكتملت عملية المزامنة", 
+        description: `تم إصلاح وتوصيل ${fixedCount} مادة دراسية بالتخصصات الصحيحة.` 
+      });
+    } catch (error) {
+      toast({ variant: "destructive", title: "فشل في عملية المزامنة" });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleAddSubject = () => {
     if (!firestore || !newSubject.nameAr || !newSubject.departmentId) {
@@ -173,11 +235,8 @@ export default function SubjectsPage() {
       });
   };
 
-  // دالة لضبط البيانات عند فتح واجهة التعديل لضمان مطابقة التخصص
   const openEditDialog = (subject: any) => {
     let fixedSubject = { ...subject };
-    
-    // إذا كان التخصص غير موجود في القائمة الحالية (بسبب اختلاف الـ IDs)، نحاول مطابقته بالاسم
     if (fixedSubject.departmentId && !departments.find((d: any) => d.id === fixedSubject.departmentId)) {
       const match = departments.find((d: any) => 
         (d.nameAr || d.name) === fixedSubject.departmentName || d.code === fixedSubject.departmentId
@@ -187,7 +246,6 @@ export default function SubjectsPage() {
       const match = departments.find((d: any) => (d.nameAr || d.name) === fixedSubject.departmentName);
       if (match) fixedSubject.departmentId = match.id;
     }
-    
     setEditingSubject(fixedSubject);
   };
 
@@ -201,110 +259,122 @@ export default function SubjectsPage() {
           <p className="text-muted-foreground font-bold">التحكم في المناهج، المستويات، والأترام الدراسية</p>
         </div>
         
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2 text-white">
-              <Plus className="w-5 h-5" />
-              إضافة مادة جديدة
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
-            <div className="p-8">
-              <DialogHeader className="text-right items-start space-y-2 mb-8">
-                <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
-                  <PlusCircle className="w-6 h-6 text-secondary" />
-                  مادة دراسية جديدة
-                </DialogTitle>
-                <DialogDescription className="font-bold text-muted-foreground">أدخل تفاصيل المادة التعليمية الجديدة لدمجها في الخطة الدراسية.</DialogDescription>
-              </DialogHeader>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={handleSyncSubjects} 
+            disabled={isSyncing || loading}
+            variant="outline"
+            className="rounded-2xl h-12 px-6 font-bold border-2 border-primary/20 text-primary hover:bg-primary/5 gap-2"
+          >
+            {isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
+            إصلاح ومزامنة البيانات
+          </Button>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-                <div className="space-y-2 text-right">
-                  <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                    <BookOpen className="w-4 h-4 text-secondary" />
-                    اسم المادة (بالعربي)
-                  </Label>
-                  <Input 
-                    value={newSubject.nameAr} 
-                    onChange={(e) => setNewSubject({...newSubject, nameAr: e.target.value})} 
-                    placeholder="مثال: برمجة 1" 
-                    className="rounded-xl h-11 border-muted text-right font-bold" 
-                  />
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2 text-white">
+                <Plus className="w-5 h-5" />
+                إضافة مادة جديدة
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+              <div className="p-8">
+                <DialogHeader className="text-right items-start space-y-2 mb-8">
+                  <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
+                    <PlusCircle className="w-6 h-6 text-secondary" />
+                    مادة دراسية جديدة
+                  </DialogTitle>
+                  <DialogDescription className="font-bold text-muted-foreground">أدخل تفاصيل المادة التعليمية الجديدة لدمجها في الخطة الدراسية.</DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start">
+                      <BookOpen className="w-4 h-4 text-secondary" />
+                      اسم المادة (بالعربي)
+                    </Label>
+                    <Input 
+                      value={newSubject.nameAr} 
+                      onChange={(e) => setNewSubject({...newSubject, nameAr: e.target.value})} 
+                      placeholder="مثال: برمجة 1" 
+                      className="rounded-xl h-11 border-muted text-right font-bold" 
+                    />
+                  </div>
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start">
+                      <Type className="w-4 h-4 text-secondary" />
+                      اسم المادة (English)
+                    </Label>
+                    <Input 
+                      value={newSubject.nameEn} 
+                      onChange={(e) => setNewSubject({...newSubject, nameEn: e.target.value})} 
+                      placeholder="Programming 1" 
+                      className="rounded-xl h-11 border-muted text-left font-mono" 
+                    />
+                  </div>
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start">
+                      <Building2 className="w-4 h-4 text-secondary" />
+                      التخصص (القسم)
+                    </Label>
+                    <Select onValueChange={(v) => setNewSubject({...newSubject, departmentId: v})}>
+                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
+                        <SelectValue placeholder="اختر التخصص" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl font-bold" dir="rtl">
+                        {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start">
+                      <Layers className="w-4 h-4 text-secondary" />
+                      المستوى الدراسي
+                    </Label>
+                    <Select value={newSubject.level} onValueChange={(v) => setNewSubject({...newSubject, level: v})}>
+                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
+                        <SelectValue placeholder="اختر المستوى" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl font-bold" dir="rtl">
+                        <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                        <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                        <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                        <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                        <SelectItem value="المستوى الخامس">المستوى الخامس</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start">
+                      <Clock className="w-4 h-4 text-secondary" />
+                      الفصل الدراسي (الترم)
+                    </Label>
+                    <Select value={newSubject.term} onValueChange={(v) => setNewSubject({...newSubject, term: v})}>
+                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
+                        <SelectValue placeholder="اختر الترم" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl font-bold" dir="rtl">
+                        <SelectItem value="الفصل الأول">الفصل الأول</SelectItem>
+                        <SelectItem value="الفصل الثاني">الفصل الثاني</SelectItem>
+                        <SelectItem value="الفصل التكميلي">الفصل التكميلي</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2 text-right">
-                  <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                    <Type className="w-4 h-4 text-secondary" />
-                    اسم المادة (English)
-                  </Label>
-                  <Input 
-                    value={newSubject.nameEn} 
-                    onChange={(e) => setNewSubject({...newSubject, nameEn: e.target.value})} 
-                    placeholder="Programming 1" 
-                    className="rounded-xl h-11 border-muted text-left font-mono" 
-                  />
-                </div>
-                <div className="space-y-2 text-right">
-                  <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                    <Building2 className="w-4 h-4 text-secondary" />
-                    التخصص (القسم)
-                  </Label>
-                  <Select onValueChange={(v) => setNewSubject({...newSubject, departmentId: v})}>
-                    <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
-                      <SelectValue placeholder="اختر التخصص" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl font-bold" dir="rtl">
-                      {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 text-right">
-                  <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                    <Layers className="w-4 h-4 text-secondary" />
-                    المستوى الدراسي
-                  </Label>
-                  <Select value={newSubject.level} onValueChange={(v) => setNewSubject({...newSubject, level: v})}>
-                    <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
-                      <SelectValue placeholder="اختر المستوى" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl font-bold" dir="rtl">
-                      <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
-                      <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
-                      <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
-                      <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
-                      <SelectItem value="المستوى الخامس">المستوى الخامس</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 text-right">
-                  <Label className="text-primary font-bold flex items-center gap-2 justify-start">
-                    <Clock className="w-4 h-4 text-secondary" />
-                    الفصل الدراسي (الترم)
-                  </Label>
-                  <Select value={newSubject.term} onValueChange={(v) => setNewSubject({...newSubject, term: v})}>
-                    <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold" dir="rtl">
-                      <SelectValue placeholder="اختر الترم" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl font-bold" dir="rtl">
-                      <SelectItem value="الفصل الأول">الفصل الأول</SelectItem>
-                      <SelectItem value="الفصل الثاني">الفصل الثاني</SelectItem>
-                      <SelectItem value="الفصل التكميلي">الفصل التكميلي</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <DialogFooter className="flex-row gap-3 pt-8 border-t mt-6">
+                  <Button disabled={submitting} onClick={handleAddSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg text-white gap-2">
+                     {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                     {submitting ? "جاري الحفظ..." : "حفظ المادة"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2 gap-2">
+                    <X className="w-5 h-5" />
+                    إلغاء
+                  </Button>
+                </DialogFooter>
               </div>
-              <DialogFooter className="flex-row gap-3 pt-8 border-t mt-6">
-                <Button disabled={submitting} onClick={handleAddSubject} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg text-white gap-2">
-                   {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                   {submitting ? "جاري الحفظ..." : "حفظ المادة"}
-                </Button>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2 gap-2">
-                  <X className="w-5 h-5" />
-                  إلغاء
-                </Button>
-              </DialogFooter>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card className="p-6 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
@@ -378,6 +448,7 @@ export default function SubjectsPage() {
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-secondary" />
                       <span className="text-sm font-bold text-primary">{s.departmentName}</span>
+                      {(!s.departmentId || s.departmentId.length < 5) && <AlertTriangle className="w-3 h-3 text-orange-500" title="ربط غير مستقر" />}
                     </div>
                   </TableCell>
                   <TableCell>

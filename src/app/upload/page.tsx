@@ -80,41 +80,38 @@ export default function UploadPage() {
 
   /**
    * تصفية المواد بناءً على القسم والمستوى المختارين.
-   * تم تحسين المنطق ليكون "شاملاً" (Inclusive) بحيث يظهر المواد المضافة يدوياً (عبر ID) 
-   * والمواد المحقونة (التي قد ترتبط بالاسم أو الرمز).
+   * تم تحسين المنطق ليكون "فائق المرونة" لضمان ظهور المواد المحقونة.
    */
   const filteredSubjects = useMemo(() => {
     if (!formData.deptId || !formData.level) return [];
     
-    // جلب بيانات القسم المختار حالياً من القائمة
     const currentDept = (departments as any[]).find(d => d.id === formData.deptId);
     if (!currentDept) return [];
 
     const targetDeptId = currentDept.id.toLowerCase();
     const targetDeptCode = (currentDept.code || "").toLowerCase().trim();
     const targetDeptNameAr = (currentDept.nameAr || "").toLowerCase().trim();
-    const targetDeptNameEn = (currentDept.nameEn || "").toLowerCase().trim();
     const targetLevelStr = formData.level.toLowerCase().trim();
 
     return (allSubjects as any[]).filter(s => {
-      // 1. مطابقة المستوى: ندعم المطابقة التامة أو الجزئية (مثلاً "المستوى الأول" تطابق "الأول")
+      // 1. مطابقة المستوى (مرنة جداً)
       const subLevel = (s.level || "").toLowerCase().trim();
       const levelMatch = subLevel === targetLevelStr || 
                          subLevel.includes(targetLevelStr) || 
-                         targetLevelStr.includes(subLevel);
+                         targetLevelStr.includes(subLevel) ||
+                         (targetLevelStr.includes("الأول") && subLevel.includes("1"));
       
       if (!levelMatch) return false;
 
-      // 2. مطابقة القسم: ندعم 4 طرق للمطابقة لضمان جلب كافة البيانات (اليدوية والمحقونة)
+      // 2. مطابقة القسم (تبحث في المعرف والرمز والاسم)
       const sDeptId = (s.departmentId || "").toLowerCase().trim();
       const sDeptName = (s.departmentName || "").toLowerCase().trim();
 
       const isMatchById = sDeptId === targetDeptId;
       const isMatchByCode = targetDeptCode && (sDeptId === targetDeptCode || sDeptName.includes(targetDeptCode));
       const isMatchByNameAr = targetDeptNameAr && (sDeptName === targetDeptNameAr || sDeptId === targetDeptNameAr);
-      const isMatchByNameEn = targetDeptNameEn && (sDeptName === targetDeptNameEn || sDeptId === targetDeptNameEn);
 
-      return isMatchById || isMatchByCode || isMatchByNameAr || isMatchByNameEn;
+      return isMatchById || isMatchByCode || isMatchByNameAr;
     });
   }, [allSubjects, formData.deptId, formData.level, departments]);
 
@@ -155,7 +152,6 @@ export default function UploadPage() {
     setLoading(true);
     
     try {
-      // إرسال صورة مضغوطة للتحليل لضمان السرعة وتجاوز حدود الـ Payload
       const { data: ocrData } = await compressImage(files[0], 0.3, 600); 
 
       const response = await fetch('/api/ai/extract', {
@@ -179,7 +175,6 @@ export default function UploadPage() {
         found: !!student
       });
 
-      // محاولة مطابقة المادة المستخرجة تلقائياً إذا كانت موجودة في القائمة المصفاة
       if (result.subjectName) {
         const matchedSub = filteredSubjects.find((s: any) => 
           s.nameAr.includes(result.subjectName!) || result.subjectName!.includes(s.nameAr)
@@ -202,14 +197,14 @@ export default function UploadPage() {
         title: "فشل التحليل الذكي", 
         description: err.message || "حدث خطأ غير متوقع أثناء المعالجة." 
       });
-      setStep(5); // المتابعة يدوياً حتى في حال فشل الذكاء الاصطناعي
+      setStep(5);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSaveToArchive = async () => {
-    if (!firestore || !extractedData.id || !formData.subjectName || files.length === 0) {
+    if (!firestore || !extractedData.id || !formData.subjectId || files.length === 0) {
       toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التحقق من رقم القيد واختيار المادة الدراسية." });
       return;
     }
@@ -222,6 +217,7 @@ export default function UploadPage() {
         student_id: extractedData.id,
         student_name: extractedData.name || "طالب غير معروف",
         subject_name: formData.subjectName,
+        subjectId: formData.subjectId,
         file_data: files[0],
         file_type: fileType,
         year: formData.year,
@@ -333,7 +329,7 @@ export default function UploadPage() {
                     disabled={!formData.deptId || !formData.level} 
                     value={formData.subjectId} 
                     onChange={(e) => { 
-                      const sel = filteredSubjects.find((s: any) => s.id === e.target.value) as any; 
+                      const sel = allSubjects.find((s: any) => s.id === e.target.value) as any; 
                       setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", term: sel?.term || "" }); 
                     }} 
                     className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right disabled:opacity-50"
