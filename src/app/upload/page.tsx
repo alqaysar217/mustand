@@ -1,7 +1,8 @@
+
 "use client";
 
 /**
- * @fileOverview صفحة رفع وأرشفة الاختبارات مع تحسين تصفية المواد ودعم التشخيص.
+ * @fileOverview صفحة رفع وأرشفة الاختبارات مع تحويل التحليل إلى API Route لضمان الاستقرار.
  */
 
 import { useState, useMemo, useRef } from "react";
@@ -33,7 +34,6 @@ import {
   Cpu,
   Image as ImageIcon
 } from "lucide-react";
-import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -77,10 +77,6 @@ export default function UploadPage() {
   const { data: allSubjects = [] } = useCollection(subjectsQuery);
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
-  /**
-   * منطق تصفية المواد المطور والمستقر:
-   * يقوم بالمطابقة بناءً على المعرف، الاسم العربي، أو الرمز لضمان ظهور المواد حتى لو اختلفت طريقة التخزين.
-   */
   const filteredSubjects = useMemo(() => {
     if (!formData.deptId || !formData.level) return [];
     
@@ -89,11 +85,9 @@ export default function UploadPage() {
     const targetDeptCode = (currentDept?.code || "").toLowerCase();
 
     return (allSubjects as any[]).filter(s => {
-      // مطابقة المستوى أولاً
       const levelMatch = s.level === formData.level;
       if (!levelMatch) return false;
 
-      // مطابقة القسم (عبر الـ ID أو الاسم أو الرمز)
       const subDeptId = (s.departmentId || "").toLowerCase();
       const subDeptName = (s.departmentName || "").toLowerCase();
 
@@ -114,18 +108,7 @@ export default function UploadPage() {
       const reader = new FileReader();
       reader.onload = async (event) => {
         if (event.target?.result) {
-          // ضغط الصورة لضمان استقرارها في Firestore
-          const { data, size } = await compressImage(event.target.result as string, 0.6, 1200);
-          const sizeKB = size / 1024;
-
-          if (sizeKB > 800) {
-            toast({ 
-              variant: "destructive", 
-              title: "تنبيه: حجم ملف كبير", 
-              description: `حجم الصورة بعد الضغط (${sizeKB.toFixed(0)}KB) قريب من الحد الأقصى.` 
-            });
-          }
-
+          const { data } = await compressImage(event.target.result as string, 0.6, 1200);
           setFiles([data]);
           setLoading(false);
           setStep(3);
@@ -151,12 +134,23 @@ export default function UploadPage() {
     setLoading(true);
     
     try {
-      // إرسال نسخة مصغرة للذكاء الاصطناعي لتجنب الـ Timeout
+      // إرسال صورة مضغوطة جداً للتحليل لتقليل استهلاك البيانات
       const { data: ocrData } = await compressImage(files[0], 0.3, 600); 
-      const result = await extractExamDetails({ examImageDataUri: ocrData });
-      
-      if (!result) throw new Error("لم يتم تلقي بيانات من المحرك");
 
+      // استدعاء API Route الجديد
+      const response = await fetch('/api/ai/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examImageDataUri: ocrData })
+      });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        console.error('--- [OCR FAILURE] ---', response.status, errJson);
+        throw new Error(errJson.error || `خطأ غير متوقع من الخادم (Status: ${response.status})`);
+      }
+
+      const result = await response.json();
       const cleanRegId = result.studentRegistrationId || '';
       const student = await findStudentByRegId(cleanRegId);
       
@@ -166,7 +160,6 @@ export default function UploadPage() {
         found: !!student
       });
 
-      // محاولة مطابقة المادة المستخرجة مع القائمة الحالية
       if (result.subjectName) {
         const matchedSub = (allSubjects as any[]).find(s => 
           s.nameAr.includes(result.subjectName!) || result.subjectName!.includes(s.nameAr)
@@ -185,12 +178,13 @@ export default function UploadPage() {
 
       setStep(5);
     } catch (err: any) {
-      console.error("OCR hand-shake error:", err);
+      console.error("OCR Analysis Error:", err);
       toast({ 
         variant: "destructive", 
         title: "فشل التحليل الذكي", 
-        description: err.message || "يرجى إكمال البيانات يدوياً." 
+        description: err.message || "تلقى النظام استجابة غير متوقعة. يرجى إدخال البيانات يدوياً." 
       });
+      // ننتقل للخطوة اليدوية للسماح للمستخدم بالإكمال رغم فشل الذكاء الاصطناعي
       setStep(5);
     } finally {
       setLoading(false);
@@ -243,13 +237,13 @@ export default function UploadPage() {
       )} dir="rtl">
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-black text-primary mb-2">نظام الأرشفة الذكي</h1>
-          <p className="text-muted-foreground font-bold text-lg">تحليل واستخراج البيانات عبر الـ Handshake المباشر</p>
+          <p className="text-muted-foreground font-bold text-lg">تحليل واستخراج البيانات عبر API Routes المستقرة</p>
         </div>
 
         <div className="max-w-md mx-auto mb-12">
           <Tabs value={mode} onValueChange={(v) => { setMode(v as any); setStep(1); }} className="w-full">
             <TabsList className="bg-white p-1 rounded-2xl h-14 shadow-lg border w-full">
-              <TabsTrigger value="ai" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'ai' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Cpu className="w-4 h-4" />تحليل ذكي (Handshake)</TabsTrigger>
+              <TabsTrigger value="ai" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'ai' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Cpu className="w-4 h-4" />تحليل ذكي (Clean Slate)</TabsTrigger>
               <TabsTrigger value="manual" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'manual' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Keyboard className="w-4 h-4" />أرشفة يدوية</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -278,7 +272,7 @@ export default function UploadPage() {
             <div className="absolute inset-0 bg-white/90 backdrop-blur-xl z-50 flex flex-col items-center justify-center gap-6 animate-fade-in text-center p-8">
               <Loader2 className="w-20 h-20 animate-spin text-primary" />
               <p className="font-black text-2xl text-primary">{loadingText}</p>
-              <p className="text-sm text-muted-foreground font-bold">يرجى الانتظار، النظام يقوم بطلب المصافحة مع خوادم الذكاء الاصطناعي...</p>
+              <p className="text-sm text-muted-foreground font-bold">يتم الآن التحليل عبر مسار API المباشر لضمان الشفافية...</p>
             </div>
           )}
 
