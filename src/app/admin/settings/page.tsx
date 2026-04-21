@@ -1,14 +1,18 @@
+
 "use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
+/**
+ * تم إلغاء هذه الصفحة بناءً على طلب المستخدم.
+ * تقوم الصفحة الآن بإعادة التوجيه التلقائي للوحة التحكم.
+ */
 export default function RemovedSettingsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // إعادة التوجيه التلقائي للوحة التحكم لأن الصفحة تم حذفها
     router.replace("/admin/dashboard");
   }, [router]);
 
