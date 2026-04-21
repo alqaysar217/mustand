@@ -70,9 +70,14 @@ export default function AdminDepartmentsPage() {
 
   const filteredDepartments = useMemo(() => {
     return (departments as any[]).filter(dept => {
-      const matchesSearch = dept.nameAr?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           dept.nameEn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           dept.code?.toLowerCase().includes(searchTerm.toLowerCase());
+      const nameToSearch = (dept.nameAr || dept.name || "").toLowerCase();
+      const nameEnToSearch = (dept.nameEn || "").toLowerCase();
+      const codeToSearch = (dept.code || "").toLowerCase();
+      const term = searchTerm.toLowerCase();
+
+      const matchesSearch = nameToSearch.includes(term) || 
+                           nameEnToSearch.includes(term) ||
+                           codeToSearch.includes(term);
       const matchesCollege = filterCollege === "all" || dept.collegeId === filterCollege;
       return matchesSearch && matchesCollege;
     });
@@ -306,8 +311,8 @@ export default function AdminDepartmentsPage() {
                         <Building2 className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-bold text-primary">{dept.nameAr}</span>
-                        <span className="text-[10px] text-muted-foreground font-mono">{dept.nameEn}</span>
+                        <span className="font-bold text-primary">{dept.nameAr || dept.name || "قسم بدون اسم"}</span>
+                        {dept.nameEn && <span className="text-[10px] text-muted-foreground font-mono">{dept.nameEn}</span>}
                       </div>
                     </div>
                   </TableCell>
@@ -322,7 +327,10 @@ export default function AdminDepartmentsPage() {
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => setEditingDept(dept)}
+                        onClick={() => setEditingDept({
+                          ...dept,
+                          nameAr: dept.nameAr || dept.name || ""
+                        })}
                         className="rounded-xl hover:bg-primary/5 text-secondary"
                         title="تعديل"
                       >

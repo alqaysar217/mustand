@@ -145,14 +145,15 @@ export default function AdminSettingsPage() {
     setStatus(true);
     try {
       const deptsRef = collection(firestore, "departments");
-      const deptQuery = query(deptsRef, where("name", "==", deptName));
+      const deptQuery = query(deptsRef, where("nameAr", "==", deptName));
       const deptSnap = await getDocs(deptQuery);
       
       let deptId = "";
       let collegeName = "كلية الحاسبات وتكنولوجيا المعلومات";
       if (deptSnap.empty) {
         const newDept = await addDoc(deptsRef, {
-          name: deptName,
+          nameAr: deptName,
+          nameEn: deptCode === "CS" ? "Computer Science" : "Information Technology",
           code: deptCode,
           collegeName: collegeName,
           collegeId: "central_college_id",
