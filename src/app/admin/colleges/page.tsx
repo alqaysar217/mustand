@@ -158,7 +158,7 @@ export default function AdminCollegesPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="colleges" onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
         <TabsList className="bg-white p-1 rounded-2xl h-14 shadow-sm border mb-8 flex items-stretch overflow-hidden">
           <TabsTrigger 
             value="colleges" 
@@ -200,7 +200,7 @@ export default function AdminCollegesPage() {
           </Button>
         </div>
 
-        <TabsContent value="colleges">
+        <TabsContent value="colleges" className="animate-slide-up">
           <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
             <Table className="text-right">
               <TableHeader className="bg-muted/30">
@@ -232,7 +232,7 @@ export default function AdminCollegesPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="years">
+        <TabsContent value="years" className="animate-slide-up">
           <Card className="border-none shadow-xl rounded-2xl bg-white overflow-hidden">
             <Table className="text-right">
               <TableHeader className="bg-muted/30">
@@ -309,7 +309,7 @@ export default function AdminCollegesPage() {
               </div>
             </div>
             <DialogFooter className="flex-row gap-3 pt-6">
-              <Button onClick={handleAddCollege} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2">
+              <Button onClick={handleAddCollege} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2 text-white">
                 {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
                 {submitting ? 'جاري الحفظ...' : 'تفعيل الكلية'}
               </Button>
@@ -348,7 +348,7 @@ export default function AdminCollegesPage() {
               </div>
             </div>
             <DialogFooter className="flex-row gap-3 pt-6">
-              <Button onClick={handleAddYear} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2">
+              <Button onClick={handleAddYear} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2 text-white">
                 {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
                 {submitting ? 'جاري الحفظ...' : 'إضافة العام'}
               </Button>
@@ -392,7 +392,7 @@ export default function AdminCollegesPage() {
                 </div>
              </div>
              <DialogFooter className="flex-row gap-3 pt-6">
-                <Button onClick={handleUpdateCollege} disabled={submitting} className="flex-1 h-12 font-bold rounded-xl gradient-blue shadow-lg gap-2">
+                <Button onClick={handleUpdateCollege} disabled={submitting} className="flex-1 h-12 font-bold rounded-xl gradient-blue shadow-lg gap-2 text-white">
                   {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
                   {submitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}
                 </Button>
@@ -426,7 +426,7 @@ export default function AdminCollegesPage() {
                 </div>
              </div>
              <DialogFooter className="flex-row gap-3 pt-6">
-                <Button onClick={handleUpdateYear} disabled={submitting} className="flex-1 h-12 font-bold rounded-xl gradient-blue shadow-lg gap-2">
+                <Button onClick={handleUpdateYear} disabled={submitting} className="flex-1 h-12 font-bold rounded-xl gradient-blue shadow-lg gap-2 text-white">
                   {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
                   {submitting ? 'جاري الحفظ...' : 'تحديث'}
                 </Button>
