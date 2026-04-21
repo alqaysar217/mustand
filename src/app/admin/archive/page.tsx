@@ -202,7 +202,7 @@ export default function AdminArchivePage() {
           <Button 
             variant={showFilters ? "default" : "outline"} 
             onClick={() => setShowFilters(!showFilters)} 
-            className="h-12 md:h-14 w-full md:auto rounded-2xl px-6 border-2 font-black gap-2 text-sm"
+            className="h-12 md:h-14 w-full md:w-auto min-w-[120px] rounded-2xl px-6 border-2 font-black gap-2 text-sm"
           >
             {showFilters ? <X className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
             تصفية
