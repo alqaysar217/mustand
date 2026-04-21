@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "College": {
@@ -39,20 +38,23 @@
     },
     "Student": {
       "title": "الطالب",
-      "description": "بيانات الطالب الأكاديمية.",
+      "description": "بيانات الطالب الأكاديمية الكاملة.",
       "type": "object",
       "properties": {
         "regId": { "type": "string", "description": "رقم القيد الجامعي" },
         "name": { "type": "string", "description": "الاسم الرباعي للطالب" },
-        "departmentId": { "type": "string", "description": "معرف القسم" },
+        "collegeId": { "type": "string" },
+        "collegeName": { "type": "string" },
+        "departmentId": { "type": "string" },
         "departmentName": { "type": "string" },
+        "academicYear": { "type": "string", "description": "السنة الدراسية المقيد بها" },
         "level": { "type": "string", "description": "المستوى الدراسي الحالي" },
         "admissionType": { "type": "string", "enum": ["عام", "موازي", "نفقة خاصة"] },
         "status": { "type": "string", "enum": ["active", "suspended"] },
         "joinDate": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["regId", "name", "departmentId", "level"]
+      "required": ["regId", "name", "collegeId", "departmentId", "level", "academicYear"]
     },
     "Subject": {
       "title": "المادة الدراسية",

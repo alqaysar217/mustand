@@ -22,7 +22,9 @@ import {
   Filter,
   Layers,
   CheckCircle,
-  ShieldCheck
+  ShieldCheck,
+  School,
+  Calendar
 } from "lucide-react";
 import {
   Table,
@@ -57,11 +59,17 @@ export default function StudentsManagementPage() {
   const [mounted, setMounted] = useState(false);
   const { isOpen } = useSidebarToggle();
   const firestore = useFirestore();
+
+  // Queries
   const studentsQuery = useMemo(() => firestore ? collection(firestore, "students") : null, [firestore]);
   const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
+  const collegesQuery = useMemo(() => firestore ? collection(firestore, "colleges") : null, [firestore]);
+  const yearsQuery = useMemo(() => firestore ? collection(firestore, "academicYears") : null, [firestore]);
 
   const { data: students = [], loading } = useCollection(studentsQuery);
   const { data: departments = [] } = useCollection(deptsQuery);
+  const { data: colleges = [] } = useCollection(collegesQuery);
+  const { data: academicYears = [] } = useCollection(yearsQuery);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDept, setFilterDept] = useState("all");
@@ -74,9 +82,11 @@ export default function StudentsManagementPage() {
   const [newStudent, setNewStudent] = useState({
     name: "",
     regId: "",
+    collegeId: "",
     departmentId: "",
     level: "المستوى الأول",
-    admissionType: "عام"
+    admissionType: "عام",
+    academicYear: ""
   });
 
   const { toast } = useToast();
@@ -97,23 +107,26 @@ export default function StudentsManagementPage() {
   }, [students, searchTerm, filterDept, filterLevel]);
 
   const handleAddStudent = async () => {
-    if (!firestore || !newStudent.name || !newStudent.regId || !newStudent.departmentId) {
+    if (!firestore || !newStudent.name || !newStudent.regId || !newStudent.collegeId || !newStudent.departmentId || !newStudent.academicYear) {
       toast({ variant: "destructive", title: "بيانات ناقصة" });
       return;
     }
 
     setSubmitting(true);
     try {
+      const selectedCollege = (colleges as any[]).find(c => c.id === newStudent.collegeId);
       const selectedDept = (departments as any[]).find(d => d.id === newStudent.departmentId);
+
       await addDoc(collection(firestore, "students"), {
         ...newStudent,
+        collegeName: selectedCollege?.name || "",
         departmentName: selectedDept?.nameAr || selectedDept?.name || "",
         status: "active",
         joinDate: new Date().toISOString().split('T')[0],
         createdAt: serverTimestamp()
       });
       setIsAddDialogOpen(false);
-      setNewStudent({ name: "", regId: "", departmentId: "", level: "المستوى الأول", admissionType: "عام" });
+      setNewStudent({ name: "", regId: "", collegeId: "", departmentId: "", level: "المستوى الأول", admissionType: "عام", academicYear: "" });
       toast({ title: "تم تسجيل الطالب بنجاح" });
     } catch (error) {
       toast({ variant: "destructive", title: "فشل الحفظ" });
@@ -123,25 +136,30 @@ export default function StudentsManagementPage() {
   };
 
   const handleUpdateStudent = () => {
-    if (!firestore || !editingStudent?.name || !editingStudent?.regId || !editingStudent?.departmentId) return;
+    if (!firestore || !editingStudent?.name || !editingStudent?.regId || !editingStudent?.collegeId || !editingStudent?.departmentId) return;
 
     setSubmitting(true);
+    const selectedCollege = (colleges as any[]).find(c => c.id === editingStudent.collegeId);
     const selectedDept = (departments as any[]).find(d => d.id === editingStudent.departmentId);
+
     const docRef = doc(firestore, "students", editingStudent.id);
     const data = {
       name: editingStudent.name,
       regId: editingStudent.regId,
+      collegeId: editingStudent.collegeId,
+      collegeName: selectedCollege?.name || "",
       departmentId: editingStudent.departmentId,
       departmentName: selectedDept?.nameAr || selectedDept?.name || "",
       level: editingStudent.level,
       admissionType: editingStudent.admissionType,
+      academicYear: editingStudent.academicYear || "",
       updatedAt: serverTimestamp()
     };
 
     updateDoc(docRef, data)
       .then(() => {
         setEditingStudent(null);
-        toast({ title: "تم التحديث", description: "تم تحديث بيانات الطالب بنجاح." });
+        toast({ title: "تم التحديث بنجاح" });
       })
       .finally(() => setSubmitting(false));
   };
@@ -161,14 +179,14 @@ export default function StudentsManagementPage() {
       await deleteDoc(doc(firestore, "students", id));
       toast({ title: "تم نقل الطالب لسلة المحذوفات" });
     } catch (error) {
-      toast({ variant: "destructive", title: "فشل نقل البيانات" });
+      toast({ variant: "destructive", title: "فشل الحذف" });
     }
   };
 
   const getStatusBadge = (status: string) => {
     return status === 'active' 
-      ? <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-lg gap-1 font-black"><CheckCircle2 className="w-3 h-3" /> نشط</Badge>
-      : <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-100 border-none rounded-lg gap-1 font-black"><XCircle className="w-3 h-3" /> موقوف</Badge>;
+      ? <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-lg gap-1 font-black px-2 py-0.5 text-[9px]"><CheckCircle2 className="w-3 h-3" /> نشط</Badge>
+      : <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none rounded-lg gap-1 font-black px-2 py-0.5 text-[9px]"><XCircle className="w-3 h-3" /> موقوف</Badge>;
   };
 
   if (!mounted) return null;
@@ -185,65 +203,97 @@ export default function StudentsManagementPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة الطلاب</h1>
-            <p className="text-muted-foreground font-bold">قاعدة بيانات الطلاب المسجلين سحابياً</p>
+            <p className="text-muted-foreground font-bold text-sm">قاعدة بيانات الطلاب المسجلين سحابياً</p>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2 text-white">
                 <UserPlus className="w-5 h-5" />
-                إضافة طالب جديد
+                تسجيل طالب جديد
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
-              <div className="p-8">
-                <DialogHeader className="text-right items-start space-y-2 mb-8">
-                  <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
-                    <ShieldCheck className="w-6 h-6 text-secondary" />
+            <DialogContent className="max-w-3xl rounded-[2.5rem] border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+              <div className="p-10">
+                <DialogHeader className="text-right items-start space-y-2 mb-10">
+                  <DialogTitle className="text-2xl font-black text-primary flex items-center gap-3">
+                    <ShieldCheck className="w-7 h-7 text-secondary" />
                     تسجيل طالب جديد
                   </DialogTitle>
                   <DialogDescription className="font-bold text-muted-foreground">أدخل البيانات الأكاديمية الكاملة للطالب لربطه بالتخصص والمستوى الصحيح.</DialogDescription>
                 </DialogHeader>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
                   <div className="space-y-2 col-span-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                    <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                       <User className="w-4 h-4 text-secondary" />
-                      الاسم الكامل للطلبة
+                      الاسم الكامل
                     </Label>
-                    <Input value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} placeholder="الاسم الرباعي كما في الهوية" className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20" />
+                    <Input value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} placeholder="الاسم الرباعي الكامل" className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20 font-bold" />
                   </div>
 
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                    <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                       <Fingerprint className="w-4 h-4 text-secondary" />
                       رقم القيد الجامعي
                     </Label>
-                    <Input value={newStudent.regId} onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})} placeholder="2024XXXX" className="rounded-xl h-12 bg-muted/20 border-muted font-mono" />
+                    <Input value={newStudent.regId} onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})} placeholder="رقم القيد" className="rounded-xl h-12 bg-muted/20 border-muted font-black" />
                   </div>
 
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 pr-1">
-                      <Building2 className="w-4 h-4 text-secondary" />
-                      التخصص / القسم
+                    <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
+                      <Calendar className="w-4 h-4 text-secondary" />
+                      العام الدراسي
                     </Label>
-                    <Select onValueChange={(v) => setNewStudent({...newStudent, departmentId: v})}>
-                      <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold">
-                        <SelectValue placeholder="اختر التخصص" />
+                    <Select onValueChange={(v) => setNewStudent({...newStudent, academicYear: v})}>
+                      <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
+                        <SelectValue placeholder="اختر العام..." />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold" dir="rtl">
-                        {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
+                        {academicYears.map((y: any) => <SelectItem key={y.id} value={y.label}>{y.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                    <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
+                      <School className="w-4 h-4 text-secondary" />
+                      الكلية
+                    </Label>
+                    <Select onValueChange={(v) => setNewStudent({...newStudent, collegeId: v, departmentId: ""})}>
+                      <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
+                        <SelectValue placeholder="اختر الكلية" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl font-bold" dir="rtl">
+                        {colleges.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
+                      <Building2 className="w-4 h-4 text-secondary" />
+                      التخصص / القسم
+                    </Label>
+                    <Select value={newStudent.departmentId} onValueChange={(v) => setNewStudent({...newStudent, departmentId: v})}>
+                      <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
+                        <SelectValue placeholder="اختر التخصص" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl font-bold" dir="rtl">
+                        {departments.filter((d: any) => !newStudent.collegeId || d.collegeId === newStudent.collegeId).map((d: any) => (
+                          <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 text-right">
+                    <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                       <Layers className="w-4 h-4 text-secondary" />
                       المستوى الدراسي
                     </Label>
                     <Select value={newStudent.level} onValueChange={(v) => setNewStudent({...newStudent, level: v})}>
-                      <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold">
+                      <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
                         <SelectValue placeholder="اختر المستوى" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold" dir="rtl">
@@ -257,13 +307,13 @@ export default function StudentsManagementPage() {
                   </div>
 
                   <div className="space-y-2 text-right">
-                    <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                    <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                       <Banknote className="w-4 h-4 text-secondary" />
                       نوع القبول
                     </Label>
                     <Select value={newStudent.admissionType} onValueChange={(v) => setNewStudent({...newStudent, admissionType: v})}>
-                      <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold">
-                        <SelectValue placeholder="اختر نوع القبول" />
+                      <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
+                        <SelectValue placeholder="نوع القبول" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold" dir="rtl">
                         <SelectItem value="عام">نظام عام</SelectItem>
@@ -274,26 +324,26 @@ export default function StudentsManagementPage() {
                   </div>
                 </div>
 
-                <DialogFooter className="flex-row gap-3 pt-8 border-t mt-6">
-                  <Button disabled={submitting} onClick={handleAddStudent} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2 text-white">
-                    {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+                <DialogFooter className="flex-row gap-4 pt-10 border-t mt-8">
+                  <Button disabled={submitting} onClick={handleAddStudent} className="flex-1 rounded-2xl h-14 text-lg font-black gradient-blue shadow-lg gap-2 text-white">
+                    {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle className="w-6 h-6" />}
                     حفظ الطالب
                   </Button>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-2xl h-14 text-lg font-bold border-2">إلغاء</Button>
                 </DialogFooter>
               </div>
             </DialogContent>
           </Dialog>
         </div>
 
-        <Card className="p-6 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
+        <Card className="p-6 border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <div className="flex-[2] relative">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input 
                 type="text"
                 placeholder="البحث بالاسم أو رقم القيد..."
-                className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all text-right"
+                className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all text-right shadow-inner"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -316,47 +366,54 @@ export default function StudentsManagementPage() {
             <Table className="text-right">
               <TableHeader className="bg-muted/50">
                 <TableRow className="hover:bg-transparent border-b">
-                  <TableHead className="text-right font-bold text-primary">الطالب</TableHead>
-                  <TableHead className="text-right font-bold text-primary">رقم القيد</TableHead>
-                  <TableHead className="text-right font-bold text-primary">التخصص / المستوى</TableHead>
-                  <TableHead className="text-right font-bold text-primary">الحالة</TableHead>
-                  <TableHead className="text-center font-bold text-primary w-32">إجراءات</TableHead>
+                  <TableHead className="text-right font-black text-primary py-5">الطالب / القيد</TableHead>
+                  <TableHead className="text-right font-black text-primary">الكلية / التخصص</TableHead>
+                  <TableHead className="text-right font-black text-primary">السنة / المستوى</TableHead>
+                  <TableHead className="text-right font-black text-primary">القبول / الحالة</TableHead>
+                  <TableHead className="text-center font-black text-primary w-32">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="h-60 text-center"><Loader2 className="w-10 h-10 animate-spin mx-auto opacity-20 text-primary" /></TableCell></TableRow>
                 ) : filteredStudents.length > 0 ? filteredStudents.map((student) => (
-                  <TableRow key={student.id} className="hover:bg-muted/20 border-b group">
-                    <TableCell className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10">
-                          <GraduationCap className="w-5 h-5 text-primary" />
+                  <TableRow key={student.id} className="hover:bg-muted/10 border-b group transition-all">
+                    <TableCell className="p-4 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10">
+                          <GraduationCap className="w-6 h-6 text-primary" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold text-primary">{student.name}</span>
-                          <span className="text-[10px] text-muted-foreground font-bold">انضم: {student.joinDate}</span>
+                          <span className="font-black text-primary text-base">{student.name}</span>
+                          <span className="text-[10px] font-mono font-bold text-muted-foreground">{student.regId}</span>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-xs font-bold text-muted-foreground">{student.regId}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-secondary uppercase mb-0.5">{student.collegeName || '---'}</span>
                         <span className="text-sm font-bold text-primary">{student.departmentName}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground font-bold">{student.level}</span>
-                          <Badge variant="outline" className="text-[8px] px-1.5 py-0 border-secondary text-secondary">{student.admissionType || 'عام'}</Badge>
-                        </div>
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(student.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-primary">{student.academicYear || '---'}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" />{student.level}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1.5 items-start">
+                        <Badge variant="outline" className="text-[9px] px-2 py-0 border-secondary/30 text-secondary font-black bg-secondary/5">{student.admissionType || 'عام'}</Badge>
+                        {getStatusBadge(student.status)}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-2">
                         <Button 
                           variant="ghost" 
                           size="icon" 
                           onClick={() => setEditingStudent(student)}
-                          className="rounded-xl hover:bg-primary/5 text-secondary"
+                          className="rounded-xl hover:bg-primary/5 text-secondary h-9 w-9"
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -364,7 +421,7 @@ export default function StudentsManagementPage() {
                           variant="ghost" 
                           size="icon" 
                           onClick={() => handleMoveToBin(student)}
-                          className="rounded-xl hover:bg-destructive/10 text-destructive"
+                          className="rounded-xl hover:bg-destructive/10 text-destructive h-9 w-9"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -372,7 +429,7 @@ export default function StudentsManagementPage() {
                     </TableCell>
                   </TableRow>
                 )) : (
-                  <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">لا يوجد طلاب مطابقين للبحث</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="h-60 text-center text-muted-foreground font-bold">لا يوجد طلاب مطابقين للبحث</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -382,19 +439,19 @@ export default function StudentsManagementPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editingStudent} onOpenChange={(open) => !open && setEditingStudent(null)}>
-        <DialogContent className="max-w-2xl rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
-          <div className="p-8">
-            <DialogHeader className="text-right items-start space-y-2 mb-8">
-              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-2">
-                <Edit2 className="w-6 h-6 text-secondary" />
+        <DialogContent className="max-w-3xl rounded-[2.5rem] border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
+          <div className="p-10">
+            <DialogHeader className="text-right items-start space-y-2 mb-10">
+              <DialogTitle className="text-2xl font-black text-primary flex items-center gap-3">
+                <Edit2 className="w-7 h-7 text-secondary" />
                 تعديل بيانات الطالب
               </DialogTitle>
               <DialogDescription className="font-bold text-muted-foreground">تحديث المعلومات الأكاديمية للطالب المختار.</DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
               <div className="space-y-2 col-span-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <User className="w-4 h-4 text-secondary" />
                   الاسم الكامل
                 </Label>
@@ -405,40 +462,68 @@ export default function StudentsManagementPage() {
                 />
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <Fingerprint className="w-4 h-4 text-secondary" />
                   رقم القيد
                 </Label>
                 <Input 
                   value={editingStudent?.regId || ""}
                   onChange={(e) => setEditingStudent({...editingStudent, regId: e.target.value})}
-                  className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold font-mono" 
+                  className="rounded-xl h-12 bg-muted/20 border-muted text-right font-black" 
                 />
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
+                  <Calendar className="w-4 h-4 text-secondary" />
+                  السنة الدراسية
+                </Label>
+                <Select value={editingStudent?.academicYear || ""} onValueChange={(v) => setEditingStudent({...editingStudent, academicYear: v})}>
+                  <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold" dir="rtl">
+                    {academicYears.map((y: any) => <SelectItem key={y.id} value={y.label}>{y.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
+                  <School className="w-4 h-4 text-secondary" />
+                  الكلية
+                </Label>
+                <Select value={editingStudent?.collegeId || ""} onValueChange={(v) => setEditingStudent({...editingStudent, collegeId: v, departmentId: ""})}>
+                  <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold" dir="rtl">
+                    {colleges.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 text-right">
+                <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <Building2 className="w-4 h-4 text-secondary" />
                   التخصص
                 </Label>
                 <Select value={editingStudent?.departmentId || ""} onValueChange={(v) => setEditingStudent({...editingStudent, departmentId: v})}>
-                  <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold">
-                    <SelectValue placeholder="اختر التخصص" />
+                  <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
-                    {departments.map((d: any) => (
+                    {departments.filter((d: any) => !editingStudent?.collegeId || d.collegeId === editingStudent.collegeId).map((d: any) => (
                       <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <Layers className="w-4 h-4 text-secondary" />
                   المستوى
                 </Label>
                 <Select value={editingStudent?.level || ""} onValueChange={(v) => setEditingStudent({...editingStudent, level: v})}>
-                  <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold">
-                    <SelectValue placeholder="اختر المستوى" />
+                  <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
                     <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
@@ -450,13 +535,13 @@ export default function StudentsManagementPage() {
                 </Select>
               </div>
               <div className="space-y-2 text-right">
-                <Label className="text-primary font-bold flex items-center gap-2 pr-1">
+                <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <Banknote className="w-4 h-4 text-secondary" />
                   نوع القبول
                 </Label>
                 <Select value={editingStudent?.admissionType || "عام"} onValueChange={(v) => setEditingStudent({...editingStudent, admissionType: v})}>
-                  <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold">
-                    <SelectValue placeholder="اختر نوع القبول" />
+                  <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
                     <SelectItem value="عام">نظام عام</SelectItem>
@@ -466,16 +551,16 @@ export default function StudentsManagementPage() {
                 </Select>
               </div>
             </div>
-            <DialogFooter className="flex-row gap-3 pt-8 border-t mt-6">
+            <DialogFooter className="flex-row gap-4 pt-10 border-t mt-8">
               <Button 
                 disabled={submitting} 
                 onClick={handleUpdateStudent}
-                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2 text-white"
+                className="flex-1 rounded-2xl h-14 text-lg font-black gradient-blue shadow-lg gap-2 text-white"
               >
-                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Edit2 className="w-5 h-5" />}
+                {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Edit2 className="w-6 h-6" />}
                 حفظ التعديلات
               </Button>
-              <Button variant="outline" onClick={() => setEditingStudent(null)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
+              <Button variant="outline" onClick={() => setEditingStudent(null)} className="flex-1 rounded-2xl h-14 text-lg font-bold border-2">إلغاء</Button>
             </DialogFooter>
           </div>
         </DialogContent>
