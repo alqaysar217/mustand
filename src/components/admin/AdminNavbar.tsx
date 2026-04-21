@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, Settings, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2, PanelRight, School } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2, PanelRight, School } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import {
@@ -30,7 +29,6 @@ const adminMenuItems = [
   { label: 'سلة المحذوفات', icon: Trash2, href: '/admin/recycle-bin' },
   { label: 'التقارير', icon: BarChart3, href: '/admin/reports' },
   { label: 'سجل العمليات', icon: History, href: '/admin/logs' },
-  { label: 'الإعدادات', icon: Settings, href: '/admin/settings' },
 ];
 
 export function AdminNavbar() {
@@ -146,14 +144,6 @@ export function AdminNavbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2" dir="rtl">
               <DropdownMenuLabel className="text-right font-bold">حسابي</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl font-bold"
-                onClick={() => router.push('/admin/settings')}
-              >
-                الإعدادات
-                <Settings className="w-4 h-4" />
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="flex items-center justify-end gap-2 text-right cursor-pointer rounded-xl text-destructive focus:text-destructive font-bold"

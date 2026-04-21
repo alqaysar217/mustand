@@ -11,7 +11,6 @@ import {
   Archive, 
   BarChart3, 
   History, 
-  Settings, 
   LogOut,
   Trash2,
   ChevronLeft,
@@ -33,7 +32,6 @@ const adminMenuItems = [
   { label: 'سلة المحذوفات', icon: Trash2, href: '/admin/recycle-bin' },
   { label: 'التقارير', icon: BarChart3, href: '/admin/reports' },
   { label: 'سجل العمليات', icon: History, href: '/admin/logs' },
-  { label: 'الإعدادات', icon: Settings, href: '/admin/settings' },
 ];
 
 export function AdminSidebar() {
