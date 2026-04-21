@@ -6,12 +6,12 @@ import { FirebaseClientProvider } from '@/firebase';
 import { PWARegister } from '@/components/PWARegister';
 
 export const metadata: Metadata = {
-  title: 'ArchivaSmart | نظام الأرشفة الذكي',
+  title: 'مستند | نظام الأرشفة الذكي',
   description: 'نظام إدارة وأرشفة الاختبارات الذكي مع استخراج البيانات تلقائياً',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'مستند',
     startupImage: [
       '/apple-splash.png'
@@ -48,10 +48,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-        {/* iOS Meta Tags */}
+        
+        {/* إعدادات iOS الاحترافية */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="مستند" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-startup-image" href="/apple-splash.png" />
+        
+        {/* منع التكبير التلقائي عند الضغط على الحقول في الآيفون */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-screen">
         <FirebaseClientProvider>
