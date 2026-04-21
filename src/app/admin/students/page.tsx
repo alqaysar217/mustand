@@ -104,7 +104,7 @@ export default function AdminStudentsPage() {
 
   const handleAddStudent = async () => {
     if (!firestore || !newStudent.name || !newStudent.regId || !newStudent.collegeId || !newStudent.departmentId || !newStudent.academicYear) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى ملء جميع الحقول المطلوبة." });
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى ملء جميع الحقول المطلوبة لتسجيل الطالب." });
       return;
     }
 
@@ -122,7 +122,6 @@ export default function AdminStudentsPage() {
         createdAt: serverTimestamp()
       });
 
-      // سجل العمليات
       await addDoc(collection(firestore, "logs"), {
         user: "المدير العام",
         role: "manager",
@@ -143,7 +142,7 @@ export default function AdminStudentsPage() {
   };
 
   const handleUpdateStudent = async () => {
-    if (!firestore || !editingStudent?.name || !editingStudent?.regId || !editingStudent?.collegeId || !editingStudent?.departmentId) return;
+    if (!firestore || !editingStudent?.name || !editingStudent?.regId) return;
 
     setSubmitting(true);
     try {
@@ -154,12 +153,12 @@ export default function AdminStudentsPage() {
       const data = {
         name: editingStudent.name,
         regId: editingStudent.regId,
-        collegeId: editingStudent.collegeId,
-        collegeName: selectedCollege?.name || "",
-        departmentId: editingStudent.departmentId,
-        departmentName: selectedDept?.nameAr || selectedDept?.name || "",
-        level: editingStudent.level,
-        admissionType: editingStudent.admissionType,
+        collegeId: editingStudent.collegeId || "",
+        collegeName: selectedCollege?.name || editingStudent.collegeName || "",
+        departmentId: editingStudent.departmentId || "",
+        departmentName: selectedDept?.nameAr || selectedDept?.name || editingStudent.departmentName || "",
+        level: editingStudent.level || "المستوى الأول",
+        admissionType: editingStudent.admissionType || "عام",
         academicYear: editingStudent.academicYear || "",
         updatedAt: serverTimestamp()
       };
@@ -176,7 +175,7 @@ export default function AdminStudentsPage() {
       });
 
       setEditingStudent(null);
-      toast({ title: "تم التحديث بنجاح" });
+      toast({ title: "تم تحديث بيانات الطالب بنجاح" });
     } catch (e) {
       toast({ variant: "destructive", title: "خطأ في التحديث" });
     } finally {
@@ -226,7 +225,7 @@ export default function AdminStudentsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-primary mb-1">إدارة شؤون الطلاب</h1>
-          <p className="text-muted-foreground font-bold text-sm">قاعدة البيانات المركزية لكافة الطلاب المقيدين في الكليات</p>
+          <p className="text-muted-foreground font-bold text-sm">تحديث وإدارة الملفات الأكاديمية لكافة الطلاب</p>
         </div>
         
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -241,9 +240,9 @@ export default function AdminStudentsPage() {
               <DialogHeader className="text-right items-start space-y-2 mb-10">
                 <DialogTitle className="text-2xl font-black text-primary flex items-center gap-3">
                   <ShieldCheck className="w-7 h-7 text-secondary" />
-                  الملف الأكاديمي الجديد
+                  تسجيل ملف أكاديمي جديد
                 </DialogTitle>
-                <DialogDescription className="font-bold text-muted-foreground">أدخل البيانات الرسمية للطالب لربطه بالتخصص والعام الدراسي بدقة.</DialogDescription>
+                <DialogDescription className="font-bold text-muted-foreground">أدخل البيانات الرسمية للطالب لربطه بالتخصص والعام الدراسي.</DialogDescription>
               </DialogHeader>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
@@ -252,7 +251,7 @@ export default function AdminStudentsPage() {
                     <User className="w-4 h-4 text-secondary" />
                     الاسم الرباعي الكامل
                   </Label>
-                  <Input value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} placeholder="كما هو مكتوب في الهوية الوطنية" className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20 font-bold" />
+                  <Input value={newStudent.name} onChange={(e) => setNewStudent({...newStudent, name: e.target.value})} placeholder="الاسم كما في الهوية" className="rounded-xl h-12 bg-muted/20 border-muted focus:ring-primary/20 font-bold" />
                 </div>
 
                 <div className="space-y-2 text-right">
@@ -260,13 +259,13 @@ export default function AdminStudentsPage() {
                     <Fingerprint className="w-4 h-4 text-secondary" />
                     رقم القيد الجامعي
                   </Label>
-                  <Input value={newStudent.regId} onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})} placeholder="رقم الجلوس أو القيد" className="rounded-xl h-12 bg-muted/20 border-muted font-black" />
+                  <Input value={newStudent.regId} onChange={(e) => setNewStudent({...newStudent, regId: e.target.value})} placeholder="رقم القيد" className="rounded-xl h-12 bg-muted/20 border-muted font-black" />
                 </div>
 
                 <div className="space-y-2 text-right">
                   <Label className="text-primary font-black flex items-center gap-2 mb-2 pr-1">
                     <Calendar className="w-4 h-4 text-secondary" />
-                    السنة الدراسية
+                    العام الجامعي
                   </Label>
                   <Select onValueChange={(v) => setNewStudent({...newStudent, academicYear: v})}>
                     <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
@@ -313,7 +312,7 @@ export default function AdminStudentsPage() {
                 <div className="space-y-2 text-right">
                   <Label className="text-primary font-black flex items-center gap-2 mb-2 pr-1">
                     <Layers className="w-4 h-4 text-secondary" />
-                    المستوى الدراسي الحالي
+                    المستوى الدراسي
                   </Label>
                   <Select value={newStudent.level} onValueChange={(v) => setNewStudent({...newStudent, level: v})}>
                     <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
@@ -415,13 +414,13 @@ export default function AdminStudentsPage() {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-secondary uppercase mb-0.5">{student.collegeName || '---'}</span>
-                      <span className="text-sm font-bold text-primary">{student.departmentName}</span>
+                      <span className="text-sm font-bold text-primary">{student.departmentName || '---'}</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="text-xs font-black text-primary">{student.academicYear || '---'}</span>
-                      <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" />{student.level}</span>
+                      <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" />{student.level || 'المستوى الأول'}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -437,6 +436,7 @@ export default function AdminStudentsPage() {
                         size="icon" 
                         onClick={() => setEditingStudent(student)}
                         className="rounded-xl hover:bg-blue-50 text-blue-600 h-9 w-9"
+                        title="تحديث البيانات"
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
@@ -445,6 +445,7 @@ export default function AdminStudentsPage() {
                         size="icon" 
                         onClick={() => handleMoveToBin(student)}
                         className="rounded-xl hover:bg-destructive/10 text-destructive h-9 w-9"
+                        title="حذف"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -459,16 +460,16 @@ export default function AdminStudentsPage() {
         </div>
       </Card>
 
-      {/* Edit Student Dialog */}
+      {/* Edit Student Dialog - الحاوية الكاملة لتحديث البيانات */}
       <Dialog open={!!editingStudent} onOpenChange={(open) => !open && setEditingStudent(null)}>
         <DialogContent className="max-w-3xl rounded-[2.5rem] border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
           <div className="p-10">
             <DialogHeader className="text-right items-start space-y-2 mb-10">
               <DialogTitle className="text-2xl font-black text-primary flex items-center gap-3">
                 <Edit2 className="w-7 h-7 text-secondary" />
-                تحديث بيانات الطالب
+                تحديث السجل الأكاديمي
               </DialogTitle>
-              <DialogDescription className="font-bold text-muted-foreground">تعديل المعلومات الأكاديمية للطالب المختار وتحديث سجله في النظام.</DialogDescription>
+              <DialogDescription className="font-bold text-muted-foreground">تعديل المعلومات الأكاديمية وإكمال الحقول الناقصة لهذا الطالب.</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
@@ -497,11 +498,11 @@ export default function AdminStudentsPage() {
               <div className="space-y-2 text-right">
                 <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <Calendar className="w-4 h-4 text-secondary" />
-                  السنة الدراسية
+                  السنة الجامعية
                 </Label>
                 <Select value={editingStudent?.academicYear || ""} onValueChange={(v) => setEditingStudent({...editingStudent, academicYear: v})}>
                   <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue />
+                    <SelectValue placeholder="اختر السنة..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
                     {academicYears.map((y: any) => <SelectItem key={y.id} value={y.label}>{y.label}</SelectItem>)}
@@ -515,7 +516,7 @@ export default function AdminStudentsPage() {
                 </Label>
                 <Select value={editingStudent?.collegeId || ""} onValueChange={(v) => setEditingStudent({...editingStudent, collegeId: v, departmentId: ""})}>
                   <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue />
+                    <SelectValue placeholder="اختر الكلية..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
                     {colleges.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -525,11 +526,11 @@ export default function AdminStudentsPage() {
               <div className="space-y-2 text-right">
                 <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <Building2 className="w-4 h-4 text-secondary" />
-                  التخصص
+                  التخصص الدراسي
                 </Label>
                 <Select value={editingStudent?.departmentId || ""} onValueChange={(v) => setEditingStudent({...editingStudent, departmentId: v})}>
                   <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue />
+                    <SelectValue placeholder="اختر التخصص..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
                     {departments.filter((d: any) => !editingStudent?.collegeId || d.collegeId === editingStudent.collegeId).map((d: any) => (
@@ -541,11 +542,11 @@ export default function AdminStudentsPage() {
               <div className="space-y-2 text-right">
                 <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <Layers className="w-4 h-4 text-secondary" />
-                  المستوى
+                  المستوى الدراسي
                 </Label>
                 <Select value={editingStudent?.level || ""} onValueChange={(v) => setEditingStudent({...editingStudent, level: v})}>
                   <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue />
+                    <SelectValue placeholder="اختر المستوى..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
                     <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
@@ -579,8 +580,8 @@ export default function AdminStudentsPage() {
                 onClick={handleUpdateStudent}
                 className="flex-1 rounded-2xl h-14 text-lg font-black gradient-blue shadow-lg gap-2 text-white"
               >
-                {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Edit2 className="w-6 h-6" />}
-                حفظ التعديلات
+                {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle className="w-6 h-6" />}
+                حفظ التحديثات
               </Button>
               <Button variant="outline" onClick={() => setEditingStudent(null)} className="flex-1 rounded-2xl h-14 text-lg font-bold border-2">تراجع</Button>
             </DialogFooter>

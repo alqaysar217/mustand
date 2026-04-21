@@ -73,7 +73,6 @@ export default function StudentsManagementPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDept, setFilterDept] = useState("all");
-  const [filterLevel, setFilterLevel] = useState("all");
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
@@ -100,11 +99,9 @@ export default function StudentsManagementPage() {
       const matchesSearch = student.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            student.regId?.includes(searchTerm);
       const matchesDept = filterDept === "all" || student.departmentId === filterDept;
-      const matchesLevel = filterLevel === "all" || student.level === filterLevel;
-      
-      return matchesSearch && matchesDept && matchesLevel;
+      return matchesSearch && matchesDept;
     });
-  }, [students, searchTerm, filterDept, filterLevel]);
+  }, [students, searchTerm, filterDept]);
 
   const handleAddStudent = async () => {
     if (!firestore || !newStudent.name || !newStudent.regId || !newStudent.collegeId || !newStudent.departmentId || !newStudent.academicYear) {
@@ -135,33 +132,36 @@ export default function StudentsManagementPage() {
     }
   };
 
-  const handleUpdateStudent = () => {
-    if (!firestore || !editingStudent?.name || !editingStudent?.regId || !editingStudent?.collegeId || !editingStudent?.departmentId) return;
+  const handleUpdateStudent = async () => {
+    if (!firestore || !editingStudent?.name || !editingStudent?.regId) return;
 
     setSubmitting(true);
-    const selectedCollege = (colleges as any[]).find(c => c.id === editingStudent.collegeId);
-    const selectedDept = (departments as any[]).find(d => d.id === editingStudent.departmentId);
+    try {
+      const selectedCollege = (colleges as any[]).find(c => c.id === editingStudent.collegeId);
+      const selectedDept = (departments as any[]).find(d => d.id === editingStudent.departmentId);
 
-    const docRef = doc(firestore, "students", editingStudent.id);
-    const data = {
-      name: editingStudent.name,
-      regId: editingStudent.regId,
-      collegeId: editingStudent.collegeId,
-      collegeName: selectedCollege?.name || "",
-      departmentId: editingStudent.departmentId,
-      departmentName: selectedDept?.nameAr || selectedDept?.name || "",
-      level: editingStudent.level,
-      admissionType: editingStudent.admissionType,
-      academicYear: editingStudent.academicYear || "",
-      updatedAt: serverTimestamp()
-    };
+      const docRef = doc(firestore, "students", editingStudent.id);
+      const data = {
+        name: editingStudent.name,
+        regId: editingStudent.regId,
+        collegeId: editingStudent.collegeId || "",
+        collegeName: selectedCollege?.name || editingStudent.collegeName || "",
+        departmentId: editingStudent.departmentId || "",
+        departmentName: selectedDept?.nameAr || selectedDept?.name || editingStudent.departmentName || "",
+        level: editingStudent.level || "المستوى الأول",
+        admissionType: editingStudent.admissionType || "عام",
+        academicYear: editingStudent.academicYear || "",
+        updatedAt: serverTimestamp()
+      };
 
-    updateDoc(docRef, data)
-      .then(() => {
-        setEditingStudent(null);
-        toast({ title: "تم التحديث بنجاح" });
-      })
-      .finally(() => setSubmitting(false));
+      await updateDoc(docRef, data);
+      setEditingStudent(null);
+      toast({ title: "تم تحديث بيانات الطالب" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "فشل التحديث" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleMoveToBin = async (student: any) => {
@@ -203,7 +203,7 @@ export default function StudentsManagementPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary mb-1">إدارة الطلاب</h1>
-            <p className="text-muted-foreground font-bold text-sm">قاعدة بيانات الطلاب المسجلين سحابياً</p>
+            <p className="text-muted-foreground font-bold text-sm">مراجعة وتصحيح بيانات الطلاب المسجلين</p>
           </div>
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -220,7 +220,7 @@ export default function StudentsManagementPage() {
                     <ShieldCheck className="w-7 h-7 text-secondary" />
                     تسجيل طالب جديد
                   </DialogTitle>
-                  <DialogDescription className="font-bold text-muted-foreground">أدخل البيانات الأكاديمية الكاملة للطالب لربطه بالتخصص والمستوى الصحيح.</DialogDescription>
+                  <DialogDescription className="font-bold text-muted-foreground">أدخل البيانات الأكاديمية الكاملة للطالب.</DialogDescription>
                 </DialogHeader>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
@@ -392,13 +392,13 @@ export default function StudentsManagementPage() {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="text-[10px] font-black text-secondary uppercase mb-0.5">{student.collegeName || '---'}</span>
-                        <span className="text-sm font-bold text-primary">{student.departmentName}</span>
+                        <span className="text-sm font-bold text-primary">{student.departmentName || '---'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="text-xs font-black text-primary">{student.academicYear || '---'}</span>
-                        <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" />{student.level}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" />{student.level || 'المستوى الأول'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -414,6 +414,7 @@ export default function StudentsManagementPage() {
                           size="icon" 
                           onClick={() => setEditingStudent(student)}
                           className="rounded-xl hover:bg-primary/5 text-secondary h-9 w-9"
+                          title="تحديث البيانات"
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -437,23 +438,23 @@ export default function StudentsManagementPage() {
         </Card>
       </main>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog - مخصص لإكمال البيانات الناقصة */}
       <Dialog open={!!editingStudent} onOpenChange={(open) => !open && setEditingStudent(null)}>
         <DialogContent className="max-w-3xl rounded-[2.5rem] border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
           <div className="p-10">
             <DialogHeader className="text-right items-start space-y-2 mb-10">
               <DialogTitle className="text-2xl font-black text-primary flex items-center gap-3">
                 <Edit2 className="w-7 h-7 text-secondary" />
-                تعديل بيانات الطالب
+                تحديث بيانات الطالب
               </DialogTitle>
-              <DialogDescription className="font-bold text-muted-foreground">تحديث المعلومات الأكاديمية للطالب المختار.</DialogDescription>
+              <DialogDescription className="font-bold text-muted-foreground">يرجى مراجعة وإكمال كافة التفاصيل الأكاديمية لهذا الطالب.</DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
               <div className="space-y-2 col-span-2 text-right">
                 <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <User className="w-4 h-4 text-secondary" />
-                  الاسم الكامل
+                  اسم الطالب
                 </Label>
                 <Input 
                   value={editingStudent?.name || ""}
@@ -475,11 +476,11 @@ export default function StudentsManagementPage() {
               <div className="space-y-2 text-right">
                 <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <Calendar className="w-4 h-4 text-secondary" />
-                  السنة الدراسية
+                  العام الدراسي
                 </Label>
                 <Select value={editingStudent?.academicYear || ""} onValueChange={(v) => setEditingStudent({...editingStudent, academicYear: v})}>
                   <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue />
+                    <SelectValue placeholder="اختر العام..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
                     {academicYears.map((y: any) => <SelectItem key={y.id} value={y.label}>{y.label}</SelectItem>)}
@@ -493,7 +494,7 @@ export default function StudentsManagementPage() {
                 </Label>
                 <Select value={editingStudent?.collegeId || ""} onValueChange={(v) => setEditingStudent({...editingStudent, collegeId: v, departmentId: ""})}>
                   <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue />
+                    <SelectValue placeholder="اختر الكلية..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
                     {colleges.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -507,7 +508,7 @@ export default function StudentsManagementPage() {
                 </Label>
                 <Select value={editingStudent?.departmentId || ""} onValueChange={(v) => setEditingStudent({...editingStudent, departmentId: v})}>
                   <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue />
+                    <SelectValue placeholder="اختر التخصص..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
                     {departments.filter((d: any) => !editingStudent?.collegeId || d.collegeId === editingStudent.collegeId).map((d: any) => (
@@ -523,7 +524,7 @@ export default function StudentsManagementPage() {
                 </Label>
                 <Select value={editingStudent?.level || ""} onValueChange={(v) => setEditingStudent({...editingStudent, level: v})}>
                   <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
-                    <SelectValue />
+                    <SelectValue placeholder="اختر المستوى..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl font-bold" dir="rtl">
                     <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
@@ -537,7 +538,7 @@ export default function StudentsManagementPage() {
               <div className="space-y-2 text-right">
                 <Label className="text-primary font-black flex items-center gap-2 pr-1 mb-2">
                   <Banknote className="w-4 h-4 text-secondary" />
-                  نوع القبول
+                  نظام القبول
                 </Label>
                 <Select value={editingStudent?.admissionType || "عام"} onValueChange={(v) => setEditingStudent({...editingStudent, admissionType: v})}>
                   <SelectTrigger className="rounded-xl h-12 bg-muted/20 border-muted text-right font-bold" dir="rtl">
@@ -557,8 +558,8 @@ export default function StudentsManagementPage() {
                 onClick={handleUpdateStudent}
                 className="flex-1 rounded-2xl h-14 text-lg font-black gradient-blue shadow-lg gap-2 text-white"
               >
-                {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Edit2 className="w-6 h-6" />}
-                حفظ التعديلات
+                {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle className="w-6 h-6" />}
+                حفظ التغييرات
               </Button>
               <Button variant="outline" onClick={() => setEditingStudent(null)} className="flex-1 rounded-2xl h-14 text-lg font-bold border-2">إلغاء</Button>
             </DialogFooter>
