@@ -185,7 +185,7 @@ export default function ArchivePage() {
                   <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="اختر التخصص" /></SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
                     <SelectItem value="all">كافة التخصصات</SelectItem>
-                    {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -222,7 +222,7 @@ export default function ArchivePage() {
                             alt="Exam" 
                             fill 
                             className="object-cover object-top group-hover:scale-105 transition-transform duration-700" 
-                          />
+                        />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-primary/5">
                             <FileText className="w-12 h-12 text-primary opacity-20" />

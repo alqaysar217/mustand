@@ -261,10 +261,10 @@ export default function UploadPage() {
                   <Label className="text-sm font-black text-primary flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />القسم العلمي</Label>
                   <select value={formData.deptId} onChange={(e) => {
                     const sel = departments.find((d: any) => d.id === e.target.value) as any;
-                    setFormData({...formData, deptId: e.target.value, deptName: sel?.name || "", collegeName: sel?.collegeName || "", subjectId: '', subjectName: ''});
+                    setFormData({...formData, deptId: e.target.value, deptName: sel?.nameAr || sel?.name || "", collegeName: sel?.collegeName || "", subjectId: '', subjectName: ''});
                   }} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right">
                     <option value="">اختر القسم...</option>
-                    {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    {departments.map((d: any) => <option key={d.id} value={d.id}>{d.nameAr || d.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-3">
