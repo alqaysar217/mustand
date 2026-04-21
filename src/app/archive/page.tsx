@@ -21,7 +21,8 @@ import {
   GraduationCap,
   Fingerprint,
   Clock,
-  Download
+  Download,
+  FileText
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -95,7 +96,7 @@ export default function ArchivePage() {
 
       return matchesSearch && matchesYear && matchesDept && matchesLevel;
     });
-  }, [archives, searchTerm, selectedYear, selectedDept, selectedLevel]);
+  }, [archives, searchTerm, selectedYear, selectedDept, setSelectedLevel]);
 
   const handleDownload = async (item: any) => {
     if (!item.fileUrl) return;
