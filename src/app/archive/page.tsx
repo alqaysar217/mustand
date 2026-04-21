@@ -84,9 +84,9 @@ export default function ArchivePage() {
     });
 
     return sorted.filter((item: any) => {
-      const sName = (item.studentName || "").toLowerCase();
-      const sId = (item.studentRegId || "").toLowerCase();
-      const subName = (item.subjectName || "").toLowerCase();
+      const sName = (item.student_name || item.studentName || "").toLowerCase();
+      const sId = (item.student_id || item.studentRegId || "").toLowerCase();
+      const subName = (item.subject_name || item.subjectName || "").toLowerCase();
       const search = searchTerm.toLowerCase();
 
       const matchesSearch = sName.includes(search) || sId.includes(search) || subName.includes(search);
@@ -99,10 +99,11 @@ export default function ArchivePage() {
   }, [archives, searchTerm, selectedYear, selectedDept, selectedLevel]);
 
   const handleDownload = async (item: any) => {
-    if (!item.fileUrl) return;
+    const fileUrl = item.file_data || item.fileUrl;
+    if (!fileUrl) return;
     toast({ title: "جاري تحميل الملف..." });
-    const fileName = `${item.studentName}_${item.subjectName}`;
-    const result = await downloadFile(item.fileUrl, fileName);
+    const fileName = `${item.student_name || item.studentName}_${item.subject_name || item.subjectName}`;
+    const result = await downloadFile(fileUrl, fileName);
     if (!result.success) {
       toast({ variant: "destructive", title: "فشل التحميل" });
     }
@@ -117,8 +118,8 @@ export default function ArchivePage() {
         originalData,
         originalId: id,
         deletedAt: serverTimestamp(),
-        name: item.studentName,
-        identifier: item.subjectName
+        name: item.student_name || item.studentName,
+        identifier: item.subject_name || item.subjectName
       });
       await deleteDoc(doc(firestore, "archives", id));
       toast({ title: "تم نقل الملف لسلة المحذوفات" });
@@ -128,7 +129,7 @@ export default function ArchivePage() {
   };
 
   const isValidImageUrl = (url: string) => {
-    return typeof url === 'string' && (url.startsWith('http') || url.startsWith('/'));
+    return typeof url === 'string' && (url.startsWith('data:image') || url.startsWith('http') || url.startsWith('/'));
   };
 
   return (
@@ -138,7 +139,7 @@ export default function ArchivePage() {
       
       <main className={cn("transition-all duration-300 p-4 md:p-10 animate-fade-in text-right", isOpen ? "mr-0 md:mr-64" : "mr-0")} dir="rtl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-          <div><h1 className="text-2xl md:text-3xl font-black text-primary mb-1">الأرشيف المركزي</h1><p className="text-muted-foreground font-bold text-sm">إدارة ومراجعة كافة الاختبارات المؤرشفة عبر الروابط المباشرة</p></div>
+          <div><h1 className="text-2xl md:text-3xl font-black text-primary mb-1">الأرشيف المركزي</h1><p className="text-muted-foreground font-bold text-sm">إدارة ومراجعة كافة الاختبارات المؤرشفة (Base64 في Firestore)</p></div>
           <div className="flex items-center gap-3 bg-white p-1.5 rounded-2xl shadow-sm border self-end md:self-auto">
             <Button variant={view === 'grid' ? 'default' : 'ghost'} size="sm" onClick={() => setView('grid')} className={cn("rounded-xl px-4 gap-2 h-9", view === 'grid' && "gradient-blue shadow-md text-white")}><LayoutGrid className="w-4 h-4" />شبكة</Button>
             <Button variant={view === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setView('list')} className={cn("rounded-xl px-4 gap-2 h-9", view === 'list' && "gradient-blue shadow-md text-white")}><List className="w-4 h-4" />قائمة</Button>
@@ -216,9 +217,9 @@ export default function ArchivePage() {
                   {processedResults.map((item) => (
                     <Card key={item.id} className="group overflow-hidden border-none shadow-lg rounded-2xl bg-white hover:-translate-y-1 transition-all flex flex-col h-full">
                       <div className="relative aspect-[3/2] bg-muted/30 overflow-hidden shrink-0">
-                        {isValidImageUrl(item.fileUrl) ? (
+                        {isValidImageUrl(item.file_data || item.fileUrl) ? (
                           <Image 
-                            src={item.fileUrl.includes('drive.google') ? PlaceHolderImages[1].imageUrl : item.fileUrl} 
+                            src={item.file_data || item.fileUrl} 
                             alt="Exam" 
                             fill 
                             className="object-cover object-top group-hover:scale-105 transition-transform duration-700" 
@@ -238,9 +239,9 @@ export default function ArchivePage() {
                         </div>
                       </div>
                       <div className="p-3 text-right flex-1 flex flex-col">
-                        <h3 className="text-xs font-black text-primary leading-tight line-clamp-1 mb-1">{item.studentName}</h3>
+                        <h3 className="text-xs font-black text-primary leading-tight line-clamp-1 mb-1">{item.student_name || item.studentName}</h3>
                         <p className="text-[10px] text-secondary font-bold flex items-center justify-start gap-1 mb-3">
-                          {item.subjectName}
+                          {item.subject_name || item.subjectName}
                           <BookOpen className="w-2.5 h-2.5" />
                         </p>
                         <div className="mt-auto border-t pt-2.5 flex items-center justify-between text-[8px] font-bold">
@@ -248,7 +249,7 @@ export default function ArchivePage() {
                              <Clock className="w-2.5 h-2.5" />
                              {item.uploadedAt?.toDate ? item.uploadedAt.toDate().toLocaleDateString('ar-EG-u-nu-latn') : 'الآن'}
                            </div>
-                           <div className="bg-muted px-1.5 py-0.5 rounded text-primary/70">{item.studentRegId}</div>
+                           <div className="bg-muted px-1.5 py-0.5 rounded text-primary/70">{item.student_id || item.studentRegId}</div>
                         </div>
                       </div>
                     </Card>
@@ -270,9 +271,9 @@ export default function ArchivePage() {
                       <tbody>
                         {processedResults.map((item) => (
                           <tr key={item.id} className="border-b hover:bg-muted/10 transition-colors group">
-                            <td className="p-5 font-black text-primary text-sm">{item.studentName}</td>
-                            <td className="p-5 font-mono font-bold text-muted-foreground text-xs">{item.studentRegId}</td>
-                            <td className="p-5"><Badge variant="outline" className="font-bold border-secondary text-secondary rounded-lg text-[10px]">{item.subjectName}</Badge></td>
+                            <td className="p-5 font-black text-primary text-sm">{item.student_name || item.studentName}</td>
+                            <td className="p-5 font-mono font-bold text-muted-foreground text-xs">{item.student_id || item.studentRegId}</td>
+                            <td className="p-5"><Badge variant="outline" className="font-bold border-secondary text-secondary rounded-lg text-[10px]">{item.subject_name || item.subjectName}</Badge></td>
                             <td className="p-5 text-xs font-bold text-muted-foreground">{item.level}</td>
                             <td className="p-5 text-center">
                               <div className="flex justify-center gap-2">
@@ -329,10 +330,10 @@ export default function ArchivePage() {
                  <div className="space-y-6 flex-1">
                     <div className="space-y-2">
                        <Label className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">بيانات الطالب</Label>
-                       <h3 className="text-xl md:text-2xl font-black text-primary leading-tight">{viewingExam.studentName}</h3>
+                       <h3 className="text-xl md:text-2xl font-black text-primary leading-tight">{viewingExam.student_name || viewingExam.studentName}</h3>
                        <div className="flex items-center justify-end gap-2 text-secondary font-black bg-secondary/5 p-2.5 rounded-xl border border-secondary/10 text-xs">
                           <Fingerprint className="w-4 h-4" />
-                          <span>رقم القيد: {viewingExam.studentRegId}</span>
+                          <span>رقم القيد: {viewingExam.student_id || viewingExam.studentRegId}</span>
                        </div>
                     </div>
                     <Separator className="opacity-50" />
@@ -340,7 +341,7 @@ export default function ArchivePage() {
                        <div className="p-3.5 rounded-2xl bg-muted/10 border-r-4 border-primary">
                           <Label className="text-muted-foreground text-[9px] font-black block mb-1">المادة الدراسية</Label>
                           <div className="flex items-center justify-end gap-2 font-black text-primary text-base">
-                             {viewingExam.subjectName}
+                             {viewingExam.subject_name || viewingExam.subjectName}
                              <BookOpen className="w-4 h-4 text-secondary" />
                           </div>
                        </div>
@@ -365,8 +366,8 @@ export default function ArchivePage() {
               </div>
               <div className="flex-1 relative bg-neutral-100 flex items-center justify-center p-8 min-h-[350px]">
                  <div className="relative w-full h-full bg-white shadow-xl rounded-xl overflow-hidden border-4 border-white flex items-center justify-center">
-                    {isValidImageUrl(viewingExam.fileUrl) && !viewingExam.fileUrl.includes('drive.google') ? (
-                       <Image src={viewingExam.fileUrl} alt="Exam Preview" fill className="object-contain" />
+                    {isValidImageUrl(viewingExam.file_data || viewingExam.fileUrl) ? (
+                       <Image src={viewingExam.file_data || viewingExam.fileUrl} alt="Exam Preview" fill className="object-contain" />
                     ) : (
                        <div className="flex flex-col items-center gap-4 p-10 text-center">
                           <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center">

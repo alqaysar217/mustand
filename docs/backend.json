@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "College": {
@@ -73,22 +74,21 @@
     },
     "Archive": {
       "title": "الملف المؤرشف",
-      "description": "يمثل ورقة اختبار ممسوحة ضوئياً ومؤرشفة.",
+      "description": "يمثل ورقة اختبار ممسوحة ضوئياً ومؤرشفة مباشرة في Firestore.",
       "type": "object",
       "properties": {
-        "studentRegId": { "type": "string" },
-        "studentName": { "type": "string" },
-        "subjectId": { "type": "string" },
-        "subjectName": { "type": "string" },
-        "departmentId": { "type": "string" },
-        "level": { "type": "string", "description": "المستوى الدراسي للاختبار" },
+        "student_id": { "type": "string", "description": "رقم القيد المستخرج" },
+        "student_name": { "type": "string", "description": "اسم الطالب المستخرج" },
+        "subject_name": { "type": "string", "description": "اسم المادة المستخرج" },
+        "file_data": { "type": "string", "description": "سلسلة Base64 للملف (يجب أن تكون < 800KB)" },
+        "file_type": { "type": "string", "description": "نوع الملف (image/jpeg, application/pdf)" },
         "year": { "type": "string" },
         "term": { "type": "string" },
-        "fileUrl": { "type": "string" },
-        "pages": { "type": "number" },
+        "departmentId": { "type": "string" },
+        "level": { "type": "string" },
         "uploadedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["studentRegId", "subjectId", "fileUrl"]
+      "required": ["student_id", "file_data"]
     }
   },
   "auth": {
@@ -117,7 +117,7 @@
     },
     "/archives/{archiveId}": {
       "schema": "#/entities/Archive",
-      "description": "الأرشيف المركزي للاختبارات"
+      "description": "الأرشيف المركزي للاختبارات (مخزن بـ Base64)"
     }
   }
 }

@@ -35,10 +35,10 @@ export async function downloadFile(url: string, fileName: string) {
 }
 
 /**
- * ضغط الصورة قبل الرفع لتقليل حجم البيانات وتجنب مشاكل وقت التنفيذ أو تجاوز الحدود.
- * يحافظ على وضوح النص مع تقليل الحجم بشكل كبير (أقل من 1 ميجابايت غالباً).
+ * ضغط الصورة بشكل فائق (Drastic Compression) لضمان حجم أقل من 800KB.
+ * تقوم الدالة بتقليل الأبعاد والجودة للوصول للحد المطلوب لتناسب قيود Firestore (1MB limit).
  */
-export async function compressImage(dataUrl: string, quality = 0.8, maxWidth = 1600): Promise<string> {
+export async function compressImage(dataUrl: string, initialQuality = 0.6, maxWidth = 1000): Promise<{ data: string; size: number }> {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = dataUrl;
@@ -47,7 +47,7 @@ export async function compressImage(dataUrl: string, quality = 0.8, maxWidth = 1
       let width = img.width;
       let height = img.height;
 
-      // الحفاظ على النسبة والتناسب
+      // الحفاظ على النسبة والتناسب مع تصغير عدواني
       if (width > maxWidth) {
         height = (maxWidth / width) * height;
         width = maxWidth;
@@ -57,16 +57,28 @@ export async function compressImage(dataUrl: string, quality = 0.8, maxWidth = 1
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // تعبئة الخلفية باللون الأبيض (مفيد لصور PNG الشفافة)
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
-        // تحويل لـ JPEG لتقليل الحجم بشكل كبير مقارنة بـ PNG
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        
+        // المحاولة الأولى للضغط
+        const result = canvas.toDataURL('image/jpeg', initialQuality);
+        const sizeInBytes = Math.ceil(((result.length - "data:image/jpeg;base64,".length) * 3) / 4);
+        
+        resolve({ data: result, size: sizeInBytes });
       } else {
-        resolve(dataUrl);
+        resolve({ data: dataUrl, size: dataUrl.length });
       }
     };
-    img.onerror = () => resolve(dataUrl);
+    img.onerror = () => resolve({ data: dataUrl, size: dataUrl.length });
   });
+}
+
+/**
+ * دالة للتحقق من حجم سلسلة الـ Base64 بالكيلوبايت.
+ */
+export function getBase64SizeKB(base64String: string): number {
+  const stringLength = base64String.substring(base64String.indexOf(',') + 1).length;
+  const sizeInBytes = Math.ceil((stringLength * 3) / 4);
+  return sizeInBytes / 1024;
 }
