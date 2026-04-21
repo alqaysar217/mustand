@@ -1,7 +1,8 @@
 'use server';
 /**
  * @fileOverview نظام استخراج بيانات الامتحانات المطور.
- * تم تحسينه لاستقبال صور مصغرة (Thumbnails) وتحديث الموديل للإصدار المستقر.
+ * تم تحسينه لمعالجة أخطاء 400 Bad Request عبر إزالة الاعتماد التلقائي على responseMimeType
+ * وإضافة آلية تحليل JSON متينة (Robust Parsing) مع تنظيف المارك داون يدوياً.
  */
 
 import {ai} from '@/ai/genkit';
@@ -26,11 +27,15 @@ const ExtractExamDetailsOutputSchema = z.object({
 });
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
+/**
+ * تعريف البرومبت بدون تحديد output schema في الإعدادات الأساسية
+ * لتجنب قيام Genkit بإضافة "responseMimeType: application/json" تلقائياً،
+ * وهو ما يسبب خطأ "Unknown name responseMimeType" في بعض إصدارات الـ API أو النماذج.
+ */
 const extractExamDetailsPrompt = ai.definePrompt({
   name: 'extractExamDetailsPrompt',
   input: {schema: ExtractExamDetailsInputSchema},
-  output: {schema: ExtractExamDetailsOutputSchema},
-  // استخدام النسخة المستقرة لضمان التوافق وتجنب أخطاء 404 في v1beta
+  // إزالة output schema من هنا لمنع إضافة responseMimeType في الـ config من قبل المكتبة
   model: 'googleai/gemini-1.5-flash',
   config: {
     safetySettings: [
@@ -42,16 +47,22 @@ const extractExamDetailsPrompt = ai.definePrompt({
     ],
   },
   prompt: `أنت خبير في تحليل الوثائق الأكاديمية العربية. 
-قم بتحليل ترويسة (Header) ورقة الامتحان المرفقة واستخرج البيانات التالية بدقة عالية في قالب JSON:
+قم بتحليل ترويسة (Header) ورقة الامتحان المرفقة واستخرج البيانات التالية بدقة عالية.
 
-1. رقم القيد (Registration ID): ابحث عنه تحت مسمى "رقم القيد" أو "رقم الجلوس" وعادة ما يتكون من أرقام فقط.
-2. اسم الطالب (Student Name): الاسم الرباعي المكتوب بوضوح.
-3. اسم المادة (Subject Name): المادة المخصصة لهذا الامتحان.
-4. العام الجامعي (Academic Year): ابحث عن صيغة مثل 2023/2024.
-5. الفصل الدراسي (Semester): الفصل الأول أو الثاني أو التكميلي.
-6. المستوى (Level): المستوى الأول، الثاني، الثالث، أو الرابع.
+يجب أن تعيد المخرجات بتنسيق JSON صالح فقط. لا تكتب أي نصوص تمهيدية أو ملاحظات ختامية.
+تأكد من أن النتيجة تبدأ بـ { وتنتهي بـ }.
 
-إذا لم تجد حقلاً معيناً، اتركه فارغاً.
+الهيكل المطلوب (JSON):
+{
+  "studentRegistrationId": "رقم القيد أو الجلوس",
+  "studentName": "الاسم الكامل المكتوب",
+  "subjectName": "اسم المادة الدراسية",
+  "academicYear": "العام الجامعي (مثلاً 2024/2025)",
+  "semester": "الفصل الدراسي",
+  "level": "المستوى الدراسي"
+}
+
+إذا لم تجد حقلاً معيناً، اتركه كسلسلة فارغة "".
 
 صورة الورقة: {{media url=examImageDataUri}}`,
 });
@@ -64,21 +75,49 @@ const extractExamDetailsFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+      // استدعاء الموديل والحصول على الاستجابة النصية الخام
       const response = await extractExamDetailsPrompt(input);
-      const output = response.output;
+      let rawText = response.text;
       
-      if (!output) throw new Error('AI_RETURNED_NO_DATA');
+      if (!rawText) throw new Error('AI_RETURNED_NO_TEXT');
 
-      // تنظيف البيانات المستخرجة لضمان الجودة
+      // 1. تنظيف مخرجات المارك داون (Markdown Stripping)
+      // إزالة علامات ```json و ``` إذا وجدت في الاستجابة
+      let cleanJson = rawText;
+      const markdownRegex = /```(?:json)?\s*([\s\S]*?)\s*```/g;
+      const markdownMatch = markdownRegex.exec(rawText);
+      
+      if (markdownMatch && markdownMatch[1]) {
+        cleanJson = markdownMatch[1];
+      } else {
+        // محاولة استخراج الجزء الذي يبدأ بـ { وينتهي بـ } في حال وجود نص خارج الـ JSON
+        const fallbackMatch = rawText.match(/\{[\s\S]*\}/);
+        if (fallbackMatch) {
+          cleanJson = fallbackMatch[0];
+        }
+      }
+
+      // 2. تحليل الـ JSON بشكل آمن (Robust Parsing)
+      let parsedOutput: any;
+      try {
+        parsedOutput = JSON.parse(cleanJson.trim());
+      } catch (parseError) {
+        console.error('Failed to parse Gemini response as JSON. Text attempted:', cleanJson);
+        throw new Error('تنسيق استجابة الذكاء الاصطناعي غير متوافق مع JSON');
+      }
+
+      // 3. تنظيف البيانات النهائية وضمان جودتها
       return {
-        ...output,
-        studentRegistrationId: output.studentRegistrationId?.replace(/\D/g, '') || '',
-        studentName: output.studentName?.trim() || '',
-        subjectName: output.subjectName?.trim() || ''
+        studentRegistrationId: parsedOutput.studentRegistrationId?.toString().replace(/\D/g, '') || '',
+        studentName: parsedOutput.studentName?.trim() || '',
+        subjectName: parsedOutput.subjectName?.trim() || '',
+        academicYear: parsedOutput.academicYear?.trim() || '',
+        semester: parsedOutput.semester?.trim() || '',
+        level: parsedOutput.level?.trim() || ''
       };
+
     } catch (error: any) {
       console.error('OCR Flow Error:', error);
-      // في حال استمرار الخطأ، نمرر رسالة توضح نوع المشكلة (مثل المنطقة الجغرافية أو مفتاح API)
       throw new Error('فشل التحليل الذكي للوثيقة: ' + (error.message || 'Error'));
     }
   }
