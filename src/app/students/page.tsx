@@ -105,7 +105,7 @@ export default function StudentsManagementPage() {
 
   const handleAddStudent = async () => {
     if (!firestore || !newStudent.name || !newStudent.regId || !newStudent.collegeId || !newStudent.departmentId || !newStudent.academicYear) {
-      toast({ variant: "destructive", title: "بيانات ناقصة" });
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى تعبئة كافة الحقول الأكاديمية المطلوبة." });
       return;
     }
 
@@ -156,7 +156,7 @@ export default function StudentsManagementPage() {
 
       await updateDoc(docRef, data);
       setEditingStudent(null);
-      toast({ title: "تم تحديث بيانات الطالب" });
+      toast({ title: "تم تحديث بيانات الطالب بنجاح" });
     } catch (e) {
       toast({ variant: "destructive", title: "فشل التحديث" });
     } finally {
