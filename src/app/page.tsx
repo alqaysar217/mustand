@@ -46,39 +46,52 @@ export default function Home() {
 
     try {
       const usersRef = collection(firestore, "users");
+      // البحث عن المستخدم ببيانات الاعتماد فقط أولاً
       const q = query(
         usersRef, 
         where("username", "==", username), 
-        where("password", "==", password),
-        where("role", "==", selectedRole)
+        where("password", "==", password)
       );
       
       const snapshot = await getDocs(q);
 
       if (snapshot.empty) {
-        setError("خطأ في اسم المستخدم أو كلمة المرور لهذا المنصب");
+        setError("خطأ في اسم المستخدم أو كلمة المرور");
         setLoading(false);
         return;
       }
 
       const userData = snapshot.docs[0].data();
 
+      // التحقق من حالة الحساب
       if (userData.status === 'suspended') {
         setError("عذراً، هذا الحساب معطل حالياً من قبل الإدارة");
         setLoading(false);
         return;
       }
 
-      // حفظ الجلسة محلياً
+      const dbRole = userData.role; // 'manager' or 'employee'
+
+      // منطق الصلاحيات المطلوب:
+      // 1. الموظف لا يمكنه الدخول كمدير
+      if (selectedRole === 'manager' && dbRole !== 'manager') {
+        setError("عذراً، ليس لديك صلاحيات المدير للوصول لهذه الواجهات");
+        setLoading(false);
+        return;
+      }
+
+      // 2. المدير يمكنه الدخول كمدير أو كموظف (المدير يدخل لكل شي)
+      // يتم حفظ الجلسة وتوجيهه حسب الدور الذي "اختاره" في البداية
+      
       localStorage.setItem('userSession', JSON.stringify({
         id: snapshot.docs[0].id,
         name: userData.name,
-        role: userData.role,
+        role: dbRole,
         username: userData.username,
-        avatar: userData.role === 'manager' ? '/admin.png' : '/emploeed-1.png'
+        avatar: dbRole === 'manager' ? '/admin.png' : '/emploeed-1.png'
       }));
 
-      // التوجيه حسب الدور
+      // التوجيه بناءً على الاختيار الذي قام به في واجهة البداية
       if (selectedRole === 'manager') {
         router.push('/admin/dashboard');
       } else {
