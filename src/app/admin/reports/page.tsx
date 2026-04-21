@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -17,7 +18,8 @@ import {
   GraduationCap,
   School,
   UserCheck,
-  Archive as ArchiveIcon
+  Archive as ArchiveIcon,
+  X
 } from "lucide-react";
 import {
   Table,
@@ -47,7 +49,7 @@ import { cn } from "@/lib/utils";
 import { useFirestore, useCollection } from "@/firebase";
 import { collection } from "firebase/firestore";
 
-const COLORS = ['#0B3C5D', '#328CC1', '#D9E3F0', '#4ade80', '#f97316'];
+const COLORS = ['#0B3C5D', '#328CC1', '#4ade80', '#f97316', '#8b5cf6'];
 
 export default function ReportsPage() {
   const firestore = useFirestore();
@@ -89,15 +91,28 @@ export default function ReportsPage() {
     });
   }, [students, filterCollege, filterDept, filterLevel]);
 
-  // Archive distribution for chart
+  // Archive distribution for chart - FIXED mapping logic
   const archiveChartData = useMemo(() => {
+    if (archives.length === 0) return [];
+    
     const counts: Record<string, number> = {};
     archives.forEach((item: any) => {
-      const key = item.departmentName || "غير محدد";
-      counts[key] = (counts[key] || 0) + 1;
+      // محاولة الحصول على اسم التخصص من الوثيقة، أو البحث عنه في قائمة التخصصات المركزية
+      let deptName = item.departmentName;
+      
+      if (!deptName || deptName === "غير محدد") {
+        const dept = (departments as any[]).find(d => d.id === item.departmentId);
+        deptName = dept?.name || "تخصص عام";
+      }
+
+      counts[deptName] = (counts[deptName] || 0) + 1;
     });
-    return Object.entries(counts).map(([name, value]) => ({ name, value })).slice(0, 5);
-  }, [archives]);
+
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [archives, departments]);
 
   const formatNumber = (num: number) => {
     if (!mounted) return "0";
@@ -117,7 +132,7 @@ export default function ReportsPage() {
         fileName = `تقرير_الطلاب_${new Date().toLocaleDateString('ar-EG')}.csv`;
       } else if (reportType === 'staff') {
         headers = ["الاسم", "اسم المستخدم", "الدور", "الحالة", "تاريخ التسجيل"];
-        rows = (staff as any[]).map(u => [u.name, u.username, u.role === 'manager' ? 'مدير' : 'موظف', u.status === 'active' ? 'نشط' : 'موظف', u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : '---']);
+        rows = (staff as any[]).map(u => [u.name, u.username, u.role === 'manager' ? 'مدير' : 'موظف', u.status === 'active' ? 'نشط' : 'موقوف', u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : '---']);
         fileName = `تقرير_العاملين_${new Date().toLocaleDateString('ar-EG')}.csv`;
       } else {
         headers = ["الطالب", "المادة", "الترم", "السنة", "تاريخ الرفع"];
@@ -146,14 +161,7 @@ export default function ReportsPage() {
     }
   };
 
-  if (!mounted) {
-    return (
-      <div className="flex flex-col items-center justify-center py-40 space-y-4">
-        <Loader2 className="w-12 h-12 animate-spin text-primary opacity-20" />
-        <p className="text-muted-foreground font-black animate-pulse">جاري تحضير المركز التحليلي المتقدم...</p>
-      </div>
-    );
-  }
+  if (!mounted) return null;
 
   return (
     <div className="space-y-8 text-right" dir="rtl">
@@ -185,7 +193,6 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 border-none shadow-xl rounded-3xl bg-white border-r-8 border-primary">
           <div className="flex items-center justify-between mb-4">
@@ -216,11 +223,11 @@ export default function ReportsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
-        <TabsList className="bg-white p-1 rounded-[2rem] h-20 shadow-xl border mb-10 flex w-full max-w-2xl mx-auto overflow-hidden">
+        <TabsList className="bg-white p-1 rounded-2xl h-16 shadow-lg border mb-10 flex w-full max-w-2xl mx-auto overflow-hidden">
           <TabsTrigger 
             value="students" 
             className={cn(
-              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center h-[calc(100%-8px)] my-auto",
+              "flex-1 rounded-xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center h-[calc(100%-8px)] my-auto",
               activeTab === "students" ? "gradient-blue text-white shadow-xl" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
@@ -230,7 +237,7 @@ export default function ReportsPage() {
           <TabsTrigger 
             value="staff" 
             className={cn(
-              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center h-[calc(100%-8px)] my-auto",
+              "flex-1 rounded-xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center h-[calc(100%-8px)] my-auto",
               activeTab === "staff" ? "gradient-blue text-white shadow-xl" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
@@ -240,7 +247,7 @@ export default function ReportsPage() {
           <TabsTrigger 
             value="archives" 
             className={cn(
-              "flex-1 rounded-3xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center h-[calc(100%-8px)] my-auto",
+              "flex-1 rounded-xl font-black text-sm transition-all duration-300 gap-2 flex items-center justify-center h-[calc(100%-8px)] my-auto",
               activeTab === "archives" ? "gradient-blue text-white shadow-xl" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
@@ -250,26 +257,26 @@ export default function ReportsPage() {
         </TabsList>
 
         <TabsContent value="students" className="space-y-6 animate-slide-up">
-          <Card className="p-8 border-none shadow-xl rounded-3xl bg-white mb-6">
+          <Card className="p-8 border-none shadow-xl rounded-3xl bg-white mb-6" dir="rtl">
             <div className="flex items-center gap-3 mb-8 border-b pb-4 justify-start">
               <div className="p-2 bg-secondary/10 rounded-xl text-secondary"><Filter className="w-6 h-6" /></div>
-              <h3 className="text-xl font-black text-primary">تصفية نتائج البحث المتقدم</h3>
+              <h3 className="text-xl font-black text-primary">تصفية نتائج الطلاب</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="space-y-3 text-right">
-                <Label className="font-black text-sm text-primary pr-1">الكلية الجامعية</Label>
+                <Label className="font-black text-sm text-primary pr-1">الكلية</Label>
                 <select 
                   value={filterCollege} 
                   onChange={(e) => setFilterCollege(e.target.value)} 
                   className="w-full h-12 px-4 rounded-xl border-2 border-muted bg-muted/20 font-bold outline-none focus:border-primary text-right"
                   dir="rtl"
                 >
-                  <option value="all">كل الكليات المسجلة</option>
+                  <option value="all">كل الكليات</option>
                   {colleges.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="space-y-3 text-right">
-                <Label className="font-black text-sm text-primary pr-1">التخصص العلمي</Label>
+                <Label className="font-black text-sm text-primary pr-1">التخصص</Label>
                 <select 
                   value={filterDept} 
                   onChange={(e) => setFilterDept(e.target.value)} 
@@ -281,7 +288,7 @@ export default function ReportsPage() {
                 </select>
               </div>
               <div className="space-y-3 text-right">
-                <Label className="font-black text-sm text-primary pr-1">المستوى الدراسي</Label>
+                <Label className="font-black text-sm text-primary pr-1">المستوى</Label>
                 <select 
                   value={filterLevel} 
                   onChange={(e) => setFilterLevel(e.target.value)} 
@@ -297,11 +304,12 @@ export default function ReportsPage() {
               </div>
               <div className="flex items-end">
                 <Button 
-                  variant="secondary" 
+                  variant="outline" 
                   onClick={() => { setFilterCollege('all'); setFilterDept('all'); setFilterLevel('all'); }} 
-                  className="w-full h-12 rounded-xl font-black shadow-sm"
+                  className="w-full h-12 rounded-xl font-black border-2 gap-2 text-muted-foreground hover:text-primary"
                 >
-                  إعادة تعيين المرشحات
+                  <X className="w-4 h-4" />
+                  إعادة تعيين
                 </Button>
               </div>
             </div>
@@ -311,33 +319,35 @@ export default function ReportsPage() {
             <div className="p-6 border-b bg-muted/10 flex items-center justify-between">
               <h3 className="font-black text-primary flex items-center gap-2">
                 <GraduationCap className="w-6 h-6 text-secondary" />
-                قائمة الطلاب المطابقة للمعايير ({filteredStudents.length})
+                قائمة الطلاب المفلترة ({filteredStudents.length})
               </h3>
             </div>
-            <Table className="text-right" dir="rtl">
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  <TableHead className="text-right font-black text-primary">اسم الطالب</TableHead>
-                  <TableHead className="text-right font-black text-primary">رقم القيد</TableHead>
-                  <TableHead className="text-right font-black text-primary">التخصص</TableHead>
-                  <TableHead className="text-right font-black text-primary">المستوى</TableHead>
-                  <TableHead className="text-right font-black text-primary">تاريخ الانضمام</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStudents.length > 0 ? filteredStudents.map((s) => (
-                  <TableRow key={s.id} className="hover:bg-muted/10 transition-colors">
-                    <TableCell className="font-bold text-primary">{s.name}</TableCell>
-                    <TableCell className="font-mono text-xs font-bold text-muted-foreground">{s.regId}</TableCell>
-                    <TableCell className="font-bold text-xs text-secondary">{s.departmentName}</TableCell>
-                    <TableCell className="text-xs font-black text-primary">{s.level}</TableCell>
-                    <TableCell className="text-[10px] font-bold text-muted-foreground">{s.joinDate}</TableCell>
+            <div className="overflow-x-auto">
+              <Table className="text-right" dir="rtl">
+                <TableHeader className="bg-muted/30">
+                  <TableRow>
+                    <TableHead className="text-right font-black text-primary">اسم الطالب</TableHead>
+                    <TableHead className="text-right font-black text-primary">رقم القيد</TableHead>
+                    <TableHead className="text-right font-black text-primary">التخصص</TableHead>
+                    <TableHead className="text-right font-black text-primary">المستوى</TableHead>
+                    <TableHead className="text-right font-black text-primary">تاريخ الانضمام</TableHead>
                   </TableRow>
-                )) : (
-                  <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">لا توجد بيانات مطابقة للفلترة الحالية</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredStudents.length > 0 ? filteredStudents.map((s) => (
+                    <TableRow key={s.id} className="hover:bg-muted/10 transition-colors">
+                      <TableCell className="font-bold text-primary">{s.name}</TableCell>
+                      <TableCell className="font-mono text-xs font-bold text-muted-foreground">{s.regId}</TableCell>
+                      <TableCell className="font-bold text-xs text-secondary">{s.departmentName}</TableCell>
+                      <TableCell className="text-xs font-black text-primary">{s.level}</TableCell>
+                      <TableCell className="text-[10px] font-bold text-muted-foreground">{s.joinDate}</TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground font-bold">لا توجد بيانات مطابقة للفلترة</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </Card>
         </TabsContent>
 
@@ -346,42 +356,42 @@ export default function ReportsPage() {
             <div className="p-6 border-b bg-muted/10 flex items-center justify-between">
               <h3 className="font-black text-primary flex items-center gap-2">
                 <ShieldCheck className="w-6 h-6 text-secondary" />
-                تقرير الموظفين والمديرين النشطين
+                تقرير القوى العاملة
               </h3>
-              <Button size="sm" variant="ghost" onClick={() => handleExportCSV('staff')} className="text-green-600 font-bold gap-2">
-                <FileSpreadsheet className="w-4 h-4" />
-                تصدير القائمة
-              </Button>
             </div>
-            <Table className="text-right" dir="rtl">
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  <TableHead className="text-right font-black text-primary">اسم الموظف</TableHead>
-                  <TableHead className="text-right font-black text-primary">الدور الوظيفي</TableHead>
-                  <TableHead className="text-right font-black text-primary">اسم المستخدم</TableHead>
-                  <TableHead className="text-right font-black text-primary">الحالة</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {staff.map((u: any) => (
-                  <TableRow key={u.id} className="hover:bg-muted/10 transition-colors">
-                    <TableCell className="font-bold text-primary">{u.name}</TableCell>
-                    <TableCell>
-                      <Badge className={u.role === 'manager' ? "bg-primary text-white border-none rounded-lg" : "bg-secondary text-white border-none rounded-lg"}>
-                        {u.role === 'manager' ? 'مدير نظام' : 'موظف أرشفة'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">@{u.username}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 justify-start">
-                        <div className={`w-2.5 h-2.5 rounded-full ${u.status === 'active' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`}></div>
-                        <span className="text-xs font-bold">{u.status === 'active' ? 'نشط/متصل' : 'موقوف'}</span>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table className="text-right" dir="rtl">
+                <TableHeader className="bg-muted/30">
+                  <TableRow>
+                    <TableHead className="text-right font-black text-primary">اسم الموظف</TableHead>
+                    <TableHead className="text-right font-black text-primary">الدور</TableHead>
+                    <TableHead className="text-right font-black text-primary">اسم المستخدم</TableHead>
+                    <TableHead className="text-right font-black text-primary">الحالة</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {staff.length > 0 ? staff.map((u: any) => (
+                    <TableRow key={u.id} className="hover:bg-muted/10 transition-colors">
+                      <TableCell className="font-bold text-primary">{u.name}</TableCell>
+                      <TableCell>
+                        <Badge className={u.role === 'manager' ? "bg-primary text-white border-none rounded-lg" : "bg-secondary text-white border-none rounded-lg"}>
+                          {u.role === 'manager' ? 'مدير نظام' : 'موظف أرشفة'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">@{u.username}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 justify-start">
+                          <div className={`w-2.5 h-2.5 rounded-full ${u.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <span className="text-xs font-bold">{u.status === 'active' ? 'نشط' : 'موقوف'}</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow><TableCell colSpan={4} className="h-40 text-center font-bold opacity-30">لا يوجد موظفون مسجلون</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </Card>
         </TabsContent>
 
@@ -390,12 +400,12 @@ export default function ReportsPage() {
             <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
               <h3 className="text-lg font-black text-primary mb-8 flex items-center gap-2 justify-start">
                 <TrendingUp className="w-6 h-6 text-secondary" />
-                توزيع الاختبارات المؤرشفة حسب التخصص
+                توزيع الأرشفة حسب التخصصات الحقيقية
               </h3>
               <div className="h-[350px] w-full">
                 {archiveChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={archiveChartData} margin={{ right: 30, left: 0, top: 10 }}>
+                    <BarChart data={archiveChartData} margin={{ right: 30, left: 10, top: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                       <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#0B3C5D', fontWeight: 'bold'}} />
                       <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontWeight: 'bold'}} orientation="right" />
@@ -411,18 +421,17 @@ export default function ReportsPage() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-muted-foreground font-bold">لا توجد سجلات أرشفة بعد لتمثيلها</div>
+                  <div className="h-full flex items-center justify-center text-muted-foreground font-bold opacity-30">لا توجد سجلات أرشفة لتمثيلها</div>
                 )}
               </div>
             </Card>
 
             <Card className="p-8 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
                <div className="flex items-center justify-between mb-8 border-b pb-4">
-                  <h3 className="text-xl font-black text-primary">أحدث عمليات الأرشفة المنفذة</h3>
-                  <Button variant="link" className="text-secondary font-bold" onClick={() => setActiveTab('students')}>مشاهدة الكل</Button>
+                  <h3 className="text-xl font-black text-primary">آخر عمليات الأرشفة</h3>
                </div>
                <div className="space-y-4">
-                 {archives.slice(0, 6).map((a: any, i: number) => (
+                 {archives.length > 0 ? archives.slice(0, 6).map((a: any, i: number) => (
                    <div key={i} className="flex items-center gap-4 p-4 bg-muted/20 rounded-2xl border border-transparent hover:border-primary/10 transition-all">
                       <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm text-secondary"><FileText className="w-6 h-6" /></div>
                       <div className="flex-1 text-right">
@@ -431,8 +440,9 @@ export default function ReportsPage() {
                       </div>
                       <Badge variant="outline" className="text-[9px] font-black border-secondary text-secondary px-3 py-1 rounded-lg">{a.term}</Badge>
                    </div>
-                 ))}
-                 {archives.length === 0 && <p className="text-center py-10 text-muted-foreground font-bold">لا توجد عمليات مؤرشفة بعد</p>}
+                 )) : (
+                   <p className="text-center py-20 text-muted-foreground font-bold opacity-30">لا توجد عمليات مؤرشفة</p>
+                 )}
                </div>
             </Card>
           </div>
@@ -441,3 +451,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
