@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -38,6 +40,19 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isOpen } = useSidebarToggle();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const session = localStorage.getItem('userSession');
+    if (session) {
+      setCurrentUser(JSON.parse(session));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('userSession');
+    router.push('/');
+  };
 
   return (
     <aside className={cn(
@@ -48,7 +63,7 @@ export function AdminSidebar() {
         <div className="relative w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-white/20 overflow-hidden shadow-lg shrink-0">
           <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
         </div>
-        <div className="flex flex-col">
+        <div className="flex flex-col text-right">
           <span className="text-xl font-black tracking-tight">مستند</span>
           <span className="text-[10px] text-white/50 font-bold">لوحة تحكم المدير</span>
         </div>
@@ -63,14 +78,14 @@ export function AdminSidebar() {
               key={item.href} 
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group",
+                "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group text-right",
                 isActive 
                   ? "bg-white text-primary shadow-lg font-bold" 
                   : "hover:bg-white/10 text-white/70 hover:text-white"
               )}
             >
               <Icon className={cn("w-5 h-5 transition-transform", !isActive && "group-hover:scale-110")} />
-              <span className="text-sm font-bold">{item.label}</span>
+              <span className="text-sm font-bold flex-1">{item.label}</span>
               {isActive && <ChevronLeft className="w-4 h-4 mr-auto" />}
             </Link>
           );
@@ -79,18 +94,18 @@ export function AdminSidebar() {
 
       <div className="p-6 mt-auto">
         <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 border border-white/10 shadow-xl">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-2 border-white/30 shadow-md">
-              <Image src="/admin.png" alt="Admin Profile" fill className="object-cover" />
+          <div className="flex items-center gap-4 mb-4 text-right">
+            <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-2 border-white/30 shadow-md shrink-0">
+              <Image src={currentUser?.avatar || "/admin.png"} alt="Admin Profile" fill className="object-cover" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-black truncate text-white">المدير العام</p>
+              <p className="text-sm font-black truncate text-white">{currentUser?.name || "المدير العام"}</p>
               <p className="text-[10px] text-white/60 truncate font-bold uppercase tracking-wider">مدير النظام</p>
             </div>
           </div>
           <Button 
             variant="ghost" 
-            onClick={() => router.push('/')}
+            onClick={handleLogout}
             className="w-full justify-center bg-white/5 hover:bg-destructive hover:text-white text-white/80 rounded-2xl h-11 font-black transition-all gap-2 border border-white/5"
           >
             <LogOut className="w-4 h-4" />

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -5,13 +6,23 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Briefcase, Settings2, Loader2, ArrowRight, User, Lock, LogIn } from "lucide-react";
+import { Briefcase, Settings2, Loader2, ArrowRight, User, Lock, LogIn, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Firebase
+import { useFirestore } from "@/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 export default function Home() {
   const [stage, setStage] = useState<'splash' | 'role' | 'login'>('splash');
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  
   const router = useRouter();
+  const firestore = useFirestore();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -22,19 +33,63 @@ export default function Home() {
 
   const handleRoleSelect = (role: string) => {
     setSelectedRole(role);
+    setError("");
     setStage('login');
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!firestore) return;
+
     setLoading(true);
-    setTimeout(() => {
+    setError("");
+
+    try {
+      const usersRef = collection(firestore, "users");
+      const q = query(
+        usersRef, 
+        where("username", "==", username), 
+        where("password", "==", password),
+        where("role", "==", selectedRole)
+      );
+      
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        setError("خطأ في اسم المستخدم أو كلمة المرور لهذا المنصب");
+        setLoading(false);
+        return;
+      }
+
+      const userData = snapshot.docs[0].data();
+
+      if (userData.status === 'suspended') {
+        setError("عذراً، هذا الحساب معطل حالياً من قبل الإدارة");
+        setLoading(false);
+        return;
+      }
+
+      // حفظ الجلسة محلياً
+      localStorage.setItem('userSession', JSON.stringify({
+        id: snapshot.docs[0].id,
+        name: userData.name,
+        role: userData.role,
+        username: userData.username,
+        avatar: userData.role === 'manager' ? '/admin.png' : '/emploeed-1.png'
+      }));
+
+      // التوجيه حسب الدور
       if (selectedRole === 'manager') {
         router.push('/admin/dashboard');
       } else {
         router.push('/dashboard');
       }
-    }, 1500);
+    } catch (err) {
+      console.error("Login Error:", err);
+      setError("حدث خطأ أثناء الاتصال بالنظام، يرجى المحاولة لاحقاً");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (stage === 'splash') {
@@ -46,8 +101,8 @@ export default function Home() {
               <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" priority />
            </div>
         </div>
-        <h1 className="text-4xl font-black mb-2 tracking-tight">مستند</h1>
-        <p className="text-white/70 mb-8 font-bold">مستقبلك الرقمي يبدأ هنا</p>
+        <h1 className="text-4xl font-black mb-2 tracking-tight text-center">مستند</h1>
+        <p className="text-white/70 mb-8 font-bold text-center">مستقبلك الرقمي يبدأ هنا</p>
         <Loader2 className="w-8 h-8 animate-spin text-white/50" />
       </div>
     );
@@ -103,8 +158,15 @@ export default function Home() {
             <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
           </div>
           <h2 className="text-2xl font-black text-primary">تسجيل الدخول - {selectedRole === 'manager' ? 'الإدارة' : 'الأرشفة'}</h2>
-          <p className="text-muted-foreground mt-1 font-bold">أهلاً بك مرة أخرى في نظام الأرشفة</p>
+          <p className="text-muted-foreground mt-1 font-bold">أدخل بيانات الاعتماد للوصول للنظام</p>
         </div>
+
+        {error && (
+          <Alert variant="destructive" className="mb-6 rounded-xl bg-red-50 border-red-100 text-red-600 font-bold">
+            <AlertCircle className="w-4 h-4" />
+            <AlertDescription className="text-xs">{error}</AlertDescription>
+          </Alert>
+        )}
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
@@ -113,6 +175,8 @@ export default function Home() {
               <User className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input 
                 type="text" 
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full h-12 pr-10 pl-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all font-bold"
                 placeholder="اسم المستخدم الخاص بك"
                 required
@@ -125,6 +189,8 @@ export default function Home() {
               <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input 
                 type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full h-12 pr-10 pl-4 rounded-xl border border-border focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                 placeholder="••••••••"
                 required
@@ -136,7 +202,7 @@ export default function Home() {
             disabled={loading}
             className="w-full h-12 rounded-xl text-lg font-black gradient-blue shadow-lg gap-2 mt-4"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <LogIn className="w-5 h-5" />}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
             دخول النظام
           </Button>
         </form>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -22,10 +23,20 @@ export function Navbar() {
   const router = useRouter();
   const { isOpen, toggle } = useSidebarToggle();
   const [mounted, setMounted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
+    const session = localStorage.getItem('userSession');
+    if (session) {
+      setCurrentUser(JSON.parse(session));
+    }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('userSession');
+    router.push('/');
+  };
 
   if (!mounted) {
     return <header className="h-20 bg-white border-b w-full" />;
@@ -36,7 +47,7 @@ export function Navbar() {
       "h-20 bg-white/80 backdrop-blur-md border-b sticky top-0 z-30 flex items-center justify-between px-6 md:px-10 transition-all duration-300",
       isOpen ? "mr-0 md:mr-64" : "mr-0"
     )} dir="rtl">
-      {/* الجهة اليمنى - الكمبيوتر */}
+      {/* الجهة اليمنى */}
       <div className="flex items-center gap-4">
         <Button 
           variant="ghost" 
@@ -47,19 +58,10 @@ export function Navbar() {
           <PanelRight className={cn("w-6 h-6 transition-transform duration-300", !isOpen && "rotate-180")} />
         </Button>
 
-        {/* الشعار والاسم في الكمبيوتر (يظهر فقط عند إغلاق القائمة) */}
         <div className={cn(
-          "hidden md:flex items-center gap-3 animate-fade-in",
-          isOpen ? "md:opacity-0 pointer-events-none" : "opacity-100"
+          "flex items-center gap-3 animate-fade-in",
+          isOpen ? "md:hidden" : "flex"
         )}>
-          <div className="relative w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
-            <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
-          </div>
-          <h2 className="text-xl font-black text-primary">مستند</h2>
-        </div>
-
-        {/* الشعار والاسم في الموبايل (يظهر دائماً يميناً) */}
-        <div className="flex md:hidden items-center gap-3">
           <div className="relative w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-primary/10 overflow-hidden shadow-sm shrink-0">
             <Image src="/logo-mustand.png" alt="Logo" fill className="object-cover" />
           </div>
@@ -69,7 +71,6 @@ export function Navbar() {
 
       {/* الجهة اليسرى */}
       <div className="flex items-center gap-3">
-        {/* المنيو للموبايل - تظهر يساراً */}
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
@@ -95,14 +96,14 @@ export function Navbar() {
                         key={item.href} 
                         href={item.href}
                         className={cn(
-                          "flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all group",
+                          "flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all group text-right",
                           isActive 
                             ? "bg-white text-primary shadow-lg font-bold" 
                             : "hover:bg-white/10 text-white/70 hover:text-white"
                         )}
                       >
                         <Icon className={cn("w-5 h-5 transition-transform", !isActive && "group-hover:scale-110")} />
-                        <span className="font-bold">{item.label}</span>
+                        <span className="font-bold flex-1">{item.label}</span>
                         {isActive && <ChevronLeft className="w-4 h-4 mr-auto" />}
                       </Link>
                     );
@@ -112,7 +113,7 @@ export function Navbar() {
                 <div className="p-6 border-t border-white/10">
                   <Button 
                     variant="ghost" 
-                    onClick={() => router.push('/')}
+                    onClick={handleLogout}
                     className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10 rounded-xl px-2 h-9 mt-4"
                   >
                     <LogOut className="w-4 h-4 ml-2" />
@@ -125,9 +126,9 @@ export function Navbar() {
         </div>
 
         {/* البروفايل للكمبيوتر */}
-        <div className="hidden md:flex items-center gap-3 cursor-pointer group">
-          <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-primary transition-colors group shadow-sm">
-            <Image src="/emploeed-1.png" alt="Profile" fill className="object-cover group-hover:scale-110 transition-transform" />
+        <div onClick={handleLogout} className="hidden md:flex items-center gap-3 cursor-pointer group" title="تسجيل الخروج">
+          <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-primary/20 hover:border-destructive transition-colors group shadow-sm">
+            <Image src={currentUser?.avatar || "/emploeed-1.png"} alt="Profile" fill className="object-cover group-hover:scale-110 transition-transform" />
           </div>
         </div>
       </div>
