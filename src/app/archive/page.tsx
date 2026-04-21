@@ -96,7 +96,7 @@ export default function ArchivePage() {
 
       return matchesSearch && matchesYear && matchesDept && matchesLevel;
     });
-  }, [archives, searchTerm, selectedYear, selectedDept, setSelectedLevel]);
+  }, [archives, searchTerm, selectedYear, selectedDept, selectedLevel]);
 
   const handleDownload = async (item: any) => {
     if (!item.fileUrl) return;
@@ -147,7 +147,7 @@ export default function ArchivePage() {
 
         <div className="space-y-4 mb-10">
           <Card className="p-3 md:p-4 rounded-[2rem] shadow-xl border-none bg-white flex flex-col md:flex-row items-center gap-4">
-            <div className="flex-1 relative w-full">
+            <div className="flex-[3] relative w-full">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input 
                 type="text" 
@@ -160,7 +160,7 @@ export default function ArchivePage() {
             <Button 
               variant={showFilters ? "default" : "outline"} 
               onClick={() => setShowFilters(!showFilters)} 
-              className="h-12 md:h-14 w-full md:auto rounded-2xl px-6 border-2 font-black gap-2 text-sm"
+              className="h-12 md:h-14 w-full md:w-auto rounded-2xl px-8 border-2 font-black gap-2 text-sm"
             >
               {showFilters ? <X className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
               تصفية
