@@ -2,11 +2,11 @@
 "use client";
 
 /**
- * @fileOverview صفحة رفع وأرشفة الاختبارات مع تحسين تصفية المواد ومعالجة أخطاء OCR.
- * تم التحديث لضمان ظهور كافة المواد (اليدوية والمحقونة) عبر مطابقة مرنة للقسم والمستوى.
+ * @fileOverview صفحة رفع وأرشفة الاختبارات مع تحسين فائق لتصفية المواد.
+ * تم تحديث منطق الفلترة ليكون فائق المرونة لضمان ظهور المواد المحقونة.
  */
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
@@ -80,17 +80,18 @@ export default function UploadPage() {
 
   /**
    * تصفية المواد بناءً على القسم والمستوى المختارين.
-   * تم تحسين المنطق ليكون "فائق المرونة" لضمان ظهور المواد المحقونة.
+   * تم تحسين المنطق ليكون فائق المرونة لضمان ظهور المواد المحقونة.
    */
   const filteredSubjects = useMemo(() => {
     if (!formData.deptId || !formData.level) return [];
     
+    // البحث عن القسم الحالي للحصول على اسمه ورمزه
     const currentDept = (departments as any[]).find(d => d.id === formData.deptId);
     if (!currentDept) return [];
 
     const targetDeptId = currentDept.id.toLowerCase();
     const targetDeptCode = (currentDept.code || "").toLowerCase().trim();
-    const targetDeptNameAr = (currentDept.nameAr || "").toLowerCase().trim();
+    const targetDeptNameAr = (currentDept.nameAr || currentDept.name || "").toLowerCase().trim();
     const targetLevelStr = formData.level.toLowerCase().trim();
 
     return (allSubjects as any[]).filter(s => {
@@ -98,8 +99,7 @@ export default function UploadPage() {
       const subLevel = (s.level || "").toLowerCase().trim();
       const levelMatch = subLevel === targetLevelStr || 
                          subLevel.includes(targetLevelStr) || 
-                         targetLevelStr.includes(subLevel) ||
-                         (targetLevelStr.includes("الأول") && subLevel.includes("1"));
+                         targetLevelStr.includes(subLevel);
       
       if (!levelMatch) return false;
 
@@ -109,7 +109,7 @@ export default function UploadPage() {
 
       const isMatchById = sDeptId === targetDeptId;
       const isMatchByCode = targetDeptCode && (sDeptId === targetDeptCode || sDeptName.includes(targetDeptCode));
-      const isMatchByNameAr = targetDeptNameAr && (sDeptName === targetDeptNameAr || sDeptId === targetDeptNameAr);
+      const isMatchByNameAr = targetDeptNameAr && (sDeptName.includes(targetDeptNameAr) || targetDeptNameAr.includes(sDeptName));
 
       return isMatchById || isMatchByCode || isMatchByNameAr;
     });
@@ -152,6 +152,7 @@ export default function UploadPage() {
     setLoading(true);
     
     try {
+      // ضغط الصورة لسرعة الرفع والتحليل
       const { data: ocrData } = await compressImage(files[0], 0.3, 600); 
 
       const response = await fetch('/api/ai/extract', {
@@ -167,6 +168,8 @@ export default function UploadPage() {
 
       const result = await response.json();
       const cleanRegId = result.studentRegistrationId || '';
+      
+      // البحث عن الطالب في قاعدة البيانات لربط البيانات
       const student = await findStudentByRegId(cleanRegId);
       
       setExtractedData({ 
@@ -175,6 +178,7 @@ export default function UploadPage() {
         found: !!student
       });
 
+      // محاولة مطابقة المادة المستخرجة مع القائمة المفلترة
       if (result.subjectName) {
         const matchedSub = filteredSubjects.find((s: any) => 
           s.nameAr.includes(result.subjectName!) || result.subjectName!.includes(s.nameAr)
@@ -191,13 +195,13 @@ export default function UploadPage() {
 
       setStep(5);
     } catch (err: any) {
-      console.error("OCR Analysis Error:", err);
+      console.error("OCR Error:", err);
       toast({ 
         variant: "destructive", 
         title: "فشل التحليل الذكي", 
         description: err.message || "حدث خطأ غير متوقع أثناء المعالجة." 
       });
-      setStep(5);
+      setStep(5); // المتابعة للتعريف اليدوي كخيار بديل
     } finally {
       setLoading(false);
     }
