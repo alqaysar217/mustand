@@ -3,6 +3,7 @@
 
 /**
  * @fileOverview صفحة رفع وأرشفة الاختبارات مع تحسين تصفية المواد ومعالجة أخطاء OCR.
+ * تم التحديث لضمان ظهور كافة المواد (اليدوية والمحقونة) عبر مطابقة مرنة للقسم والمستوى.
  */
 
 import { useState, useMemo, useRef } from "react";
@@ -77,30 +78,43 @@ export default function UploadPage() {
   const { data: allSubjects = [] } = useCollection(subjectsQuery);
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
-  // تصفية المواد بناءً على القسم والمستوى المختارين مع منطق مطابقة مرن
+  /**
+   * تصفية المواد بناءً على القسم والمستوى المختارين.
+   * تم تحسين المنطق ليكون "شاملاً" (Inclusive) بحيث يظهر المواد المضافة يدوياً (عبر ID) 
+   * والمواد المحقونة (التي قد ترتبط بالاسم أو الرمز).
+   */
   const filteredSubjects = useMemo(() => {
     if (!formData.deptId || !formData.level) return [];
     
+    // جلب بيانات القسم المختار حالياً من القائمة
     const currentDept = (departments as any[]).find(d => d.id === formData.deptId);
     if (!currentDept) return [];
 
-    const targetDeptNameAr = (currentDept?.nameAr || "").toLowerCase().trim();
-    const targetDeptCode = (currentDept?.code || "").toLowerCase().trim();
+    const targetDeptId = currentDept.id.toLowerCase();
+    const targetDeptCode = (currentDept.code || "").toLowerCase().trim();
+    const targetDeptNameAr = (currentDept.nameAr || "").toLowerCase().trim();
+    const targetDeptNameEn = (currentDept.nameEn || "").toLowerCase().trim();
+    const targetLevelStr = formData.level.toLowerCase().trim();
 
     return (allSubjects as any[]).filter(s => {
-      // مطابقة المستوى أولاً
-      const levelMatch = s.level === formData.level;
+      // 1. مطابقة المستوى: ندعم المطابقة التامة أو الجزئية (مثلاً "المستوى الأول" تطابق "الأول")
+      const subLevel = (s.level || "").toLowerCase().trim();
+      const levelMatch = subLevel === targetLevelStr || 
+                         subLevel.includes(targetLevelStr) || 
+                         targetLevelStr.includes(subLevel);
+      
       if (!levelMatch) return false;
 
-      // مطابقة القسم بأكثر من طريقة (ID، الاسم، أو الرمز) لضمان الشمولية
-      const subDeptId = (s.departmentId || "").toLowerCase().trim();
-      const subDeptName = (s.departmentName || "").toLowerCase().trim();
+      // 2. مطابقة القسم: ندعم 4 طرق للمطابقة لضمان جلب كافة البيانات (اليدوية والمحقونة)
+      const sDeptId = (s.departmentId || "").toLowerCase().trim();
+      const sDeptName = (s.departmentName || "").toLowerCase().trim();
 
-      return (
-        subDeptId === formData.deptId.toLowerCase() || 
-        subDeptName === targetDeptNameAr || 
-        subDeptId === targetDeptCode
-      );
+      const isMatchById = sDeptId === targetDeptId;
+      const isMatchByCode = targetDeptCode && (sDeptId === targetDeptCode || sDeptName.includes(targetDeptCode));
+      const isMatchByNameAr = targetDeptNameAr && (sDeptName === targetDeptNameAr || sDeptId === targetDeptNameAr);
+      const isMatchByNameEn = targetDeptNameEn && (sDeptName === targetDeptNameEn || sDeptId === targetDeptNameEn);
+
+      return isMatchById || isMatchByCode || isMatchByNameAr || isMatchByNameEn;
     });
   }, [allSubjects, formData.deptId, formData.level, departments]);
 
@@ -141,7 +155,7 @@ export default function UploadPage() {
     setLoading(true);
     
     try {
-      // إرسال صورة مضغوطة للتحليل
+      // إرسال صورة مضغوطة للتحليل لضمان السرعة وتجاوز حدود الـ Payload
       const { data: ocrData } = await compressImage(files[0], 0.3, 600); 
 
       const response = await fetch('/api/ai/extract', {
@@ -150,15 +164,12 @@ export default function UploadPage() {
         body: JSON.stringify({ examImageDataUri: ocrData })
       });
 
-      const responseData = await response.json();
-
       if (!response.ok) {
-        console.error('--- [OCR FAILURE] ---', response.status, responseData);
-        const errorMsg = typeof responseData.error === 'string' ? responseData.error : 'خطأ غير معروف في خادم التحليل';
-        throw new Error(errorMsg);
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `فشل في استخراج البيانات (Status: ${response.status})`);
       }
 
-      const result = responseData;
+      const result = await response.json();
       const cleanRegId = result.studentRegistrationId || '';
       const student = await findStudentByRegId(cleanRegId);
       
@@ -168,9 +179,9 @@ export default function UploadPage() {
         found: !!student
       });
 
-      // محاولة مطابقة المادة المستخرجة مع القائمة المتاحة
+      // محاولة مطابقة المادة المستخرجة تلقائياً إذا كانت موجودة في القائمة المصفاة
       if (result.subjectName) {
-        const matchedSub = (allSubjects as any[]).find(s => 
+        const matchedSub = filteredSubjects.find((s: any) => 
           s.nameAr.includes(result.subjectName!) || result.subjectName!.includes(s.nameAr)
         );
         if (matchedSub) {
@@ -178,8 +189,6 @@ export default function UploadPage() {
             ...prev,
             subjectId: matchedSub.id,
             subjectName: matchedSub.nameAr,
-            deptId: matchedSub.departmentId,
-            level: matchedSub.level,
             term: matchedSub.term
           }));
         }
@@ -191,9 +200,9 @@ export default function UploadPage() {
       toast({ 
         variant: "destructive", 
         title: "فشل التحليل الذكي", 
-        description: err.message || "حدث خطأ أثناء التواصل مع الخادم." 
+        description: err.message || "حدث خطأ غير متوقع أثناء المعالجة." 
       });
-      setStep(5); // المتابعة يدوياً في حال الفشل
+      setStep(5); // المتابعة يدوياً حتى في حال فشل الذكاء الاصطناعي
     } finally {
       setLoading(false);
     }
@@ -201,7 +210,7 @@ export default function UploadPage() {
 
   const handleSaveToArchive = async () => {
     if (!firestore || !extractedData.id || !formData.subjectName || files.length === 0) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى تأكيد رقم القيد واختيار المادة." });
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التحقق من رقم القيد واختيار المادة الدراسية." });
       return;
     }
 
@@ -245,7 +254,7 @@ export default function UploadPage() {
       )} dir="rtl">
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-black text-primary mb-2">نظام الأرشفة الذكي</h1>
-          <p className="text-muted-foreground font-bold text-lg">أرشفة سريعة مع استخراج البيانات عبر Gemini AI</p>
+          <p className="text-muted-foreground font-bold text-lg">أرشفة سريعة مع استخراج البيانات بدعم Gemini AI</p>
         </div>
 
         <div className="max-w-md mx-auto mb-12">
@@ -287,7 +296,7 @@ export default function UploadPage() {
             <div className="space-y-10 animate-slide-up flex-1">
               <div className="flex items-center gap-4 border-b pb-6">
                 <div className="p-3 bg-primary/5 rounded-2xl text-primary"><Info className="w-7 h-7" /></div>
-                <div><h2 className="text-2xl font-black text-primary">تحديد السياق الأكاديمي</h2><p className="text-muted-foreground font-bold text-sm">اختر التخصص والمستوى لجلب المواد الدراسية الصحيحة</p></div>
+                <div><h2 className="text-2xl font-black text-primary">تحديد السياق الأكاديمي</h2><p className="text-muted-foreground font-bold text-sm">اختر التخصص والمستوى لجلب قائمة المواد المتاحة</p></div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
@@ -342,7 +351,7 @@ export default function UploadPage() {
               <div className="text-center space-y-4 mb-8">
                 <div className="p-4 bg-primary/5 rounded-full inline-block text-primary mb-2"><ImageIcon className="w-12 h-12" /></div>
                 <h2 className="text-3xl font-black text-primary">رفع ورقة الامتحان</h2>
-                <p className="text-muted-foreground font-bold text-sm">يرجى رفع صورة واضحة للجزء العلوي من ورقة الاختبار</p>
+                <p className="text-muted-foreground font-bold text-sm">يرجى رفع صورة واضحة للجزء العلوي من ورقة الاختبار (رقم القيد والاسم)</p>
               </div>
               
               <div 
@@ -354,7 +363,7 @@ export default function UploadPage() {
                 </div>
                 <div className="text-center">
                   <p className="text-xl font-black text-primary">اضغط هنا لاختيار الصورة</p>
-                  <p className="text-sm text-muted-foreground font-bold mt-2">يتم تحسين الحجم تلقائياً للأرشفة</p>
+                  <p className="text-sm text-muted-foreground font-bold mt-2">يتم تحسين الحجم تلقائياً لضمان استقرار الأرشفة</p>
                 </div>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
               </div>
@@ -364,7 +373,7 @@ export default function UploadPage() {
           {step === 3 && (
              <div className="animate-slide-up flex-1 space-y-10">
                <div className="flex items-center justify-between border-b pb-6">
-                  <div><h2 className="text-2xl font-black text-primary">معاينة الملف</h2><p className="text-muted-foreground font-bold text-sm">تأكد من وضوح البيانات قبل بدء المعالجة</p></div>
+                  <div><h2 className="text-2xl font-black text-primary">معاينة الملف</h2><p className="text-muted-foreground font-bold text-sm">تأكد من وضوح البيانات قبل بدء المعالجة الذكية</p></div>
                   <Button variant="ghost" onClick={() => { setFiles([]); setStep(2); }} className="text-destructive font-black gap-2"><Trash2 className="w-5 h-5" />مسح الصورة</Button>
                </div>
                <div className="flex flex-col md:flex-row gap-10 items-center justify-center">
@@ -400,7 +409,7 @@ export default function UploadPage() {
                   </div>
                   <div className="text-right flex-1">
                     <h2 className={cn("text-2xl font-black", extractedData.found ? "text-green-800" : "text-orange-800")}>{extractedData.found ? "تم التعرف على الطالب" : "تنبيه: الطالب غير مسجل"}</h2>
-                    <p className="text-base font-bold opacity-70">{extractedData.found ? `تمت مطابقة رقم القيد (${extractedData.id}) مع السجلات.` : "رقم القيد المستخرج لم يطابق أي سجل. يرجى المراجعة."}</p>
+                    <p className="text-base font-bold opacity-70">{extractedData.found ? `تمت مطابقة رقم القيد (${extractedData.id}) مع السجلات الرسمية.` : "رقم القيد المستخرج لم يطابق أي سجل. يرجى المراجعة يدوياً."}</p>
                   </div>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
