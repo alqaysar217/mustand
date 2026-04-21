@@ -132,17 +132,9 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground font-bold">
-              <input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
-              <span>تذكرني</span>
-            </label>
-            <button type="button" className="text-sm text-secondary font-bold hover:underline">نسيت كلمة المرور؟</button>
-          </div>
-
           <Button 
             disabled={loading}
-            className="w-full h-12 rounded-xl text-lg font-black gradient-blue shadow-lg gap-2"
+            className="w-full h-12 rounded-xl text-lg font-black gradient-blue shadow-lg gap-2 mt-4"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <LogIn className="w-5 h-5" />}
             دخول النظام
