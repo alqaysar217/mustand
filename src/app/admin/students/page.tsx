@@ -10,8 +10,6 @@ import {
   UserPlus, 
   Edit2, 
   Trash2,
-  CheckCircle2,
-  XCircle,
   Loader2,
   Fingerprint,
   User,
@@ -23,8 +21,7 @@ import {
   CheckCircle,
   School,
   Calendar,
-  X,
-  ChevronLeft
+  X
 } from "lucide-react";
 import {
   Table,
@@ -132,15 +129,6 @@ export default function AdminStudentsPage() {
         createdAt: serverTimestamp()
       });
 
-      await addDoc(collection(firestore, "logs"), {
-        user: "المدير العام",
-        role: "manager",
-        action: "إضافة طالب جديد",
-        target: `${newStudent.name} (${newStudent.regId})`,
-        type: 'update',
-        timestamp: serverTimestamp()
-      });
-
       setIsAddDialogOpen(false);
       setNewStudent({ name: "", regId: "", collegeId: "", departmentId: "", level: "المستوى الثاني", admissionType: "عام", academicYear: "" });
       toast({ title: "تم تسجيل الطالب بنجاح" });
@@ -174,16 +162,6 @@ export default function AdminStudentsPage() {
       };
 
       await updateDoc(docRef, data);
-
-      await addDoc(collection(firestore, "logs"), {
-        user: "المدير العام",
-        role: "manager",
-        action: "تحديث بيانات طالب",
-        target: `${editingStudent.name}`,
-        type: 'update',
-        timestamp: serverTimestamp()
-      });
-
       setEditingStudent(null);
       toast({ title: "تم تحديث بيانات الطالب بنجاح" });
     } catch (e) {
@@ -206,16 +184,6 @@ export default function AdminStudentsPage() {
         identifier: student.regId
       });
       await deleteDoc(doc(firestore, "students", id));
-
-      await addDoc(collection(firestore, "logs"), {
-        user: "المدير العام",
-        role: "manager",
-        action: "حذف طالب مؤقت",
-        target: `${student.name}`,
-        type: 'delete',
-        timestamp: serverTimestamp()
-      });
-
       toast({ title: "تم نقل الطالب لسلة المحذوفات" });
     } catch (error) {
       toast({ variant: "destructive", title: "فشل الحذف" });
@@ -668,3 +636,4 @@ export default function AdminStudentsPage() {
     </div>
   );
 }
+

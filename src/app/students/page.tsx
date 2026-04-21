@@ -24,7 +24,8 @@ import {
   CheckCircle,
   ShieldCheck,
   School,
-  Calendar
+  Calendar,
+  X
 } from "lucide-react";
 import {
   Table,
@@ -72,7 +73,12 @@ export default function StudentsManagementPage() {
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterCollege, setFilterCollege] = useState("all");
   const [filterDept, setFilterDept] = useState("all");
+  const [filterLevel, setFilterLevel] = useState("all");
+  const [filterYear, setFilterYear] = useState("all");
+  const [filterAdmissionType, setFilterAdmissionType] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
@@ -98,10 +104,15 @@ export default function StudentsManagementPage() {
     return (students as any[]).filter(student => {
       const matchesSearch = student.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            student.regId?.includes(searchTerm);
+      const matchesCollege = filterCollege === "all" || student.collegeId === filterCollege;
       const matchesDept = filterDept === "all" || student.departmentId === filterDept;
-      return matchesSearch && matchesDept;
+      const matchesLevel = filterLevel === "all" || student.level === filterLevel;
+      const matchesYear = filterYear === "all" || student.academicYear === filterYear;
+      const matchesAdmission = filterAdmissionType === "all" || student.admissionType === filterAdmissionType;
+      
+      return matchesSearch && matchesCollege && matchesDept && matchesLevel && matchesYear && matchesAdmission;
     });
-  }, [students, searchTerm, filterDept]);
+  }, [students, searchTerm, filterCollege, filterDept, filterLevel, filterYear, filterAdmissionType]);
 
   const handleAddStudent = async () => {
     if (!firestore || !newStudent.name || !newStudent.regId || !newStudent.collegeId || !newStudent.departmentId || !newStudent.academicYear) {
@@ -183,10 +194,13 @@ export default function StudentsManagementPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    return status === 'active' 
-      ? <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-lg gap-1 font-black px-2 py-0.5 text-[9px]"><CheckCircle2 className="w-3 h-3" /> نشط</Badge>
-      : <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none rounded-lg gap-1 font-black px-2 py-0.5 text-[9px]"><XCircle className="w-3 h-3" /> موقوف</Badge>;
+  const resetFilters = () => {
+    setFilterCollege("all");
+    setFilterDept("all");
+    setFilterLevel("all");
+    setFilterYear("all");
+    setFilterAdmissionType("all");
+    setSearchTerm("");
   };
 
   if (!mounted) return null;
@@ -336,32 +350,97 @@ export default function StudentsManagementPage() {
           </Dialog>
         </div>
 
-        <Card className="p-6 border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
-          <div className="flex flex-col md:flex-row gap-4 mb-8">
-            <div className="flex-[2] relative">
+        <div className="space-y-4 mb-8">
+          <Card className="p-3 md:p-4 rounded-[2rem] shadow-xl border-none bg-white flex flex-col md:flex-row items-center gap-4">
+            <div className="flex-[3] relative w-full">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input 
-                type="text"
-                placeholder="البحث بالاسم أو رقم القيد..."
-                className="w-full bg-muted/30 outline-none text-sm font-bold text-primary h-12 pr-12 pl-4 rounded-2xl border border-transparent focus:border-primary/20 transition-all text-right shadow-inner"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                type="text" 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)} 
+                placeholder="ابحث باسم الطالب أو رقم القيد..." 
+                className="w-full h-12 md:h-14 pr-12 pl-4 rounded-2xl border-none bg-muted/20 outline-none focus:ring-2 focus:ring-primary font-bold transition-all text-sm text-right" 
               />
             </div>
-            <div className="flex-1">
-               <Select value={filterDept} onValueChange={setFilterDept}>
-                 <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
-                   <Filter className="w-4 h-4 ml-2 opacity-50" />
-                   <SelectValue placeholder="كل التخصصات" />
-                 </SelectTrigger>
-                 <SelectContent className="rounded-xl font-bold" dir="rtl">
-                   <SelectItem value="all">جميع التخصصات</SelectItem>
-                   {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
-                 </SelectContent>
-               </Select>
-            </div>
-          </div>
+            <Button 
+              variant={showFilters ? "default" : "outline"} 
+              onClick={() => setShowFilters(!showFilters)} 
+              className="h-12 md:h-14 w-full md:w-auto rounded-2xl px-8 border-2 font-black gap-2 text-sm"
+            >
+              {showFilters ? <X className="w-5 h-5" /> : <Filter className="w-5 h-5" />}
+              تصفية النتائج
+            </Button>
+          </Card>
 
+          {showFilters && (
+            <Card className="p-6 md:p-8 rounded-[2rem] shadow-lg border-none bg-white animate-slide-up grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2 justify-start"><Calendar className="w-4 h-4 text-secondary" />السنة الدراسية</label>
+                <Select value={filterYear} onValueChange={setFilterYear}>
+                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="السنة" /></SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold" dir="rtl">
+                    <SelectItem value="all">كافة السنوات</SelectItem>
+                    {academicYears.map((y: any) => <SelectItem key={y.id} value={y.label}>{y.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2 justify-start"><School className="w-4 h-4 text-secondary" />الكلية</label>
+                <Select value={filterCollege} onValueChange={setFilterCollege}>
+                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="الكلية" /></SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold" dir="rtl">
+                    <SelectItem value="all">كافة الكليات</SelectItem>
+                    {colleges.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2 justify-start"><Building2 className="w-4 h-4 text-secondary" />التخصص</label>
+                <Select value={filterDept} onValueChange={setFilterDept}>
+                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="التخصص" /></SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold" dir="rtl">
+                    <SelectItem value="all">كافة التخصصات</SelectItem>
+                    {departments.filter((d: any) => filterCollege === "all" || d.collegeId === filterCollege).map((d: any) => (
+                      <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2 justify-start"><Layers className="w-4 h-4 text-secondary" />المستوى</label>
+                <Select value={filterLevel} onValueChange={setFilterLevel}>
+                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="المستوى" /></SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold" dir="rtl">
+                    <SelectItem value="all">كافة المستويات</SelectItem>
+                    <SelectItem value="المستوى الأول">الأول</SelectItem>
+                    <SelectItem value="المستوى الثاني">الثاني</SelectItem>
+                    <SelectItem value="المستوى الثالث">الثالث</SelectItem>
+                    <SelectItem value="المستوى الرابع">الرابع</SelectItem>
+                    <SelectItem value="المستوى الخامس">الخامس</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-primary mr-1 flex items-center gap-2 justify-start"><Banknote className="w-4 h-4 text-secondary" />نوع القبول</label>
+                <Select value={filterAdmissionType} onValueChange={setFilterAdmissionType}>
+                  <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold text-sm"><SelectValue placeholder="النوع" /></SelectTrigger>
+                  <SelectContent className="rounded-xl font-bold" dir="rtl">
+                    <SelectItem value="all">كافة الأنواع</SelectItem>
+                    <SelectItem value="عام">عام</SelectItem>
+                    <SelectItem value="موازي">موازي</SelectItem>
+                    <SelectItem value="نفقة خاصة">نفقة خاصة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="ghost" onClick={resetFilters} className="xl:col-span-5 text-muted-foreground font-bold hover:text-primary gap-2 h-10 mt-2">
+                <X className="w-4 h-4" />
+                إعادة ضبط كافة الفلاتر
+              </Button>
+            </Card>
+          )}
+        </div>
+
+        <Card className="p-6 border-none shadow-xl rounded-[2rem] bg-white overflow-hidden">
           <div className="rounded-2xl border overflow-hidden">
             <Table className="text-right">
               <TableHeader className="bg-muted/50">
@@ -369,7 +448,7 @@ export default function StudentsManagementPage() {
                   <TableHead className="text-right font-black text-primary py-5">الطالب / القيد</TableHead>
                   <TableHead className="text-right font-black text-primary">الكلية / التخصص</TableHead>
                   <TableHead className="text-right font-black text-primary">السنة / المستوى</TableHead>
-                  <TableHead className="text-right font-black text-primary">القبول / الحالة</TableHead>
+                  <TableHead className="text-right font-black text-primary">نظام القبول</TableHead>
                   <TableHead className="text-center font-black text-primary w-32">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
@@ -402,10 +481,7 @@ export default function StudentsManagementPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1.5 items-start">
-                        <Badge variant="outline" className="text-[9px] px-2 py-0 border-secondary/30 text-secondary font-black bg-secondary/5">{student.admissionType || 'عام'}</Badge>
-                        {getStatusBadge(student.status)}
-                      </div>
+                      <Badge variant="outline" className="text-[9px] px-2 py-0 border-secondary/30 text-secondary font-black bg-secondary/5">{student.admissionType || 'عام'}</Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-2">
@@ -569,3 +645,4 @@ export default function StudentsManagementPage() {
     </div>
   );
 }
+
