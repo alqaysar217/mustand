@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview نظام استخراج بيانات الامتحانات المطور.
- * يستخدم Gemini 1.5 Flash لاستخراج كافة البيانات الأكاديمية من ترويسة الورقة.
+ * تم تحسينه لاستقبال صور مصغرة (Thumbnails) لتجنب أخطاء Timeout و Payload Too Large.
  */
 
 import {ai} from '@/ai/genkit';
@@ -12,7 +12,7 @@ const ExtractExamDetailsInputSchema = z.object({
   examImageDataUri: z
     .string()
     .describe(
-      "A photo of an exam paper as a data URI (Base64)."
+      "A photo of an exam paper as a data URI (Base64). Optimized small version for OCR."
     ),
 });
 export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSchema>;
@@ -44,8 +44,8 @@ const extractExamDetailsPrompt = ai.definePrompt({
   prompt: `أنت خبير في تحليل الوثائق الأكاديمية العربية. 
 قم بتحليل ترويسة (Header) ورقة الامتحان المرفقة واستخرج البيانات التالية بدقة عالية في قالب JSON:
 
-1. رقم القيد (Registration ID): ابحث عنه تحت مسمى "رقم القيد" أو "رقم الجلوس".
-2. اسم الطالب (Student Name): الاسم الرباعي المكتوب في الأعلى.
+1. رقم القيد (Registration ID): ابحث عنه تحت مسمى "رقم القيد" أو "رقم الجلوس" وعادة ما يتكون من أرقام فقط.
+2. اسم الطالب (Student Name): الاسم الرباعي المكتوب بوضوح.
 3. اسم المادة (Subject Name): المادة المخصصة لهذا الامتحان.
 4. العام الجامعي (Academic Year): ابحث عن صيغة مثل 2023/2024.
 5. الفصل الدراسي (Semester): الفصل الأول أو الثاني أو التكميلي.
@@ -69,14 +69,16 @@ const extractExamDetailsFlow = ai.defineFlow(
       
       if (!output) throw new Error('AI_RETURNED_NO_DATA');
 
+      // تنظيف البيانات المستخرجة لضمان الجودة
       return {
         ...output,
         studentRegistrationId: output.studentRegistrationId?.replace(/\D/g, '') || '',
-        studentName: output.studentName?.trim() || ''
+        studentName: output.studentName?.trim() || '',
+        subjectName: output.subjectName?.trim() || ''
       };
     } catch (error: any) {
       console.error('OCR Flow Error:', error);
-      throw new Error('فشل التحليل الذكي للوثيقة');
+      throw new Error('فشل التحليل الذكي للوثيقة: ' + (error.message || 'Error'));
     }
   }
 );

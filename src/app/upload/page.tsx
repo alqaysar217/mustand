@@ -3,7 +3,7 @@
 
 /**
  * @fileOverview صفحة رفع وأرشفة الاختبارات المطورة.
- * تحقق شروط الضغط الفائق (< 800KB) والاستخراج الذكي والحفظ المباشر في Firestore بدون Storage.
+ * تم حل مشكلة Error 500 عبر تقليص حجم الحمولة المرسلة للـ AI (Thumbnail Processing).
  */
 
 import { useState, useMemo, useRef } from "react";
@@ -71,7 +71,6 @@ export default function UploadPage() {
   
   const firestore = useFirestore();
 
-  // جلب البيانات المرجعية للفلاتر
   const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
   const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
   const yearsQuery = useMemo(() => firestore ? collection(firestore, "academicYears") : null, [firestore]);
@@ -88,7 +87,6 @@ export default function UploadPage() {
     );
   }, [allSubjects, formData.deptId, formData.level]);
 
-  // 1. معالجة الرفع والضغط الفائق لـ Base64
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (fileList && fileList.length > 0) {
@@ -100,15 +98,15 @@ export default function UploadPage() {
       const reader = new FileReader();
       reader.onload = async (event) => {
         if (event.target?.result) {
-          // ضغط عدواني لضمان البقاء تحت 800KB (Constraint #1)
-          const { data, size } = await compressImage(event.target.result as string, 0.5, 900);
+          // ضغط نسخة الأرشفة (عالية الجودة ولكن تحت 800KB)
+          const { data, size } = await compressImage(event.target.result as string, 0.6, 1200);
           const sizeKB = size / 1024;
 
           if (sizeKB > 800) {
             toast({ 
               variant: "destructive", 
-              title: "حجم الملف كبير جداً", 
-              description: `الحجم الحالي (${sizeKB.toFixed(0)}KB) يتجاوز الحد المسموح للأرشفة بدون Storage (800KB).` 
+              title: "تنبيه: الحجم مرتفع", 
+              description: `الحجم الحالي (${sizeKB.toFixed(0)}KB) يتجاوز الحد المسموح. يرجى اختيار صورة أصغر.` 
             });
             setLoading(false);
             return;
@@ -132,15 +130,21 @@ export default function UploadPage() {
     return null;
   };
 
-  // 2. تحليل البيانات بالذكاء الاصطناعي (AI OCR/NLP)
   const handleOCR = async () => {
     if (files.length === 0 || !firestore) return;
-    setLoadingText("جاري استخراج البيانات بالذكاء الاصطناعي...");
+    
+    setLoadingText("جاري تحسين الصورة للتحليل الفوري...");
     setLoading(true);
+    
     try {
-      // استخدام Genkit Flow (أقوى بكثير من google_ml_kit للغة العربية)
-      const result = await extractExamDetails({ examImageDataUri: files[0] });
+      // استراتيجية "النسخة المصغرة": نرسل نسخة صغيرة جداً للذكاء الاصطناعي لتجنب Error 500
+      const { data: ocrData } = await compressImage(files[0], 0.3, 500); 
       
+      setLoadingText("جاري استخراج البيانات (Gemini AI)...");
+      const result = await extractExamDetails({ examImageDataUri: ocrData });
+      
+      if (!result) throw new Error("فشل استخراج البيانات");
+
       const cleanRegId = result.studentRegistrationId || '';
       const student = await findStudentByRegId(cleanRegId);
       
@@ -150,7 +154,6 @@ export default function UploadPage() {
         found: !!student
       });
 
-      // ملء السياق تلقائياً إذا وجدت المادة
       if (result.subjectName) {
         const matchedSub = (allSubjects as any[]).find(s => 
           s.nameAr.includes(result.subjectName!) || result.subjectName!.includes(s.nameAr)
@@ -161,7 +164,7 @@ export default function UploadPage() {
             subjectId: matchedSub.id,
             subjectName: matchedSub.nameAr,
             deptId: matchedSub.departmentId,
-            deptName: matchedSub.departmentName,
+            deptName: matchedSub.departmentName || matchedSub.departmentId,
             level: matchedSub.level,
             term: matchedSub.term,
             year: result.academicYear || prev.year
@@ -171,39 +174,34 @@ export default function UploadPage() {
 
       setStep(5);
     } catch (err: any) {
-      toast({ variant: "destructive", title: "تنبيه", description: "تعذر التحليل التلقائي، يرجى إكمال البيانات يدوياً." });
+      console.error("OCR Client Error:", err);
+      toast({ 
+        variant: "destructive", 
+        title: "خطأ في التحليل", 
+        description: "تعذر تحليل الوثيقة تلقائياً. يرجى إدخال البيانات يدوياً." 
+      });
       setStep(5);
     } finally {
       setLoading(false);
     }
   };
 
-  // 3. الحفظ المباشر في Firestore (Firestore Storage logic)
   const handleSaveToArchive = async () => {
     if (!firestore || !extractedData.id || !formData.subjectName || files.length === 0) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى اختيار المادة وتأكيد بيانات الطالب." });
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى اختيار المادة وتأكيد رقم القيد." });
       return;
     }
 
-    // التحقق النهائي من الحجم قبل الحفظ (Firestore Document limit is 1MB)
-    const finalSize = getBase64SizeKB(files[0]);
-    if (finalSize > 850) {
-      toast({ variant: "destructive", title: "خطأ في الحجم", description: "الملف لا يزال يتجاوز حد التخزين المباشر في Firestore." });
-      return;
-    }
-
-    setLoadingText("جاري الحفظ النهائي في السحابة...");
+    setLoadingText("جاري الحفظ المباشر في السحابة...");
     setLoading(true);
 
     try {
       const archiveData = {
-        // الحقول المطلوبة بالضبط
         student_id: extractedData.id,
         student_name: extractedData.name || "طالب غير معروف",
         subject_name: formData.subjectName,
-        file_data: files[0], // Base64 String
+        file_data: files[0],
         file_type: fileType,
-        // بيانات إضافية للتصنيف
         year: formData.year,
         term: formData.term,
         departmentId: formData.deptId,
@@ -213,14 +211,13 @@ export default function UploadPage() {
 
       await addDoc(collection(firestore, "archives"), archiveData);
 
-      toast({ title: "تمت الأرشفة بنجاح", description: "تم حفظ السجل مع صورة الـ Base64 في Firestore بنجاح." });
+      toast({ title: "تمت الأرشفة بنجاح", description: "تم حفظ الملف والبيانات المستخرجة بنجاح." });
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false });
       setStep(1);
 
     } catch (error: any) {
-      console.error("Save error:", error);
-      toast({ variant: "destructive", title: "فشل الحفظ", description: "تأكد من استقرار الإنترنت وحجم الملف." });
+      toast({ variant: "destructive", title: "فشل الحفظ النهائي", description: "تأكد من استقرار الاتصال بالإنترنت." });
     } finally {
       setLoading(false);
     }
@@ -236,15 +233,15 @@ export default function UploadPage() {
         isOpen ? "mr-0 md:mr-64" : "mr-0"
       )} dir="rtl">
         <div className="mb-10 text-center">
-          <h1 className="text-4xl font-black text-primary mb-2">الأرشفة السحابية المباشرة</h1>
-          <p className="text-muted-foreground font-bold text-lg">أرشفة الملفات في Firestore بدون Storage عبر ضغط Base64</p>
+          <h1 className="text-4xl font-black text-primary mb-2">نظام الأرشفة الذكي</h1>
+          <p className="text-muted-foreground font-bold text-lg">تحليل واستخراج البيانات محلياً مع التخزين السحابي المباشر</p>
         </div>
 
         <div className="max-w-md mx-auto mb-12">
           <Tabs value={mode} onValueChange={(v) => { setMode(v as any); setStep(1); }} className="w-full">
             <TabsList className="bg-white p-1 rounded-2xl h-14 shadow-lg border w-full">
-              <TabsTrigger value="ai" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'ai' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Cpu className="w-4 h-4" />أرشفة ذكية (AI)</TabsTrigger>
-              <TabsTrigger value="manual" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'manual' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Keyboard className="w-4 h-4" />أرشفة يدوية</TabsTrigger>
+              <TabsTrigger value="ai" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'ai' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Cpu className="w-4 h-4" />تحليل ذكي (Gemini)</TabsTrigger>
+              <TabsTrigger value="manual" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'manual' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Keyboard className="w-4 h-4" />إدخال يدوي</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -321,8 +318,8 @@ export default function UploadPage() {
             <div className="space-y-10 animate-slide-up flex-1 flex flex-col items-center justify-center">
               <div className="text-center space-y-4 mb-8">
                 <div className="p-4 bg-primary/5 rounded-full inline-block text-primary mb-2"><ImageIcon className="w-12 h-12" /></div>
-                <h2 className="text-3xl font-black text-primary">رفع الملف (صورة)</h2>
-                <p className="text-muted-foreground font-bold">سيتم تحويل الصورة لسلسلة نصية وحفظها في Firestore مباشرة</p>
+                <h2 className="text-3xl font-black text-primary">رفع ورقة الامتحان</h2>
+                <p className="text-muted-foreground font-bold text-sm">سيتم ضغط الصورة محلياً وتحويلها إلى Base64</p>
               </div>
               
               <div 
@@ -334,7 +331,7 @@ export default function UploadPage() {
                 </div>
                 <div className="text-center">
                   <p className="text-xl font-black text-primary">اضغط هنا لاختيار الصورة</p>
-                  <p className="text-sm text-muted-foreground font-bold mt-2">نوصي بصيغة JPG لأفضل ضغط (أقل من 800KB)</p>
+                  <p className="text-sm text-muted-foreground font-bold mt-2">يتم الضغط تلقائياً لضمان الحجم المثالي (تحت 800KB)</p>
                 </div>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
               </div>
@@ -344,18 +341,18 @@ export default function UploadPage() {
           {step === 3 && (
              <div className="animate-slide-up flex-1 space-y-10">
                <div className="flex items-center justify-between border-b pb-6">
-                  <div><h2 className="text-2xl font-black text-primary">معاينة الملف الموثق</h2><p className="text-muted-foreground font-bold text-sm">تأكيد الصورة المحولة لـ Base64 قبل التحليل</p></div>
+                  <div><h2 className="text-2xl font-black text-primary">معاينة الملف الموثق</h2><p className="text-muted-foreground font-bold text-sm">تأكيد الصورة قبل البدء بالتحليل واستخراج البيانات</p></div>
                   <Button variant="ghost" onClick={() => { setFiles([]); setStep(2); }} className="text-destructive font-black gap-2"><Trash2 className="w-5 h-5" />مسح الصورة</Button>
                </div>
                <div className="flex flex-col md:flex-row gap-10 items-center justify-center">
-                  <div className="w-full md:w-80 aspect-[3/4] relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
-                    <Image src={files[0]} alt="Preview" fill className="object-cover" />
+                  <div className="w-full md:w-80 aspect-[3/4] relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-muted/20">
+                    <Image src={files[0]} alt="Preview" fill className="object-contain" />
                   </div>
                   <div className="flex-1 max-w-md space-y-6 text-center md:text-right">
                     <div className="p-6 bg-muted/20 rounded-3xl border border-muted">
-                      <p className="font-bold text-primary mb-2">الحجم الحالي للـ Base64:</p>
-                      <p className="text-2xl font-black text-secondary">{getBase64SizeKB(files[0]).toFixed(0)} KB</p>
-                      <p className="text-[10px] text-muted-foreground mt-2">تم الضغط لضمان البقاء تحت 800KB (أمان Firestore)</p>
+                      <p className="font-bold text-primary mb-1 text-sm">حجم ملف الأرشفة:</p>
+                      <p className="text-3xl font-black text-secondary">{getBase64SizeKB(files[0]).toFixed(0)} KB</p>
+                      <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-wider">الحجم آمن للحفظ المباشر في Firestore</p>
                     </div>
                     {mode === 'ai' ? (
                        <Button onClick={handleOCR} className="w-full h-16 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-3">
