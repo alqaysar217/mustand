@@ -1,11 +1,13 @@
 'use server';
+
 /**
- * @fileOverview نظام استخراج بيانات الامتحانات الثوري (v2.0).
- * تم التخلص من كافة الروابط الصلبة والاعتماد على استراتيجية الـ Fallback الديناميكي.
+ * @fileOverview نظام تشخيص واستخراج بيانات الامتحانات (Diagnostic v3.0).
+ * مصمم لتتبع أخطاء الاتصال بالـ API وتجاوز مشاكل الـ Timeout و Regional Blocking.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const ExtractExamDetailsInputSchema = z.object({
   examImageDataUri: z.string(),
@@ -22,43 +24,6 @@ const ExtractExamDetailsOutputSchema = z.object({
 });
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
-const SYSTEM_INSTRUCTION = `
-<objective>
-  Analyze the provided exam paper header image and extract academic metadata.
-</objective>
-<constraints>
-  - RETURN ONLY A VALID JSON OBJECT.
-  - DO NOT INCLUDE ANY MARKDOWN CODE BLOCKS OR PREAMBLES.
-  - USE EMPTY STRINGS FOR MISSING FIELDS.
-  - CONCENTRATE ON ARABIC TEXT EXTRACTION ACCURACY.
-</constraints>
-<schema>
-  {
-    "studentRegistrationId": "string (numeric only)",
-    "studentName": "string",
-    "subjectName": "string",
-    "academicYear": "string (e.g. 2024/2025)",
-    "semester": "string",
-    "level": "string"
-  }
-</schema>
-`;
-
-/**
- * دالة تنظيف واستخراج الـ JSON من استجابة النموذج باستخدام Regex
- */
-function cleanAndParseJSON(rawText: string): any {
-  try {
-    // محاولة استخراج الجزء المحصور بين { } في حال أضاف النموذج أي نصوص
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    const targetText = jsonMatch ? jsonMatch[0] : rawText;
-    return JSON.parse(targetText.trim());
-  } catch (e) {
-    console.error('Failed to parse AI response as JSON:', rawText);
-    throw new Error('FORMAT_ERROR');
-  }
-}
-
 export async function extractExamDetails(input: ExtractExamDetailsInput): Promise<ExtractExamDetailsOutput> {
   return extractExamDetailsFlow(input);
 }
@@ -70,35 +35,78 @@ const extractExamDetailsFlow = ai.defineFlow(
     outputSchema: ExtractExamDetailsOutputSchema,
   },
   async (input) => {
-    // قائمة النماذج المراد تجربتها بالترتيب في حال الفشل
-    const modelsToTry = [
-      'googleai/gemini-1.5-flash',
-      'googleai/gemini-1.5-pro',
-      'googleai/gemini-2.0-flash-exp'
-    ];
+    const apiKey = process.env.GOOGLE_GENAI_API_KEY || '';
+    const maskedKey = apiKey.slice(0, 4) + '...' + apiKey.slice(-4);
+    
+    console.log('--- [START AI DIAGNOSTICS] ---');
+    console.log(`Step 1: Checking API Configuration...`);
+    console.log(`- API Key (Masked): ${maskedKey}`);
+    console.log(`- Payload Size: ${Math.round(input.examImageDataUri.length / 1024)} KB`);
 
+    // 1. التشخيص المبدئي: فحص الشبكة والمفتاح (Handshake)
+    try {
+      console.log('Step 2: Network Handshake (Pinging Google AI)...');
+      const ping = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
+      console.log(`- Network Status: ${ping.status} ${ping.statusText}`);
+      
+      if (!ping.ok) {
+        const errorDetails = await ping.json().catch(() => ({}));
+        console.error('Handshake Failed. Google Response:', JSON.stringify(errorDetails));
+        if (ping.status === 403) throw new Error('API_KEY_RESTRICTED_OR_REGIONAL_BLOCK');
+      }
+    } catch (e: any) {
+      console.warn('Step 2 Warning: Handshake check failed, continuing anyway...');
+    }
+
+    // 2. محاولة التحليل عبر النماذج بالترتيب (Flash -> Pro)
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro'];
     let lastError: any = null;
 
-    for (const modelId of modelsToTry) {
+    for (const modelName of modelsToTry) {
       try {
-        console.log(`Attempting extraction with model: ${modelId}`);
-        
-        const { text } = await ai.generate({
-          model: modelId,
-          system: SYSTEM_INSTRUCTION,
-          prompt: [
-            { text: "Extract details from this exam image:" },
-            { media: { url: input.examImageDataUri } }
-          ],
-          config: {
-            temperature: 0.1, // لضمان دقة واستقرار المخرجات
+        console.log(`Step 3: Handshaking with Model: ${modelName}...`);
+        const model = genAI.getGenerativeModel({ model: modelName });
+
+        // تجهيز البيانات
+        const base64Data = input.examImageDataUri.split(',')[1];
+        const mimeType = input.examImageDataUri.split(',')[0].split(':')[1].split(';')[0];
+
+        const prompt = `
+          Analyze this exam paper header. 
+          Return ONLY a JSON object (no markdown, no preamble) with: 
+          {
+            "studentRegistrationId": "string",
+            "studentName": "string",
+            "subjectName": "string",
+            "academicYear": "string",
+            "semester": "string",
+            "level": "string"
           }
-        });
+          Focus on Arabic text accuracy for student and subject names.
+        `;
 
-        if (!text) continue;
+        console.log(`Step 4: Sending Data to ${modelName}...`);
+        const result = await model.generateContent([
+          { text: prompt },
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType: mimeType
+            }
+          }
+        ]);
 
-        const parsed = cleanAndParseJSON(text);
-        
+        const response = await result.response;
+        const text = response.text();
+        console.log(`- Response received from ${modelName}.`);
+
+        // تنظيف وتحويل الـ JSON
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const cleanJson = jsonMatch ? jsonMatch[0] : text;
+        const parsed = JSON.parse(cleanJson);
+
+        console.log('--- [DIAGNOSTICS SUCCESS] ---');
         return {
           studentRegistrationId: parsed.studentRegistrationId?.toString().replace(/\D/g, '') || '',
           studentName: parsed.studentName?.trim() || '',
@@ -108,16 +116,17 @@ const extractExamDetailsFlow = ai.defineFlow(
           level: parsed.level?.trim() || ''
         };
 
-      } catch (error: any) {
-        console.warn(`Model ${modelId} failed:`, error.message);
-        lastError = error;
-        // الاستمرار في الحلقة لتجربة النموذج التالي
-        continue;
+      } catch (err: any) {
+        console.error(`- Error with model ${modelName}:`, err.message);
+        lastError = err;
+        continue; // تجربة النموذج التالي
       }
     }
 
-    // إذا وصلنا لهنا، فهذا يعني فشل كافة النماذج
-    console.error('All AI models failed to process the document:', lastError);
-    throw new Error('تعذر تحليل الوثيقة عبر كافة محركات الذكاء الاصطناعي. يرجى التأكد من جودة الصورة أو إدخال البيانات يدوياً.');
+    console.error('--- [DIAGNOSTICS CRITICAL FAILURE] ---');
+    console.error('Handshake failed on all models. Last Error:', lastError?.message);
+
+    // الرد النهائي في حال فشل كافة المحاولات
+    throw new Error(`تعذر الاتصال بخوادم الذكاء الاصطناعي. التشخيص: ${lastError?.message || 'مشكلة في الشبكة أو الـ API Key'}`);
   }
 );

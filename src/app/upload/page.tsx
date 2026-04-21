@@ -1,8 +1,7 @@
 "use client";
 
 /**
- * @fileOverview صفحة رفع وأرشفة الاختبارات المطورة.
- * تم إصلاح مشكلة تصفية المواد لضمان ظهورها بناءً على القسم والمستوى.
+ * @fileOverview صفحة رفع وأرشفة الاختبارات مع تحسين تصفية المواد ودعم التشخيص.
  */
 
 import { useState, useMemo, useRef } from "react";
@@ -79,14 +78,14 @@ export default function UploadPage() {
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
   /**
-   * منطق تصفية المواد المطور:
-   * يقوم بالمطابقة بناءً على المعرف، الاسم، أو الرمز لضمان المرونة.
+   * منطق تصفية المواد المطور والمستقر:
+   * يقوم بالمطابقة بناءً على المعرف، الاسم العربي، أو الرمز لضمان ظهور المواد حتى لو اختلفت طريقة التخزين.
    */
   const filteredSubjects = useMemo(() => {
     if (!formData.deptId || !formData.level) return [];
     
     const currentDept = (departments as any[]).find(d => d.id === formData.deptId);
-    const targetDeptName = (currentDept?.nameAr || currentDept?.name || "").toLowerCase();
+    const targetDeptNameAr = (currentDept?.nameAr || "").toLowerCase();
     const targetDeptCode = (currentDept?.code || "").toLowerCase();
 
     return (allSubjects as any[]).filter(s => {
@@ -94,12 +93,12 @@ export default function UploadPage() {
       const levelMatch = s.level === formData.level;
       if (!levelMatch) return false;
 
-      // مطابقة القسم (ID أو اسم أو رمز)
+      // مطابقة القسم (عبر الـ ID أو الاسم أو الرمز)
       const subDeptId = (s.departmentId || "").toLowerCase();
       const subDeptName = (s.departmentName || "").toLowerCase();
 
       return subDeptId === formData.deptId.toLowerCase() || 
-             subDeptName === targetDeptName || 
+             subDeptName === targetDeptNameAr || 
              subDeptId === targetDeptCode;
     });
   }, [allSubjects, formData.deptId, formData.level, departments]);
@@ -107,7 +106,7 @@ export default function UploadPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (fileList && fileList.length > 0) {
-      setLoadingText("جاري الضغط الفائق للملف...");
+      setLoadingText("جاري معالجة حجم الملف...");
       setLoading(true);
       
       const file = fileList[0];
@@ -115,17 +114,16 @@ export default function UploadPage() {
       const reader = new FileReader();
       reader.onload = async (event) => {
         if (event.target?.result) {
+          // ضغط الصورة لضمان استقرارها في Firestore
           const { data, size } = await compressImage(event.target.result as string, 0.6, 1200);
           const sizeKB = size / 1024;
 
           if (sizeKB > 800) {
             toast({ 
               variant: "destructive", 
-              title: "تنبيه: الحجم مرتفع", 
-              description: `الحجم الحالي (${sizeKB.toFixed(0)}KB) يتجاوز الحد المسموح. يرجى اختيار صورة أصغر.` 
+              title: "تنبيه: حجم ملف كبير", 
+              description: `حجم الصورة بعد الضغط (${sizeKB.toFixed(0)}KB) قريب من الحد الأقصى.` 
             });
-            setLoading(false);
-            return;
           }
 
           setFiles([data]);
@@ -153,11 +151,11 @@ export default function UploadPage() {
     setLoading(true);
     
     try {
-      // إرسال نسخة مصغرة للذكاء الاصطناعي لتوفير الباندويث ومنع الـ 500 error
-      const { data: ocrData } = await compressImage(files[0], 0.3, 500); 
+      // إرسال نسخة مصغرة للذكاء الاصطناعي لتجنب الـ Timeout
+      const { data: ocrData } = await compressImage(files[0], 0.3, 600); 
       const result = await extractExamDetails({ examImageDataUri: ocrData });
       
-      if (!result) throw new Error("فشل استخراج البيانات");
+      if (!result) throw new Error("لم يتم تلقي بيانات من المحرك");
 
       const cleanRegId = result.studentRegistrationId || '';
       const student = await findStudentByRegId(cleanRegId);
@@ -168,6 +166,7 @@ export default function UploadPage() {
         found: !!student
       });
 
+      // محاولة مطابقة المادة المستخرجة مع القائمة الحالية
       if (result.subjectName) {
         const matchedSub = (allSubjects as any[]).find(s => 
           s.nameAr.includes(result.subjectName!) || result.subjectName!.includes(s.nameAr)
@@ -178,21 +177,19 @@ export default function UploadPage() {
             subjectId: matchedSub.id,
             subjectName: matchedSub.nameAr,
             deptId: matchedSub.departmentId,
-            deptName: matchedSub.departmentName || matchedSub.departmentId,
             level: matchedSub.level,
-            term: matchedSub.term,
-            year: result.academicYear || prev.year
+            term: matchedSub.term
           }));
         }
       }
 
       setStep(5);
     } catch (err: any) {
-      console.error("OCR Client Error:", err);
+      console.error("OCR hand-shake error:", err);
       toast({ 
         variant: "destructive", 
-        title: "خطأ في التحليل", 
-        description: "تعذر تحليل الوثيقة تلقائياً. يرجى إدخال البيانات يدوياً." 
+        title: "فشل التحليل الذكي", 
+        description: err.message || "يرجى إكمال البيانات يدوياً." 
       });
       setStep(5);
     } finally {
@@ -202,15 +199,15 @@ export default function UploadPage() {
 
   const handleSaveToArchive = async () => {
     if (!firestore || !extractedData.id || !formData.subjectName || files.length === 0) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى اختيار المادة وتأكيد رقم القيد." });
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى تأكيد رقم القيد واختيار المادة." });
       return;
     }
 
-    setLoadingText("جاري الحفظ المباشر في السحابة...");
+    setLoadingText("جاري الأرشفة في Firestore...");
     setLoading(true);
 
     try {
-      const archiveData = {
+      await addDoc(collection(firestore, "archives"), {
         student_id: extractedData.id,
         student_name: extractedData.name || "طالب غير معروف",
         subject_name: formData.subjectName,
@@ -221,17 +218,15 @@ export default function UploadPage() {
         departmentId: formData.deptId,
         level: formData.level,
         uploadedAt: serverTimestamp()
-      };
+      });
 
-      await addDoc(collection(firestore, "archives"), archiveData);
-
-      toast({ title: "تمت الأرشفة بنجاح", description: "تم حفظ الملف والبيانات المستخرجة بنجاح." });
+      toast({ title: "تمت الأرشفة بنجاح" });
       setFiles([]);
       setExtractedData({ id: '', name: '', found: false });
       setStep(1);
 
     } catch (error: any) {
-      toast({ variant: "destructive", title: "فشل الحفظ النهائي" });
+      toast({ variant: "destructive", title: "خطأ في الحفظ السحابي" });
     } finally {
       setLoading(false);
     }
@@ -248,14 +243,14 @@ export default function UploadPage() {
       )} dir="rtl">
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-black text-primary mb-2">نظام الأرشفة الذكي</h1>
-          <p className="text-muted-foreground font-bold text-lg">تحليل واستخراج البيانات مع تخزين سحابي فوري</p>
+          <p className="text-muted-foreground font-bold text-lg">تحليل واستخراج البيانات عبر الـ Handshake المباشر</p>
         </div>
 
         <div className="max-w-md mx-auto mb-12">
           <Tabs value={mode} onValueChange={(v) => { setMode(v as any); setStep(1); }} className="w-full">
             <TabsList className="bg-white p-1 rounded-2xl h-14 shadow-lg border w-full">
-              <TabsTrigger value="ai" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'ai' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Cpu className="w-4 h-4" />تحليل ذكي (Gemini)</TabsTrigger>
-              <TabsTrigger value="manual" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'manual' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Keyboard className="w-4 h-4" />إدخال يدوي</TabsTrigger>
+              <TabsTrigger value="ai" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'ai' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Cpu className="w-4 h-4" />تحليل ذكي (Handshake)</TabsTrigger>
+              <TabsTrigger value="manual" className={cn("flex-1 rounded-xl font-black transition-all gap-2", mode === 'manual' ? "gradient-blue text-white shadow-md" : "text-muted-foreground")}><Keyboard className="w-4 h-4" />أرشفة يدوية</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -280,9 +275,10 @@ export default function UploadPage() {
 
         <Card className="p-8 md:p-12 border-none shadow-2xl rounded-[40px] bg-white min-h-[500px] flex flex-col relative overflow-hidden">
           {loading && (
-            <div className="absolute inset-0 bg-white/90 backdrop-blur-xl z-50 flex flex-col items-center justify-center gap-6 animate-fade-in">
+            <div className="absolute inset-0 bg-white/90 backdrop-blur-xl z-50 flex flex-col items-center justify-center gap-6 animate-fade-in text-center p-8">
               <Loader2 className="w-20 h-20 animate-spin text-primary" />
               <p className="font-black text-2xl text-primary">{loadingText}</p>
+              <p className="text-sm text-muted-foreground font-bold">يرجى الانتظار، النظام يقوم بطلب المصافحة مع خوادم الذكاء الاصطناعي...</p>
             </div>
           )}
 
@@ -290,7 +286,7 @@ export default function UploadPage() {
             <div className="space-y-10 animate-slide-up flex-1">
               <div className="flex items-center gap-4 border-b pb-6">
                 <div className="p-3 bg-primary/5 rounded-2xl text-primary"><Info className="w-7 h-7" /></div>
-                <div><h2 className="text-2xl font-black text-primary">تحديد سياق الاختبار</h2><p className="text-muted-foreground text-sm font-bold">يرجى تحديد التفاصيل الأكاديمية قبل رفع الملف</p></div>
+                <div><h2 className="text-2xl font-black text-primary">تحديد السياق الأكاديمي</h2><p className="text-muted-foreground text-sm font-bold">سيتم عرض المواد بناءً على القسم والمستوى المختارين</p></div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
@@ -304,14 +300,14 @@ export default function UploadPage() {
                   <Label className="text-sm font-black text-primary flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />القسم العلمي</Label>
                   <select value={formData.deptId} onChange={(e) => {
                     const sel = departments.find((d: any) => d.id === e.target.value) as any;
-                    setFormData({...formData, deptId: e.target.value, deptName: sel?.nameAr || sel?.name || "", collegeName: sel?.collegeName || "", subjectId: '', subjectName: ''});
+                    setFormData({...formData, deptId: e.target.value, deptName: sel?.nameAr || sel?.name || "", subjectId: '', subjectName: ''});
                   }} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right">
                     <option value="">اختر القسم...</option>
                     {departments.map((d: any) => <option key={d.id} value={d.id}>{d.nameAr || d.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-sm font-black text-primary flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى</Label>
+                  <Label className="text-sm font-black text-primary flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label>
                   <select value={formData.level} onChange={(e) => setFormData({...formData, level: e.target.value, subjectId: '', subjectName: ''})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right">
                     <option value="">اختر المستوى...</option>
                     <option value="المستوى الأول">المستوى الأول</option><option value="المستوى الثاني">المستوى الثاني</option><option value="المستوى الثالث">المستوى الثالث</option><option value="المستوى الرابع">المستوى الرابع</option>
@@ -328,7 +324,7 @@ export default function UploadPage() {
                     }} 
                     className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right disabled:opacity-50"
                   >
-                    <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "لا توجد مواد لهذا القسم والمستوى"}</option>
+                    <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "لا توجد مواد تطابق هذا القسم والمستوى"}</option>
                     {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
                   </select>
                 </div>
@@ -341,7 +337,7 @@ export default function UploadPage() {
               <div className="text-center space-y-4 mb-8">
                 <div className="p-4 bg-primary/5 rounded-full inline-block text-primary mb-2"><ImageIcon className="w-12 h-12" /></div>
                 <h2 className="text-3xl font-black text-primary">رفع ورقة الامتحان</h2>
-                <p className="text-muted-foreground font-bold text-sm">سيتم ضغط الصورة محلياً وتحويلها إلى Base64</p>
+                <p className="text-muted-foreground font-bold text-sm">يرجى رفع صورة واضحة للجزء العلوي من ورقة الاختبار</p>
               </div>
               
               <div 
@@ -353,7 +349,7 @@ export default function UploadPage() {
                 </div>
                 <div className="text-center">
                   <p className="text-xl font-black text-primary">اضغط هنا لاختيار الصورة</p>
-                  <p className="text-sm text-muted-foreground font-bold mt-2">يتم الضغط تلقائياً لضمان الحجم المثالي (تحت 800KB)</p>
+                  <p className="text-sm text-muted-foreground font-bold mt-2">يتم تحسين الحجم تلقائياً للأرشفة السحابية</p>
                 </div>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
               </div>
@@ -363,7 +359,7 @@ export default function UploadPage() {
           {step === 3 && (
              <div className="animate-slide-up flex-1 space-y-10">
                <div className="flex items-center justify-between border-b pb-6">
-                  <div><h2 className="text-2xl font-black text-primary">معاينة الملف الموثق</h2><p className="text-muted-foreground font-bold text-sm">تأكيد الصورة قبل البدء بالتحليل واستخراج البيانات</p></div>
+                  <div><h2 className="text-2xl font-black text-primary">معاينة الملف الموثق</h2><p className="text-muted-foreground font-bold text-sm">تأكد من وضوح البيانات قبل بدء المعالجة الذكية</p></div>
                   <Button variant="ghost" onClick={() => { setFiles([]); setStep(2); }} className="text-destructive font-black gap-2"><Trash2 className="w-5 h-5" />مسح الصورة</Button>
                </div>
                <div className="flex flex-col md:flex-row gap-10 items-center justify-center">
@@ -372,9 +368,8 @@ export default function UploadPage() {
                   </div>
                   <div className="flex-1 max-w-md space-y-6 text-center md:text-right">
                     <div className="p-6 bg-muted/20 rounded-3xl border border-muted">
-                      <p className="font-bold text-primary mb-1 text-sm">حجم ملف الأرشفة:</p>
+                      <p className="font-bold text-primary mb-1 text-sm">حجم الملف المستقر:</p>
                       <p className="text-3xl font-black text-secondary">{getBase64SizeKB(files[0]).toFixed(0)} KB</p>
-                      <p className="text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-wider">الحجم آمن للحفظ المباشر في Firestore</p>
                     </div>
                     {mode === 'ai' ? (
                        <Button onClick={handleOCR} className="w-full h-16 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-3">
@@ -399,13 +394,13 @@ export default function UploadPage() {
                     {extractedData.found ? <UserCheck className="w-9 h-9" /> : <AlertCircle className="w-9 h-9" />}
                   </div>
                   <div className="text-right flex-1">
-                    <h2 className={cn("text-2xl font-black", extractedData.found ? "text-green-800" : "text-orange-800")}>{extractedData.found ? "تم التعرف على الطالب بنجاح" : "تنبيه: الطالب غير مسجل"}</h2>
+                    <h2 className={cn("text-2xl font-black", extractedData.found ? "text-green-800" : "text-orange-800")}>{extractedData.found ? "تم التعرف على الطالب" : "تنبيه: الطالب غير مسجل"}</h2>
                     <p className="text-base font-bold opacity-70">{extractedData.found ? `تمت مطابقة رقم القيد (${extractedData.id}) مع السجلات المركزية.` : "رقم القيد المستخرج لم يطابق أي سجل حالي. يرجى إكمال البيانات."}</p>
                   </div>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><Fingerprint className="w-4 h-4 text-secondary" />رقم القيد (student_id)</Label>
+                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><Fingerprint className="w-4 h-4 text-secondary" />رقم القيد الجامعي</Label>
                     <input 
                       value={extractedData.id} 
                       onChange={(e) => setExtractedData({...extractedData, id: e.target.value.replace(/\D/g, '')})} 
@@ -414,7 +409,7 @@ export default function UploadPage() {
                     />
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><User className="w-4 h-4 text-secondary" />اسم الطالب (student_name)</Label>
+                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><User className="w-4 h-4 text-secondary" />اسم الطالب الكامل</Label>
                     <input 
                       value={extractedData.name} 
                       readOnly={extractedData.found}
@@ -424,7 +419,7 @@ export default function UploadPage() {
                     />
                   </div>
                   <div className="space-y-3 md:col-span-2">
-                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />تأكيد المادة الدراسية</Label>
+                    <Label className="text-sm font-black text-primary mr-1 flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />تأكيد المادة المؤرشفة</Label>
                     <select 
                       value={formData.subjectId} 
                       onChange={(e) => { 
