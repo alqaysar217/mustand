@@ -91,16 +91,16 @@ export default function ReportsPage() {
     });
   }, [students, filterCollege, filterDept, filterLevel]);
 
-  // Archive distribution for chart - FIXED mapping logic
+  // Archive distribution for chart - SMART MAPPING
   const archiveChartData = useMemo(() => {
     if (archives.length === 0) return [];
     
     const counts: Record<string, number> = {};
     archives.forEach((item: any) => {
-      // محاولة الحصول على اسم التخصص من الوثيقة، أو البحث عنه في قائمة التخصصات المركزية
       let deptName = item.departmentName;
       
-      if (!deptName || deptName === "غير محدد") {
+      // منطق ذكي: إذا كان الاسم مفقوداً، ابحث عنه في قاعدة التخصصات المركزية
+      if (!deptName || deptName === "غير محدد" || deptName === "unknown") {
         const dept = (departments as any[]).find(d => d.id === item.departmentId);
         deptName = dept?.name || "تخصص عام";
       }
@@ -111,7 +111,7 @@ export default function ReportsPage() {
     return Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
+      .slice(0, 8); // زيادة عدد التخصصات المعروضة لملء المساحة العريضة
   }, [archives, departments]);
 
   const formatNumber = (num: number) => {
@@ -161,6 +161,7 @@ export default function ReportsPage() {
     }
   };
 
+  // تأخير الرندر لمنع أخطاء الـ Hydration
   if (!mounted) return null;
 
   return (
@@ -266,10 +267,10 @@ export default function ReportsPage() {
               <div className="space-y-3 text-right">
                 <Label className="font-black text-sm text-primary pr-1">الكلية</Label>
                 <select 
+                  dir="rtl"
                   value={filterCollege} 
                   onChange={(e) => setFilterCollege(e.target.value)} 
                   className="w-full h-12 px-4 rounded-xl border-2 border-muted bg-muted/20 font-bold outline-none focus:border-primary text-right"
-                  dir="rtl"
                 >
                   <option value="all">كل الكليات</option>
                   {colleges.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -278,10 +279,10 @@ export default function ReportsPage() {
               <div className="space-y-3 text-right">
                 <Label className="font-black text-sm text-primary pr-1">التخصص</Label>
                 <select 
+                  dir="rtl"
                   value={filterDept} 
                   onChange={(e) => setFilterDept(e.target.value)} 
                   className="w-full h-12 px-4 rounded-xl border-2 border-muted bg-muted/20 font-bold outline-none focus:border-primary text-right"
-                  dir="rtl"
                 >
                   <option value="all">كل التخصصات</option>
                   {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -290,10 +291,10 @@ export default function ReportsPage() {
               <div className="space-y-3 text-right">
                 <Label className="font-black text-sm text-primary pr-1">المستوى</Label>
                 <select 
+                  dir="rtl"
                   value={filterLevel} 
                   onChange={(e) => setFilterLevel(e.target.value)} 
                   className="w-full h-12 px-4 rounded-xl border-2 border-muted bg-muted/20 font-bold outline-none focus:border-primary text-right"
-                  dir="rtl"
                 >
                   <option value="all">كل المستويات</option>
                   <option value="المستوى الأول">المستوى الأول</option>
@@ -396,59 +397,73 @@ export default function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="archives" className="space-y-8 animate-slide-up">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
-              <h3 className="text-lg font-black text-primary mb-8 flex items-center gap-2 justify-start">
-                <TrendingUp className="w-6 h-6 text-secondary" />
-                توزيع الأرشفة حسب التخصصات الحقيقية
-              </h3>
-              <div className="h-[350px] w-full">
-                {archiveChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={archiveChartData} margin={{ right: 30, left: 10, top: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                      <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#0B3C5D', fontWeight: 'bold'}} />
-                      <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontWeight: 'bold'}} orientation="right" />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', direction: 'rtl', textAlign: 'right' }}
-                        cursor={{ fill: '#f4f7fb', radius: 10 }}
-                      />
-                      <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                        {archiveChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-muted-foreground font-bold opacity-30">لا توجد سجلات أرشفة لتمثيلها</div>
-                )}
-              </div>
-            </Card>
+          {/* الرسم البياني في الصف العلوي بشكل مستقل */}
+          <Card className="p-8 border-none shadow-xl rounded-3xl bg-white">
+            <h3 className="text-lg font-black text-primary mb-8 flex items-center gap-2 justify-start">
+              <TrendingUp className="w-6 h-6 text-secondary" />
+              توزيع الاختبارات المؤرشفة حسب التخصص
+            </h3>
+            <div className="h-[400px] w-full">
+              {archiveChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={archiveChartData} margin={{ right: 30, left: 10, top: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis 
+                      dataKey="name" 
+                      fontSize={11} 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fill: '#0B3C5D', fontWeight: '900'}} 
+                    />
+                    <YAxis 
+                      fontSize={11} 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fill: '#94a3b8', fontWeight: 'bold'}} 
+                      orientation="right" 
+                    />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', direction: 'rtl', textAlign: 'right' }}
+                      cursor={{ fill: '#f4f7fb', radius: 10 }}
+                    />
+                    <Bar dataKey="value" radius={[12, 12, 0, 0]} barSize={50}>
+                      {archiveChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground font-bold opacity-30">لا توجد سجلات أرشفة لتمثيلها</div>
+              )}
+            </div>
+          </Card>
 
-            <Card className="p-8 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
-               <div className="flex items-center justify-between mb-8 border-b pb-4">
-                  <h3 className="text-xl font-black text-primary">آخر عمليات الأرشفة</h3>
-               </div>
-               <div className="space-y-4">
-                 {archives.length > 0 ? archives.slice(0, 6).map((a: any, i: number) => (
-                   <div key={i} className="flex items-center gap-4 p-4 bg-muted/20 rounded-2xl border border-transparent hover:border-primary/10 transition-all">
-                      <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm text-secondary"><FileText className="w-6 h-6" /></div>
-                      <div className="flex-1 text-right">
-                        <p className="text-sm font-black text-primary">{a.studentName}</p>
-                        <p className="text-[10px] font-bold text-muted-foreground">{a.subjectName} • {a.year}</p>
-                      </div>
-                      <Badge variant="outline" className="text-[9px] font-black border-secondary text-secondary px-3 py-1 rounded-lg">{a.term}</Badge>
-                   </div>
-                 )) : (
-                   <p className="text-center py-20 text-muted-foreground font-bold opacity-30">لا توجد عمليات مؤرشفة</p>
-                 )}
-               </div>
-            </Card>
-          </div>
+          {/* أحدث العمليات في الصف السفلي بشكل مستقل */}
+          <Card className="p-8 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
+             <div className="flex items-center justify-between mb-8 border-b pb-4">
+                <h3 className="text-xl font-black text-primary">أحدث عمليات الأرشفة المنفذة</h3>
+                <Button variant="ghost" className="text-secondary font-bold" onClick={() => setActiveTab('students')}>مشاهدة الكل</Button>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+               {archives.length > 0 ? archives.slice(0, 6).map((a: any, i: number) => (
+                 <div key={i} className="flex items-center gap-4 p-5 bg-muted/20 rounded-2xl border border-transparent hover:border-primary/10 transition-all group">
+                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm text-secondary group-hover:bg-secondary group-hover:text-white transition-colors">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 text-right overflow-hidden">
+                      <p className="text-sm font-black text-primary truncate">{a.studentName}</p>
+                      <p className="text-[10px] font-bold text-muted-foreground truncate">{a.subjectName} • {a.year}</p>
+                    </div>
+                    <Badge variant="outline" className="text-[9px] font-black border-secondary text-secondary px-3 py-1 rounded-lg shrink-0">{a.term}</Badge>
+                 </div>
+               )) : (
+                 <div className="col-span-full py-20 text-center text-muted-foreground font-bold opacity-30">لا توجد عمليات مؤرشفة</div>
+               )}
+             </div>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
   );
 }
-
