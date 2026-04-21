@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, LayoutDashboard, UploadCloud, Archive, LogOut, PanelRight, ChevronLeft, GraduationCap } from "lucide-react";
+import { Menu, LayoutDashboard, UploadCloud, Archive, LogOut, PanelRight, ChevronLeft, GraduationCap, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Link from "next/link";
@@ -24,6 +23,7 @@ export function Navbar() {
   const { isOpen, toggle } = useSidebarToggle();
   const [mounted, setMounted] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -31,7 +31,24 @@ export function Navbar() {
     if (session) {
       setCurrentUser(JSON.parse(session));
     }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('userSession');
@@ -71,6 +88,18 @@ export function Navbar() {
 
       {/* الجهة اليسرى */}
       <div className="flex items-center gap-3">
+        {/* زر التثبيت لسطح المكتب والجوال */}
+        {deferredPrompt && (
+          <Button 
+            onClick={handleInstallClick}
+            variant="outline" 
+            className="hidden sm:flex items-center gap-2 rounded-xl h-10 border-primary/20 text-primary font-bold hover:bg-primary/5"
+          >
+            <Download className="w-4 h-4" />
+            تثبيت التطبيق
+          </Button>
+        )}
+
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
@@ -108,6 +137,15 @@ export function Navbar() {
                       </Link>
                     );
                   })}
+                  {deferredPrompt && (
+                    <button 
+                      onClick={handleInstallClick}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all text-right mt-4"
+                    >
+                      <Download className="w-5 h-5" />
+                      <span className="text-sm font-bold">تثبيت التطبيق على الجهاز</span>
+                    </button>
+                  )}
                 </nav>
 
                 <div className="p-6 border-t border-white/10">

@@ -1,12 +1,7 @@
 {
-  "name": "مستند - نظام الأرشفة الذكي",
   "short_name": "مستند",
-  "description": "نظام إدارة وأرشفة الاختبارات الذكي مع استخراج البيانات تلقائياً",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0B3C5D",
-  "theme_color": "#0B3C5D",
-  "orientation": "portrait",
+  "name": "مستند - نظام الأرشفة الذكي",
+  "description": "نظام احترافي لإدارة وأرشفة الاختبارات والبيانات الأكاديمية باستخدام الذكاء الاصطناعي",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -21,11 +16,19 @@
       "purpose": "any"
     }
   ],
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B3C5D",
+  "theme_color": "#0B3C5D",
+  "categories": ["education", "productivity"],
   "screenshots": [
     {
       "src": "/splash-mustand.png",
       "sizes": "1080x1920",
-      "type": "image/png"
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "واجهة الجوال"
     }
   ]
 }

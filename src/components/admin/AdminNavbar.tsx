@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2, PanelRight, School } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, Users, GraduationCap, BookOpen, Archive, BarChart3, History, Trash2, ChevronLeft, Building2, PanelRight, School, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import {
@@ -38,6 +37,7 @@ export function AdminNavbar() {
   const { isOpen, toggle } = useSidebarToggle();
   const [mounted, setMounted] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -45,7 +45,24 @@ export function AdminNavbar() {
     if (session) {
       setCurrentUser(JSON.parse(session));
     }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('userSession');
@@ -88,6 +105,18 @@ export function AdminNavbar() {
 
       {/* جهة اليسار */}
       <div className="flex items-center gap-4">
+        {/* زر التثبيت لسطح المكتب للمدير */}
+        {deferredPrompt && (
+          <Button 
+            onClick={handleInstallClick}
+            variant="outline" 
+            className="hidden sm:flex items-center gap-2 rounded-xl h-10 border-primary/20 text-primary font-bold hover:bg-primary/5"
+          >
+            <Download className="w-4 h-4" />
+            تثبيت النظام
+          </Button>
+        )}
+
         {/* أيقونة القائمة للموبايل */}
         <div className="md:hidden">
           <Sheet>
@@ -126,6 +155,15 @@ export function AdminNavbar() {
                       </Link>
                     );
                   })}
+                  {deferredPrompt && (
+                    <button 
+                      onClick={handleInstallClick}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all text-right mt-4"
+                    >
+                      <Download className="w-5 h-5" />
+                      <span className="text-sm font-bold">تثبيت التطبيق على الجهاز</span>
+                    </button>
+                  )}
                 </nav>
 
                 <div className="p-6 border-t border-white/10">

@@ -1,19 +1,17 @@
-/**
- * Mustand Service Worker
- * يساعد في جعل التطبيق يعمل كـ PWA ويدعم وضع الأوفلاين البسيط
- */
 const CACHE_NAME = 'mustand-v1';
-const ASSETS = [
+const ASSETS_TO_CACHE = [
   '/',
-  '/globals.css',
+  '/manifest.json',
   '/logo-mustand.png',
-  '/manifest.json'
+  '/icon-192.png',
+  '/icon-512.png',
+  '/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
 });
