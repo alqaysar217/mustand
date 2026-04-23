@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -33,7 +32,9 @@ import {
   ArrowRight,
   UserPlus,
   ArrowLeft,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ShieldCheck,
+  Activity
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -61,6 +62,7 @@ export default function UploadPage() {
   const [step, setStep] = useState(1); 
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("جاري المعالجة...");
+  const [apiTesting, setApiTesting] = useState(false);
   
   const [context, setContext] = useState({ 
     year: '', 
@@ -110,6 +112,23 @@ export default function UploadPage() {
       }
     } catch (e) {}
     return { isVerified: false };
+  };
+
+  const checkApiConnection = async () => {
+    setApiTesting(true);
+    try {
+      const res = await fetch('/api/ai/test');
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "اختبار المفتاح", description: data.message });
+      } else {
+        toast({ variant: "destructive", title: "خطأ في المفتاح", description: data.message });
+      }
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "فشل الاختبار", description: "تعذر الاتصال بالخادم الداخلي." });
+    } finally {
+      setApiTesting(false);
+    }
   };
 
   const identifyStudent = async (regId: string) => {
@@ -163,21 +182,6 @@ export default function UploadPage() {
     });
   };
 
-  const runLocalOCR = async (imageData: string): Promise<{studentRegistrationId: string, studentName: string}> => {
-    try {
-      const result = await Tesseract.recognize(imageData, 'ara+eng');
-      const text = result.data.text;
-      // محاولة استخراج رقم القيد (بحث عن 7 أرقام متتالية كمثال)
-      const regMatch = text.match(/\d{5,10}/);
-      return {
-        studentRegistrationId: regMatch ? regMatch[0] : "لم يستخرج",
-        studentName: "قراءة محلية"
-      };
-    } catch (e) {
-      return { studentRegistrationId: "فشل", studentName: "فشل" };
-    }
-  };
-
   const startAIAnalysis = async () => {
     if (files.length === 0) return;
     setLoading(true);
@@ -193,27 +197,23 @@ export default function UploadPage() {
           body: JSON.stringify({ examImageDataUri: file })
         });
         
-        let extractedData;
+        const responseData = await response.json();
+        
         if (!response.ok) {
-          // محاولة الـ OCR المحلي إذا فشل Gemini
-          console.warn("Gemini Failed, switching to local OCR...");
-          extractedData = await runLocalOCR(file);
-        } else {
-          extractedData = await response.json();
+          throw new Error(responseData.error || `خطأ (${response.status})`);
         }
         
-        const dbCheck = await verifyStudentInDB(extractedData.studentRegistrationId || "");
+        const dbCheck = await verifyStudentInDB(responseData.studentRegistrationId || "");
         
         tempResults.push({
-          studentRegistrationId: extractedData.studentRegistrationId || "---",
-          studentName: dbCheck.isVerified ? dbCheck.dbStudentName! : (extractedData.studentName || "غير مسجل"),
-          dbDepartmentName: dbCheck.dbDepartmentName || "غير مسجل",
+          studentRegistrationId: responseData.studentRegistrationId || "---",
+          studentName: dbCheck.isVerified ? dbCheck.dbStudentName! : (responseData.studentName || "طالب غير مسجل"),
+          dbDepartmentName: dbCheck.dbDepartmentName || (dbCheck.isVerified ? "" : "غير مسجل"),
           fileData: file,
           isVerified: dbCheck.isVerified,
           status: dbCheck.isVerified ? 'success' : 'failed'
         });
       } catch (e: any) {
-        // حالة الفشل التام تظهر النتيجة باللون الأحمر للتعديل
         tempResults.push({ 
           studentName: "فشل التحليل", 
           studentRegistrationId: "يرجى الكتابة", 
@@ -221,6 +221,7 @@ export default function UploadPage() {
           isVerified: false,
           status: 'failed'
         });
+        toast({ variant: "destructive", title: "خطأ في ورقة", description: e.message });
       }
     }
     
@@ -240,7 +241,7 @@ export default function UploadPage() {
         newResults[index].studentName = check.dbStudentName!;
         newResults[index].dbDepartmentName = check.dbDepartmentName;
       } else {
-        newResults[index].studentName = "غير مسجل";
+        newResults[index].studentName = "طالب غير مسجل";
         newResults[index].dbDepartmentName = "غير مسجل";
       }
     }
@@ -250,7 +251,7 @@ export default function UploadPage() {
   const saveManualArchive = async () => {
     if (!firestore || !manualStudent) return;
     setLoading(true);
-    setLoadingText("جاري الحفظ في الأرشيف...");
+    setLoadingText("جاري الحفظ...");
     try {
       await addDoc(collection(firestore, "archives"), {
         student_id: manualStudent.regId,
@@ -269,7 +270,6 @@ export default function UploadPage() {
         uploadedAt: serverTimestamp()
       });
 
-      // تسجيل في سجل العمليات
       await addDoc(collection(firestore, "logs"), {
         user: "موظف الأرشفة",
         role: "employee",
@@ -279,8 +279,7 @@ export default function UploadPage() {
         timestamp: serverTimestamp()
       });
 
-      toast({ title: "تمت الأرشفة بنجاح" });
-      // العودة لخطوة رفع الملف مع بقاء بيانات المادة ثابتة
+      toast({ title: "تمت الأرشفة" });
       setFiles([]);
       setManualId("");
       setManualStudent(null);
@@ -294,8 +293,7 @@ export default function UploadPage() {
   const saveBatchAI = async () => {
     if (!firestore || aiResults.length === 0) return;
     setLoading(true);
-    setLoadingText("جاري أرشفة الدفعة بالكامل...");
-    
+    setLoadingText("أرشفة الدفعة...");
     try {
       for (const res of aiResults) {
         await addDoc(collection(firestore, "archives"), {
@@ -315,22 +313,12 @@ export default function UploadPage() {
           uploadedAt: serverTimestamp()
         });
       }
-
-      await addDoc(collection(firestore, "logs"), {
-        user: "موظف الأرشفة",
-        role: "employee",
-        action: "أرشفة ذكية جماعية",
-        target: `أرشفة ${aiResults.length} ورقة - مادة ${context.subjectName}`,
-        type: 'archive',
-        timestamp: serverTimestamp()
-      });
-
-      toast({ title: "اكتملت الأرشفة الذكية بنجاح" });
+      toast({ title: "اكتملت الأرشفة الذكية" });
       setFiles([]);
       setAiResults([]);
       setStep(1); 
     } catch (e) {
-      toast({ variant: "destructive", title: "خطأ أثناء حفظ البيانات" });
+      toast({ variant: "destructive", title: "خطأ أثناء الحفظ" });
     } finally {
       setLoading(false);
     }
@@ -349,25 +337,37 @@ export default function UploadPage() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
           <div>
             <h1 className="text-4xl font-black text-primary mb-2">أرشفة الأوراق</h1>
-            <p className="text-muted-foreground font-bold text-lg">نظام الكشف الذكي المدعوم بـ Gemini & Tesseract</p>
+            <p className="text-muted-foreground font-bold text-lg">نظام الكشف الذكي المدعوم بـ Gemini</p>
           </div>
-          
-          <Tabs value={activeMode} onValueChange={(v: any) => { setActiveMode(v); setStep(1); setFiles([]); setAiResults([]); setManualId(""); setManualStudent(null); }} className="w-full md:w-[400px]">
-            <TabsList className="grid w-full grid-cols-2 h-16 bg-white/80 backdrop-blur-md rounded-2xl p-1.5 shadow-xl border overflow-hidden">
-              <TabsTrigger 
-                value="manual" 
-                className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
-              >
-                <Keyboard className="w-4 h-4 ml-2" /> يدوي
-              </TabsTrigger>
-              <TabsTrigger 
-                value="ai" 
-                className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
-              >
-                <Cpu className="w-4 h-4 ml-2" /> ذكي
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+
+          <div className="flex flex-col items-end gap-3 w-full md:w-auto">
+            <Button 
+              onClick={checkApiConnection} 
+              disabled={apiTesting}
+              variant="outline"
+              className="rounded-xl h-10 border-2 gap-2 font-black text-xs hover:bg-primary/5"
+            >
+              {apiTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4 text-blue-500" />}
+              فحص اتصال الذكاء الاصطناعي
+            </Button>
+            
+            <Tabs value={activeMode} onValueChange={(v: any) => { setActiveMode(v); setStep(1); setFiles([]); setAiResults([]); setManualId(""); setManualStudent(null); }} className="w-full md:w-[400px]">
+              <TabsList className="grid w-full grid-cols-2 h-16 bg-white rounded-2xl p-1.5 shadow-xl border overflow-hidden">
+                <TabsTrigger 
+                  value="manual" 
+                  className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+                >
+                  <Keyboard className="w-4 h-4 ml-2" /> يدوي
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="ai" 
+                  className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+                >
+                  <Cpu className="w-4 h-4 ml-2" /> ذكي
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
 
         {loading && (
@@ -386,7 +386,7 @@ export default function UploadPage() {
               <div className="p-4 bg-primary/5 rounded-2xl text-primary"><Layers className="w-8 h-8" /></div>
               <div className="text-right">
                 <h2 className="text-2xl font-black text-primary">تحديد تفاصيل الأرشفة</h2>
-                <p className="text-sm font-bold text-muted-foreground">اختر المادة والمستوى لربط الأوراق بها تلقائياً</p>
+                <p className="text-sm font-bold text-muted-foreground">اختر المادة لربط الأوراق بها</p>
               </div>
             </div>
 
@@ -435,15 +435,15 @@ export default function UploadPage() {
                   }} 
                   className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black text-primary outline-none focus:border-primary text-right appearance-none"
                 >
-                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة من القائمة..." : "يرجى تحديد القسم والمستوى والترم أولاً"}</option>
+                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "يرجى تحديد القسم والمستوى"}</option>
                   {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
                 </select>
               </div>
             </div>
 
             <div className="flex justify-center">
-              <Button onClick={() => setStep(2)} disabled={!context.subjectId} className="h-16 px-20 rounded-[2rem] text-xl font-black gradient-blue shadow-2xl gap-4 text-white hover:scale-105 transition-transform active:scale-95">
-                بدء رفع الأوراق <ArrowLeft className="w-6 h-6" />
+              <Button onClick={() => setStep(2)} disabled={!context.subjectId} className="h-16 px-20 rounded-[2rem] text-xl font-black gradient-blue shadow-2xl gap-4 text-white hover:scale-105 transition-transform">
+                متابعة الرفع <ArrowLeft className="w-6 h-6" />
               </Button>
             </div>
           </Card>
@@ -451,27 +451,24 @@ export default function UploadPage() {
 
         {step === 2 && (
           <div className="space-y-10 animate-slide-up">
-            {/* Header: Selected Subject Info */}
             <div className="bg-white p-6 rounded-[2rem] shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 border-r-8 border-secondary">
                <div className="flex items-center gap-5">
                   <div className="w-14 h-14 bg-secondary/5 rounded-2xl flex items-center justify-center text-secondary border border-secondary/10 shadow-inner"><BookOpen className="w-8 h-8" /></div>
                   <div className="text-right">
                     <h3 className="text-2xl font-black text-primary">{context.subjectName}</h3>
-                    <p className="text-sm font-bold text-muted-foreground">{context.deptName} • {context.level} • {context.term}</p>
+                    <p className="text-sm font-bold text-muted-foreground">{context.deptName} • {context.level}</p>
                   </div>
                </div>
                <Button variant="outline" onClick={() => setStep(1)} className="rounded-xl font-black h-12 px-6 border-2 hover:bg-muted/50 gap-2"><RefreshCcw className="w-4 h-4" /> تغيير المادة</Button>
             </div>
 
-            {/* Row 1: Images Grid (Upper Section) */}
             <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white text-center relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-full h-1 gradient-blue opacity-20"></div>
                <div className="flex items-center justify-between mb-8 px-2">
                   <h2 className="text-2xl font-black text-primary flex items-center gap-3">
                     <ImageIcon className="w-7 h-7 text-secondary" />
-                    {files.length > 0 ? `صور الأوراق (${files.length})` : 'ارفع صور الاختبارات'}
+                    {files.length > 0 ? `صور الأوراق (${files.length})` : 'رفع صور الاختبارات'}
                   </h2>
-                  <Button variant="ghost" onClick={() => fileInputRef.current?.click()} className="text-secondary font-black hover:bg-secondary/5 h-12 px-4 rounded-xl border-2 border-transparent hover:border-secondary/10">
+                  <Button variant="ghost" onClick={() => fileInputRef.current?.click()} className="text-secondary font-black hover:bg-secondary/5 h-12 px-4 rounded-xl border-2 border-transparent">
                     <UserPlus className="w-5 h-5 ml-2" /> إضافة المزيد
                   </Button>
                </div>
@@ -497,48 +494,47 @@ export default function UploadPage() {
                 ) : (
                   <div className="animate-fade-in flex flex-col items-center gap-3">
                     <div className="w-20 h-20 bg-primary/10 rounded-[1.5rem] flex items-center justify-center text-primary mb-2 shadow-lg"><FileUp className="w-10 h-10" /></div>
-                    <p className="text-xl font-black text-primary">اسحب الصور أو اضغط هنا للبدء</p>
-                    <p className="text-sm font-bold text-muted-foreground">يدعم صور (JPG, PNG) بحجم يصل لـ 5MB للورقة</p>
+                    <p className="text-xl font-black text-primary">اضغط لرفع الصور</p>
+                    <p className="text-sm font-bold text-muted-foreground">يدعم صور (JPG, PNG)</p>
                   </div>
                 )}
               </div>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple={activeMode === 'ai'} onChange={handleFileUpload} />
               
               {files.length > 0 && activeMode === 'ai' && aiResults.length === 0 && (
-                <Button onClick={startAIAnalysis} className="mt-10 rounded-2xl font-black gradient-blue shadow-2xl px-16 text-white h-16 text-xl hover:scale-105 active:scale-95 transition-all">
-                  <Scan className="w-7 h-7 ml-3 animate-pulse" /> بدء استخراج البيانات ذكياً
+                <Button onClick={startAIAnalysis} className="mt-10 rounded-2xl font-black gradient-blue shadow-2xl px-16 text-white h-16 text-xl hover:scale-105 transition-all">
+                  <Scan className="w-7 h-7 ml-3 animate-pulse" /> بدء التحليل الذكي
                 </Button>
               )}
             </Card>
 
-            {/* Row 2: Verification / Results (Bottom Section) */}
             {activeMode === 'manual' ? (
               files.length > 0 && (
                 <Card className="p-10 border-none shadow-2xl rounded-[3rem] bg-white animate-slide-up border-b-8 border-green-500">
                   <div className="flex items-center gap-3 mb-8">
                      <div className="p-3 bg-green-50 rounded-xl text-green-600"><CheckCircle2 className="w-6 h-6" /></div>
-                     <h2 className="text-2xl font-black text-primary">التحقق اليدوي من الطالب</h2>
+                     <h2 className="text-2xl font-black text-primary">التحقق من بيانات الطالب</h2>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                      <div className="space-y-3">
-                        <Label className="font-black text-primary flex items-center gap-2 pr-1"><Fingerprint className="w-4 h-4 text-secondary" />رقم القيد الجامعي</Label>
+                        <Label className="font-black text-primary flex items-center gap-2 pr-1"><Fingerprint className="w-4 h-4 text-secondary" />رقم القيد</Label>
                         <div className="flex gap-2">
-                          <Input value={manualId} onChange={(e) => setManualId(e.target.value)} placeholder="أدخل الرقم..." className="h-14 rounded-xl border-2 font-black text-2xl text-center shadow-inner" onKeyDown={(e) => e.key === 'Enter' && identifyStudent(manualId)} />
-                          <Button onClick={() => identifyStudent(manualId)} className="h-14 w-14 rounded-xl gradient-blue text-white shrink-0 shadow-lg hover:scale-105 active:scale-95 transition-transform"><Search className="w-6 h-6" /></Button>
+                          <Input value={manualId} onChange={(e) => setManualId(e.target.value)} placeholder="رقم القيد..." className="h-14 rounded-xl border-2 font-black text-2xl text-center shadow-inner" onKeyDown={(e) => e.key === 'Enter' && identifyStudent(manualId)} />
+                          <Button onClick={() => identifyStudent(manualId)} className="h-14 w-14 rounded-xl gradient-blue text-white shrink-0 shadow-lg transition-transform"><Search className="w-6 h-6" /></Button>
                         </div>
                      </div>
                      <div className="space-y-3">
-                        <Label className="font-black text-primary pr-1">اسم الطالب (تلقائي)</Label>
-                        <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg transition-colors", manualStudent ? "text-primary bg-primary/5" : "text-muted-foreground")}>{manualStudent?.name || "---"}</div>
+                        <Label className="font-black text-primary pr-1">الاسم</Label>
+                        <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg", manualStudent ? "text-primary bg-primary/5" : "text-muted-foreground")}>{manualStudent?.name || "---"}</div>
                      </div>
                      <div className="space-y-3">
-                        <Label className="font-black text-primary pr-1">التخصص (تلقائي)</Label>
-                        <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg transition-colors", manualStudent ? "text-secondary bg-secondary/5" : "text-muted-foreground")}>{manualStudent?.deptName || "---"}</div>
+                        <Label className="font-black text-primary pr-1">التخصص</Label>
+                        <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg", manualStudent ? "text-secondary bg-secondary/5" : "text-muted-foreground")}>{manualStudent?.deptName || "---"}</div>
                      </div>
                   </div>
                   {manualStudent && (
-                    <Button onClick={saveManualArchive} className="w-full mt-12 h-20 rounded-[2rem] text-2xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-4 transition-transform hover:scale-[1.01] active:scale-95">
-                      <CheckCircle2 className="w-8 h-8" /> إتمام الأرشفة وحفظ الورقة
+                    <Button onClick={saveManualArchive} className="w-full mt-12 h-20 rounded-[2rem] text-2xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-4">
+                      <CheckCircle2 className="w-8 h-8" /> حفظ وإتمام الأرشفة
                     </Button>
                   )}
                 </Card>
@@ -547,27 +543,27 @@ export default function UploadPage() {
               aiResults.length > 0 && (
                 <div className="space-y-8 animate-slide-up pb-10">
                   <div className="flex flex-col md:flex-row items-center justify-between bg-white px-10 py-6 rounded-[2.5rem] shadow-xl border-r-8 border-green-500 gap-4">
-                     <div className="text-right w-full md:w-auto">
+                     <div className="text-right">
                         <h2 className="text-2xl font-black text-primary flex items-center gap-3">
                           <CheckCircle className="w-7 h-7 text-green-500" /> 
                           مراجعة واعتماد النتائج
                         </h2>
-                        <p className="text-muted-foreground font-bold text-sm">تأكد من مطابقة الأوراق الحمراء قبل الحفظ النهائي</p>
+                        <p className="text-muted-foreground font-bold text-sm">تأكد من مطابقة الأوراق (الخلفية الحمراء تعني غير مسجل)</p>
                      </div>
-                     <div className="bg-primary/5 text-primary px-10 py-3 rounded-2xl font-black border-2 border-primary/10 shadow-sm text-lg">{aiResults.length} ورقة جاهزة</div>
+                     <div className="bg-primary/5 text-primary px-10 py-3 rounded-2xl font-black border-2 border-primary/10 shadow-sm text-lg">{aiResults.length} ورقة مستخرجة</div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-6">
                      {aiResults.map((res, i) => (
                        <Card key={i} className={cn(
-                         "p-6 rounded-[2.5rem] border-4 flex flex-col md:flex-row items-center gap-8 bg-white shadow-xl relative overflow-hidden transition-all duration-300", 
-                         res.isVerified ? "border-green-400" : "border-red-400 bg-red-50/20 shadow-red-100"
+                         "p-6 rounded-[2.5rem] border-4 flex flex-col md:flex-row items-center gap-8 bg-white shadow-xl relative overflow-hidden transition-all", 
+                         res.isVerified ? "border-green-400" : "border-red-400 bg-red-50/20"
                         )}>
                           <div className={cn("absolute top-0 right-0 w-4 h-full", res.isVerified ? "bg-green-400" : "bg-red-400")} />
                           <div className="w-32 h-44 relative rounded-2xl overflow-hidden shadow-2xl shrink-0 border-4 border-white"><Image src={res.fileData} alt="Extracted" fill className="object-cover" /></div>
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-8 w-full text-right">
                              <div className="space-y-2">
-                                <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-1"><User className="w-3 h-3" /> الاسم المستخرج</Label>
+                                <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-1"><User className="w-3 h-3" /> الاسم</Label>
                                 <div className={cn("h-14 rounded-xl px-4 flex items-center font-black text-lg truncate shadow-sm", res.isVerified ? "bg-green-50 text-primary border border-green-200" : "bg-red-50 text-red-700 border border-red-200")}>{res.studentName}</div>
                              </div>
                              <div className="space-y-2">
@@ -575,7 +571,7 @@ export default function UploadPage() {
                                 <Input 
                                   value={res.studentRegistrationId} 
                                   onChange={(e) => handleUpdateAiResult(i, 'studentRegistrationId', e.target.value)} 
-                                  className={cn("h-14 rounded-xl font-black text-2xl text-center shadow-inner", !res.isVerified ? "border-red-500 bg-white ring-red-100 ring-4" : "border-green-500 bg-white ring-green-100 ring-4")} 
+                                  className={cn("h-14 rounded-xl font-black text-2xl text-center", !res.isVerified ? "border-red-500 ring-red-100 ring-4" : "border-green-500 ring-green-100 ring-4")} 
                                 />
                              </div>
                              <div className="space-y-2">
@@ -588,7 +584,7 @@ export default function UploadPage() {
                                 ) : (
                                   <div className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-base flex items-center gap-3 shadow-lg shadow-red-600/30"><XCircle className="w-6 h-6" /> غير مسجل</div>
                                 )}
-                                <Button size="icon" variant="ghost" onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive hover:bg-red-100 rounded-2xl h-14 w-14 border-2 border-transparent hover:border-red-200 transition-all"><Trash2 className="w-6 h-6" /></Button>
+                                <Button size="icon" variant="ghost" onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive hover:bg-red-100 rounded-2xl h-14 w-14 transition-all"><Trash2 className="w-6 h-6" /></Button>
                              </div>
                           </div>
                        </Card>
@@ -596,10 +592,10 @@ export default function UploadPage() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-6 pt-10">
-                     <Button onClick={saveBatchAI} className="flex-1 h-24 rounded-[2.5rem] text-3xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-6 transition-all hover:scale-[1.01] active:scale-95 border-b-8 border-green-800">
-                       <CloudUpload className="w-10 h-10" /> اعتماد وحفظ الأرشيف
+                     <Button onClick={saveBatchAI} className="flex-1 h-24 rounded-[2.5rem] text-3xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-6 transition-all border-b-8 border-green-800">
+                       <CloudUpload className="w-10 h-10" /> اعتماد وحفظ الدفعة
                      </Button>
-                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-24 px-16 rounded-[2.5rem] font-black border-4 text-2xl hover:bg-white hover:border-primary transition-all">إلغاء الكل</Button>
+                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-24 px-16 rounded-[2.5rem] font-black border-4 text-2xl hover:bg-white transition-all">إلغاء الكل</Button>
                   </div>
                 </div>
               )
@@ -610,4 +606,3 @@ export default function UploadPage() {
     </div>
   );
 }
-
