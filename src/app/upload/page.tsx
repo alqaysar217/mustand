@@ -87,6 +87,7 @@ export default function UploadPage() {
   const filteredSubjects = useMemo(() => {
     if (!context.deptId || !context.level || !context.term) return [];
     return (allSubjects as any[]).filter(s => {
+      // مطابقة مرنة (ID أو اسم)
       const matchDept = s.departmentId === context.deptId || s.departmentName === context.deptName;
       const matchLevel = s.level === context.level;
       const matchTerm = s.term === context.term;
@@ -175,7 +176,6 @@ export default function UploadPage() {
       });
 
       toast({ title: "تمت الأرشفة بنجاح" });
-      // Reset for next paper but keep context and step
       setFiles([]);
       setManualId("");
       setManualStudent(null);
@@ -266,16 +266,16 @@ export default function UploadPage() {
             <p className="text-muted-foreground font-bold text-lg">اختر آلية الرفع المناسبة لحجم العمل الحالي</p>
           </div>
           <Tabs value={activeMode} onValueChange={(v: any) => { setActiveMode(v); setStep(1); setFiles([]); setAiResults([]); setManualId(""); setManualStudent(null); }} className="w-full md:w-[450px]">
-            <TabsList className="grid w-full grid-cols-2 h-16 bg-white/50 backdrop-blur-md rounded-2xl p-1.5 shadow-xl border border-white">
+            <TabsList className="grid w-full grid-cols-2 h-16 bg-muted/20 backdrop-blur-md rounded-2xl p-1.5 shadow-inner border">
               <TabsTrigger 
                 value="manual" 
-                className="rounded-xl font-black text-base transition-all duration-500 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+                className="rounded-xl font-black text-base transition-all duration-500 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:bg-transparent"
               >
                 <Keyboard className="w-5 h-5 ml-2" /> الرفع اليدوي
               </TabsTrigger>
               <TabsTrigger 
                 value="ai" 
-                className="rounded-xl font-black text-base transition-all duration-500 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
+                className="rounded-xl font-black text-base transition-all duration-500 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:bg-transparent"
               >
                 <Cpu className="w-5 h-5 ml-2" /> الرفع الذكي
               </TabsTrigger>
