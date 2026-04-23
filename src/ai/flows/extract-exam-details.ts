@@ -3,6 +3,7 @@
 
 /**
  * @fileOverview نظام استخراج بيانات الاختبارات باستخدام Genkit و Gemini.
+ * تم تحسين الـ Prompt لضمان دقة استخراج الأرقام والأسماء العربية.
  */
 
 import { ai } from '@/ai/genkit';
@@ -22,7 +23,7 @@ export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSche
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
 /**
- * تعريف الـ Flow الخاص باستخراج البيانات بـ Prompt محسن لدعم اللغة العربية
+ * تعريف الـ Flow الخاص باستخراج البيانات بـ Prompt محسن لدعم اللغة العربية والتعامل مع الخط اليدوي
  */
 export const extractExamDetailsFlow = ai.defineFlow(
   {
@@ -31,43 +32,51 @@ export const extractExamDetailsFlow = ai.defineFlow(
     outputSchema: ExtractExamDetailsOutputSchema,
   },
   async (input) => {
-    const promptText = `أنت خبير في أرشفة الوثائق الأكاديمية العربية. 
-    قم بتحليل صورة ورقة الامتحان المرفقة واستخرج البيانات التالية بدقة شديدة:
-    1. رقم القيد الجامعي (studentRegistrationId): ابحث عن أي أرقام تعريفية أو أكاديمية للطالب (عادة أرقام فقط).
-    2. اسم الطالب (studentName): استخرج الاسم الرباعي المكتوب بخط اليد أو المطبوع.
-    3. اسم المادة (subjectName): استخرج اسم المادة الدراسية المكتوبة في ترويسة الورقة.
+    const promptText = `أنت خبير محترف في تحليل الأوراق الأكاديمية العربية. 
+    قم بتحليل صورة ورقة الامتحان المرفقة بدقة شديدة واستخرج:
+    1. رقم القيد الجامعي (studentRegistrationId): ابحث عن أي أرقام تعريفية (عادة تكون 8 أرقام أو أكثر).
+    2. اسم الطالب (studentName): استخرج الاسم الكامل (الثلاثي أو الرباعي) سواء كان مكتوباً بخط اليد أو مطبوعاً.
+    3. اسم المادة (subjectName): ابحث عن اسم المادة في ترويسة الورقة.
 
-    يجب أن تكون المخرجات بصيغة JSON فقط مطابقة لهذا المخطط:
+    يجب أن تكون المخرجات بصيغة JSON حصراً بهذا التنسيق:
     {
-      "studentRegistrationId": "string",
-      "studentName": "string",
-      "subjectName": "string"
+      "studentRegistrationId": "الأرقام فقط",
+      "studentName": "الاسم الكامل",
+      "subjectName": "اسم المادة"
     }
-    إذا لم تجد بياناً، اترك الحقل فارغاً "". لا تضف أي نصوص خارج الـ JSON.`;
+    ملاحظات هامة:
+    - إذا وجدت رقم القيد مكتوباً، استخرجه كأرقام فقط بدون حروف.
+    - إذا لم تجد بياناً معيناً، اترك الحقل فارغاً "".
+    - لا تضف أي شرح أو نصوص خارج الـ JSON.`;
 
-    const response = await ai.generate({
-      model: 'googleai/gemini-1.5-flash',
-      prompt: [
-        { text: promptText },
-        { media: { url: input.examImageDataUri } }
-      ],
-      config: {
-        responseMimeType: 'application/json',
-        safetySettings: [
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-        ]
+    try {
+      const response = await ai.generate({
+        model: 'googleai/gemini-1.5-flash',
+        prompt: [
+          { text: promptText },
+          { media: { url: input.examImageDataUri } }
+        ],
+        config: {
+          responseMimeType: 'application/json',
+          safetySettings: [
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          ]
+        }
+      });
+
+      const output = response.output;
+      if (!output) {
+        return { studentRegistrationId: "", studentName: "", subjectName: "" };
       }
-    });
 
-    const output = response.output;
-    if (!output) {
-      return { studentRegistrationId: "", studentName: "", subjectName: "" };
+      return output as ExtractExamDetailsOutput;
+    } catch (error: any) {
+      console.error('Genkit Generate Error:', error);
+      throw error;
     }
-
-    return output as ExtractExamDetailsOutput;
   }
 );
 
@@ -79,6 +88,6 @@ export async function extractExamDetails(input: ExtractExamDetailsInput): Promis
     return await extractExamDetailsFlow(input);
   } catch (error: any) {
     console.error('--- [Genkit Flow Error] ---', error);
-    throw new Error('فشل محرك الذكاء الاصطناعي في تحليل الورقة.');
+    throw new Error(error.message || 'فشل محرك الذكاء الاصطناعي في تحليل الورقة.');
   }
 }

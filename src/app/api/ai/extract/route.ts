@@ -4,6 +4,7 @@ import { extractExamDetails } from '@/ai/flows/extract-exam-details';
 
 /**
  * @fileOverview مسار API مطور لاستدعاء نظام التحليل الذكي مع تقارير أخطاء مفصلة.
+ * يدعم استخدام مفتاح API من البيئة مباشرة.
  */
 
 export async function POST(req: NextRequest) {
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     if (!apiKey) {
       return NextResponse.json({ 
-        error: 'مفتاح الـ API لـ Google AI Studio مفقود. يرجى إضافته لكي يعمل التحليل الذكي.' 
+        error: 'مفتاح الـ API لـ Google AI Studio مفقود في ملف .env. يرجى إضافته لكي يعمل التحليل الذكي.' 
       }, { status: 401 });
     }
 
@@ -29,15 +30,18 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('--- [API ROUTE ERROR] ---', error);
     
-    // التعامل مع أخطاء جوجل الشائعة بشكل ودي للمستخدم
-    const errorMessage = error.message || '';
+    let errorMessage = error.message || 'حدث خطأ غير متوقع أثناء معالجة الورقة.';
+    
+    // التعامل مع أخطاء جوجل الشائعة
     if (errorMessage.includes('429')) {
-      return NextResponse.json({ error: 'تم تجاوز حد الاستخدام المجاني المؤقت. يرجى الانتظار دقيقة والمحاولة مجدداً.' }, { status: 429 });
+      errorMessage = 'تم تجاوز حد الاستخدام المجاني المؤقت. يرجى الانتظار دقيقة والمحاولة مجدداً.';
+    } else if (errorMessage.includes('API key not valid')) {
+      errorMessage = 'مفتاح الـ API غير صالح. يرجى التحقق منه في ملف .env';
     }
     
     return NextResponse.json({ 
-      error: 'حدث خطأ أثناء معالجة الورقة عبر الذكاء الاصطناعي. تأكد من جودة الصورة.',
-      details: errorMessage 
+      error: errorMessage,
+      details: error.toString()
     }, { status: 500 });
   }
 }
