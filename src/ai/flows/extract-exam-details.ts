@@ -22,7 +22,7 @@ export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSche
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
 /**
- * تعريف الـ Flow الخاص باستخراج البيانات
+ * تعريف الـ Flow الخاص باستخراج البيانات بـ Prompt محسن لدعم اللغة العربية
  */
 export const extractExamDetailsFlow = ai.defineFlow(
   {
@@ -33,7 +33,7 @@ export const extractExamDetailsFlow = ai.defineFlow(
   async (input) => {
     const promptText = `أنت خبير في أرشفة الوثائق الأكاديمية العربية. 
     قم بتحليل صورة ورقة الامتحان المرفقة واستخرج البيانات التالية بدقة شديدة:
-    1. رقم القيد الجامعي (studentRegistrationId): ابحث عن أي أرقام تعريفية أو أكاديمية للطالب.
+    1. رقم القيد الجامعي (studentRegistrationId): ابحث عن أي أرقام تعريفية أو أكاديمية للطالب (عادة أرقام فقط).
     2. اسم الطالب (studentName): استخرج الاسم الرباعي المكتوب بخط اليد أو المطبوع.
     3. اسم المادة (subjectName): استخرج اسم المادة الدراسية المكتوبة في ترويسة الورقة.
 
@@ -43,7 +43,7 @@ export const extractExamDetailsFlow = ai.defineFlow(
       "studentName": "string",
       "subjectName": "string"
     }
-    إذا لم تجد بياناً، اترك الحقل فارغاً "".`;
+    إذا لم تجد بياناً، اترك الحقل فارغاً "". لا تضف أي نصوص خارج الـ JSON.`;
 
     const response = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
@@ -79,6 +79,6 @@ export async function extractExamDetails(input: ExtractExamDetailsInput): Promis
     return await extractExamDetailsFlow(input);
   } catch (error: any) {
     console.error('--- [Genkit Flow Error] ---', error);
-    throw new Error('فشل في معالجة الصورة عبر محرك الذكاء الاصطناعي.');
+    throw new Error('فشل محرك الذكاء الاصطناعي في تحليل الورقة.');
   }
 }
