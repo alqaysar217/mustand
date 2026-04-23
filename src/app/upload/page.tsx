@@ -249,7 +249,7 @@ export default function UploadPage() {
         uploadedAt: serverTimestamp()
       });
 
-      // تسجيل في السجل
+      // سجل في العمليات
       await addDoc(collection(firestore, "logs"), {
         user: "موظف الأرشفة",
         role: "employee",
@@ -427,7 +427,7 @@ export default function UploadPage() {
 
         {step === 2 && (
           <div className="space-y-8 animate-slide-up">
-            {/* Header Info */}
+            {/* معلومات المادة المختارة */}
             <div className="bg-white p-6 rounded-3xl shadow-xl flex items-center justify-between border-r-8 border-secondary">
                <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-secondary/5 rounded-xl flex items-center justify-center text-secondary"><BookOpen className="w-6 h-6" /></div>
@@ -439,7 +439,7 @@ export default function UploadPage() {
                <Button variant="outline" onClick={() => setStep(1)} className="rounded-xl font-bold h-10 border-2">تغيير المادة</Button>
             </div>
 
-            {/* Row 1: Images Grid */}
+            {/* الصف الأول: الصور المرفوعة (Grid) */}
             <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white text-center">
                <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-black text-primary flex items-center gap-2">
@@ -485,7 +485,7 @@ export default function UploadPage() {
               )}
             </Card>
 
-            {/* Row 2: Verification Results (Full Width Below) */}
+            {/* الصف الثاني: قائمة التحقق (Full Width) */}
             {activeMode === 'manual' ? (
               files.length > 0 && (
                 <Card className="p-10 border-none shadow-2xl rounded-[3rem] bg-white animate-slide-up border-b-8 border-green-500">
