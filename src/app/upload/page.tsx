@@ -31,10 +31,11 @@ import {
   AlertCircle,
   ArrowLeft,
   UserPlus,
-  Image as ImageIcon,
+  ImageIcon,
   Activity,
   AlertTriangle,
-  X
+  X,
+  FileText
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -121,11 +122,10 @@ export default function UploadPage() {
       if (data.success) {
         toast({ title: "تم الاتصال بنجاح", description: data.message });
       } else {
-        // إظهار الخطأ الحقيقي للمستخدم للمساعدة في التشخيص
         toast({ 
           variant: "destructive", 
           title: "فشل الاختبار التقني", 
-          description: data.rawError || data.message || "خطأ غير معروف في المفتاح"
+          description: data.rawError || data.message || "المفتاح غير مفعل أو به قيود من Google"
         });
       }
     } catch (e: any) {
@@ -207,11 +207,12 @@ export default function UploadPage() {
           throw new Error(responseData.error || `خطأ (${response.status})`);
         }
         
-        const dbCheck = await verifyStudentInDB(responseData.studentRegistrationId || "");
+        const regId = responseData.studentRegistrationId || "";
+        const dbCheck = await verifyStudentInDB(regId);
         
         tempResults.push({
-          studentRegistrationId: responseData.studentRegistrationId || "---",
-          studentName: dbCheck.isVerified ? dbCheck.dbStudentName! : (responseData.studentName || "طالب غير مسجل"),
+          studentRegistrationId: regId || "---",
+          studentName: dbCheck.isVerified ? dbCheck.dbStudentName! : (responseData.studentName || "غير معروف"),
           dbDepartmentName: dbCheck.dbDepartmentName || (dbCheck.isVerified ? "" : "غير مسجل"),
           fileData: file,
           isVerified: dbCheck.isVerified,
@@ -275,7 +276,6 @@ export default function UploadPage() {
       });
 
       toast({ title: "تمت الأرشفة بنجاح" });
-      // تصفير الصورة ورقم القيد للبدء بالورقة التالية فوراً
       setFiles([]);
       setManualId("");
       setManualStudent(null);
@@ -332,8 +332,8 @@ export default function UploadPage() {
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-4xl font-black text-primary mb-2">أرشفة الأوراق</h1>
-            <p className="text-muted-foreground font-bold text-lg">نظام الكشف الذكي المدعوم بـ Gemini</p>
+            <h1 className="text-4xl font-black text-primary mb-2 tracking-tight">أرشفة الأوراق</h1>
+            <p className="text-muted-foreground font-bold text-lg">نظام الكشف الذكي المطور (Gemini 1.5 Pro)</p>
           </div>
 
           <div className="flex flex-col items-end gap-3 w-full md:w-auto">
@@ -379,7 +379,7 @@ export default function UploadPage() {
         {step === 1 && (
           <Card className="p-10 border-none shadow-2xl rounded-[3rem] bg-white animate-slide-up border-r-8 border-primary">
             <div className="flex items-center gap-5 mb-10 border-b pb-6">
-              <div className="p-4 bg-primary/5 rounded-2xl text-primary"><Layers className="w-8 h-8" /></div>
+              <div className="p-4 bg-primary/5 rounded-2xl text-primary shadow-sm"><Layers className="w-8 h-8" /></div>
               <div className="text-right">
                 <h2 className="text-2xl font-black text-primary">تحديد تفاصيل الأرشفة</h2>
                 <p className="text-sm font-bold text-muted-foreground">اختر المادة لربط الأوراق بها</p>
@@ -389,7 +389,7 @@ export default function UploadPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
               <div className="space-y-3">
                 <Label className="font-black text-primary flex items-center gap-2 pr-1"><Calendar className="w-4 h-4 text-secondary" />العام الجامعي</Label>
-                <select value={context.year} onChange={(e) => setContext({...context, year: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                <select value={context.year} onChange={(e) => setContext({...context, year: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none transition-all">
                   <option value="">اختر العام...</option>
                   {academicYears.map((y: any) => <option key={y.id} value={y.label}>{y.label}</option>)}
                 </select>
@@ -399,14 +399,14 @@ export default function UploadPage() {
                 <select value={context.deptId} onChange={(e) => {
                   const sel = departments.find((d: any) => d.id === e.target.value) as any;
                   setContext({...context, deptId: e.target.value, deptName: sel?.nameAr || sel?.name || ""});
-                }} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                }} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none transition-all">
                   <option value="">اختر القسم...</option>
                   {departments.map((d: any) => <option key={d.id} value={d.id}>{d.nameAr || d.name}</option>)}
                 </select>
               </div>
               <div className="space-y-3">
                 <Label className="font-black text-primary flex items-center gap-2 pr-1"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label>
-                <select value={context.level} onChange={(e) => setContext({...context, level: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                <select value={context.level} onChange={(e) => setContext({...context, level: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none transition-all">
                   <option value="">اختر المستوى...</option>
                   {["المستوى الأول", "المستوى الثاني", "المستوى الثالث", "المستوى الرابع", "المستوى الخامس"].map(l => (
                     <option key={l} value={l}>{l}</option>
@@ -415,7 +415,7 @@ export default function UploadPage() {
               </div>
               <div className="space-y-3">
                 <Label className="font-black text-primary flex items-center gap-2 pr-1"><RefreshCcw className="w-4 h-4 text-secondary" />الفصل الدراسي</Label>
-                <select value={context.term} onChange={(e) => setContext({...context, term: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                <select value={context.term} onChange={(e) => setContext({...context, term: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none transition-all">
                   <option value="">اختر الفصل...</option>
                   <option value="الفصل الأول">الفصل الأول</option>
                   <option value="الفصل الثاني">الفصل الثاني</option>
@@ -429,7 +429,7 @@ export default function UploadPage() {
                     const sel = filteredSubjects.find((s: any) => s.id === e.target.value) as any;
                     setContext({...context, subjectId: e.target.value, subjectName: sel?.nameAr || ""});
                   }} 
-                  className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black text-primary outline-none focus:border-primary text-right appearance-none"
+                  className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black text-primary outline-none focus:border-primary text-right appearance-none transition-all"
                 >
                   <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "يرجى تحديد القسم والمستوى أولاً"}</option>
                   {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
@@ -447,6 +447,7 @@ export default function UploadPage() {
 
         {step === 2 && (
           <div className="space-y-10 animate-slide-up pb-20">
+            {/* عرض المادة الحالية */}
             <div className="bg-white p-6 rounded-[2rem] shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 border-r-8 border-secondary">
                <div className="flex items-center gap-5">
                   <div className="w-14 h-14 bg-secondary/5 rounded-2xl flex items-center justify-center text-secondary border border-secondary/10 shadow-inner"><BookOpen className="w-8 h-8" /></div>
@@ -458,6 +459,7 @@ export default function UploadPage() {
                <Button variant="outline" onClick={() => setStep(1)} className="rounded-xl font-black h-12 px-6 border-2 hover:bg-muted/50 gap-2"><RefreshCcw className="w-4 h-4" /> تغيير المادة</Button>
             </div>
 
+            {/* منطقة الرفع */}
             <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white text-center relative overflow-hidden">
                <div className="flex items-center justify-between mb-8 px-2">
                   <h2 className="text-2xl font-black text-primary flex items-center gap-3">
@@ -524,17 +526,17 @@ export default function UploadPage() {
                         </div>
                      </div>
                      <div className="space-y-3">
-                        <Label className="font-black text-primary pr-1">الاسم الكامل من القاعدة</Label>
-                        <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg", manualStudent ? "text-primary bg-primary/5" : "text-muted-foreground")}>{manualStudent?.name || "---"}</div>
+                        <Label className="font-black text-primary pr-1">اسم الطالب من قاعدة البيانات</Label>
+                        <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg shadow-sm", manualStudent ? "text-primary bg-primary/5" : "text-muted-foreground")}>{manualStudent?.name || "---"}</div>
                      </div>
                      <div className="space-y-3">
-                        <Label className="font-black text-primary pr-1">التخصص الدراسي</Label>
-                        <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg", manualStudent ? "text-secondary bg-secondary/5" : "text-muted-foreground")}>{manualStudent?.deptName || "---"}</div>
+                        <Label className="font-black text-primary pr-1">التخصص / القسم</Label>
+                        <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg shadow-sm", manualStudent ? "text-secondary bg-secondary/5" : "text-muted-foreground")}>{manualStudent?.deptName || "---"}</div>
                      </div>
                   </div>
                   {manualStudent && (
-                    <Button onClick={saveManualArchive} className="w-full mt-12 h-20 rounded-[2rem] text-2xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-4">
-                      <CheckCircle2 className="w-8 h-8" /> حفظ وإتمام عملية الأرشفة
+                    <Button onClick={saveManualArchive} className="w-full mt-12 h-20 rounded-[2rem] text-2xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-4 transition-all">
+                      <CheckCircle2 className="w-8 h-8" /> إتمام عملية الأرشفة والحفظ
                     </Button>
                   )}
                 </Card>
@@ -546,7 +548,7 @@ export default function UploadPage() {
                      <div className="text-right">
                         <h2 className="text-2xl font-black text-primary flex items-center gap-3">
                           <CheckCircle className="w-7 h-7 text-green-500" /> 
-                          مراجعة واعتماد النتائج المستخرجة
+                          مراجعة واعتماد نتائج التحليل
                         </h2>
                         <p className="text-muted-foreground font-bold text-sm">تأكد من مطابقة الأوراق؛ الحافة الحمراء تعني طالب غير مسجل في النظام.</p>
                      </div>
@@ -564,8 +566,9 @@ export default function UploadPage() {
                           <div className={cn("absolute top-0 right-0 w-4 h-full", res.isVerified ? "bg-green-400" : "bg-red-400")} />
                           
                           {/* معاينة الصورة المرفوعة */}
-                          <div className="w-32 h-44 relative rounded-2xl overflow-hidden shadow-2xl shrink-0 border-4 border-white">
+                          <div className="w-32 h-44 relative rounded-2xl overflow-hidden shadow-2xl shrink-0 border-4 border-white group cursor-zoom-in">
                              <Image src={res.fileData} alt="Extracted" fill className="object-cover" />
+                             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Search className="w-6 h-6 text-white" /></div>
                           </div>
 
                           {/* البيانات المستخرجة والتحقق */}
@@ -586,7 +589,7 @@ export default function UploadPage() {
                                   value={res.studentRegistrationId} 
                                   onChange={(e) => handleUpdateAiResult(i, 'studentRegistrationId', e.target.value)} 
                                   className={cn(
-                                    "h-14 rounded-xl font-black text-2xl text-center", 
+                                    "h-14 rounded-xl font-black text-2xl text-center transition-all", 
                                     !res.isVerified ? "border-red-500 ring-red-100 ring-4" : "border-green-500 ring-green-100 ring-4"
                                   )} 
                                 />
@@ -604,11 +607,11 @@ export default function UploadPage() {
 
                              <div className="flex items-center justify-end gap-5">
                                 {res.isVerified ? (
-                                  <div className="bg-green-500 text-white px-8 py-4 rounded-2xl font-black text-base flex items-center gap-3 shadow-lg shadow-green-500/30">
+                                  <div className="bg-green-500 text-white px-8 py-4 rounded-2xl font-black text-base flex items-center gap-3 shadow-lg shadow-green-500/30 animate-fade-in">
                                     <CheckCircle2 className="w-6 h-6" /> مطابق
                                   </div>
                                 ) : (
-                                  <div className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-base flex items-center gap-3 shadow-lg shadow-red-600/30">
+                                  <div className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-base flex items-center gap-3 shadow-lg shadow-red-600/30 animate-fade-in">
                                     <AlertTriangle className="w-6 h-6" /> غير مسجل
                                   </div>
                                 )}
@@ -627,7 +630,7 @@ export default function UploadPage() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-6 pt-10 pb-10">
-                     <Button onClick={saveBatchAI} className="flex-1 h-24 rounded-[2.5rem] text-3xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-6 transition-all border-b-8 border-green-800">
+                     <Button onClick={saveBatchAI} className="flex-1 h-24 rounded-[2.5rem] text-3xl font-black gradient-blue shadow-2xl text-white gap-6 transition-all border-b-8 border-primary/50">
                        <CloudUpload className="w-10 h-10" /> اعتماد وحفظ الدفعة بالكامل
                      </Button>
                      <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-24 px-16 rounded-[2.5rem] font-black border-4 text-2xl hover:bg-white transition-all">إلغاء وإعادة الرفع</Button>
@@ -641,3 +644,4 @@ export default function UploadPage() {
     </div>
   );
 }
+

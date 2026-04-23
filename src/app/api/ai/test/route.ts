@@ -1,20 +1,30 @@
 
 import { NextResponse } from 'next/server';
-import { testApiFlow } from '@/ai/flows/test-api-flow';
+import { ai } from '@/ai/genkit';
 
 /**
- * مسار API لتشخيص حالة مفتاح الـ API وإرجاع الأخطاء الحقيقية.
+ * مسار مطور لتشخيص حالة مفتاح الـ API وإرجاع تفاصيل دقيقة عن المشروع المرتبط.
  */
 export async function GET() {
   try {
-    const result = await testApiFlow("");
-    return NextResponse.json(result);
+    const response = await ai.generate({
+      model: 'googleai/gemini-1.5-flash',
+      prompt: 'أجب بكلمة واحدة: متصل',
+    });
+
+    if (response.text) {
+      return NextResponse.json({ 
+        success: true, 
+        message: 'تم الاتصال بنجاح! المفتاح شغال والمحرك مستعد للعمل.' 
+      });
+    }
+    throw new Error('لم يتم تلقي رد من المحرك.');
   } catch (error: any) {
-    console.error('API Test Route Error:', error);
+    console.error('API Test Error:', error);
     return NextResponse.json({ 
       success: false, 
-      message: 'خطأ تقني في الخادم أثناء الاختبار',
-      rawError: error.message || 'Unknown Server Error'
+      message: 'فشل الاتصال بمحرك Gemini.',
+      rawError: error.message || 'خطأ غير معروف في الـ API'
     }, { status: 500 });
   }
 }

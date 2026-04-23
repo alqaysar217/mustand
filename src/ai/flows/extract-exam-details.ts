@@ -2,8 +2,7 @@
 'use server';
 
 /**
- * @fileOverview محرك استخراج البيانات المطور.
- * تم تحسين استقرار النموذج وتعطيل كافة فلاتر الحماية لضمان قراءة كافة المستندات الأكاديمية.
+ * @fileOverview محرك استخراج البيانات المطور والمستقر تماماً.
  */
 
 import { ai } from '@/ai/genkit';
@@ -15,7 +14,7 @@ const ExtractExamDetailsInputSchema = z.object({
 
 const ExtractExamDetailsOutputSchema = z.object({
   studentRegistrationId: z.string().optional().describe("رقم القيد الجامعي المستخرج"),
-  studentName: z.string().optional().describe("اسم الطالب المستخرج كما هو مكتوب"),
+  studentName: z.string().optional().describe("اسم الطالب المستخرج"),
 });
 
 export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSchema>;
@@ -28,12 +27,11 @@ export const extractExamDetailsFlow = ai.defineFlow(
     outputSchema: ExtractExamDetailsOutputSchema,
   },
   async (input) => {
-    const promptText = `أنت خبير في أرشفة الوثائق الأكاديمية. 
-    قم بتحليل صورة ورقة الامتحان واستخرج منها بدقة شديدة:
-    1. رقم القيد الجامعي (studentRegistrationId): استخرج الأرقام فقط (مثلاً: 2021001).
-    2. اسم الطالب (studentName): الاسم الكامل المكتوب في خانة الاسم.
+    const promptText = `أنت خبير أرشفة أكاديمية. حلل صورة ورقة الامتحان واستخرج:
+    1. studentRegistrationId: استخرج الأرقام فقط (مثلاً: 2021001).
+    2. studentName: الاسم الكامل المكتوب بوضوح.
 
-    أجب بصيغة JSON فقط بهذا الهيكل:
+    أجب بصيغة JSON فقط:
     {
       "studentRegistrationId": "رقم القيد",
       "studentName": "الاسم الكامل"
@@ -41,7 +39,7 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
     try {
       const response = await ai.generate({
-        model: 'googleai/gemini-1.5-flash',
+        model: 'googleai/gemini-1.5-flash', // تأكد من استخدام هذا المسمى المستقر
         prompt: [
           { text: promptText },
           { media: { url: input.examImageDataUri } }
@@ -60,14 +58,13 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
       const output = response.output;
       if (!output) {
-        throw new Error('لم يتمكن المحرك من استخراج بيانات واضحة من الصورة');
+        throw new Error('لم يتمكن المحرك من قراءة بيانات الورقة.');
       }
 
       return output as ExtractExamDetailsOutput;
     } catch (error: any) {
-      console.error('AI Extraction Error:', error);
-      // إرسال تفاصيل الخطأ الحقيقية للمساعدة في التشخيص
-      throw new Error(`فشل التحليل: ${error.message || 'مشكلة في الاتصال بمحرك Gemini'}`);
+      console.error('AI Flow Error:', error);
+      throw new Error(`خطأ Gemini: ${error.message || 'مشكلة في الاتصال بالخدمة'}`);
     }
   }
 );
