@@ -87,7 +87,7 @@ export default function UploadPage() {
   const filteredSubjects = useMemo(() => {
     if (!context.deptId || !context.level || !context.term) return [];
     return (allSubjects as any[]).filter(s => {
-      // مطابقة مرنة (ID أو اسم)
+      // مطابقة مرنة تشمل كافة المعايير
       const matchDept = s.departmentId === context.deptId || s.departmentName === context.deptName;
       const matchLevel = s.level === context.level;
       const matchTerm = s.term === context.term;
@@ -162,9 +162,11 @@ export default function UploadPage() {
     try {
       await addDoc(collection(firestore, "archives"), {
         student_id: manualId,
-        student_name: manualStudent.name,
-        subject_name: context.subjectName,
+        studentName: manualStudent.name,
+        studentRegId: manualId,
+        subjectName: context.subjectName,
         subjectId: context.subjectId,
+        fileUrl: files[0], // نستخدم fileUrl للحفاظ على التوافق مع واجهة المعاينة
         file_data: files[0],
         file_type: "image/jpeg",
         year: context.year,
@@ -176,6 +178,7 @@ export default function UploadPage() {
       });
 
       toast({ title: "تمت الأرشفة بنجاح" });
+      // نعود لخطوة رفع الصورة مع تصفير بيانات الطالب فقط
       setFiles([]);
       setManualId("");
       setManualStudent(null);
@@ -226,9 +229,11 @@ export default function UploadPage() {
       for (const res of aiResults) {
         await addDoc(collection(firestore, "archives"), {
           student_id: res.studentRegistrationId,
-          student_name: res.studentName,
-          subject_name: context.subjectName,
+          studentRegId: res.studentRegistrationId,
+          studentName: res.studentName,
+          subjectName: context.subjectName,
           subjectId: context.subjectId,
+          fileUrl: res.fileData,
           file_data: res.fileData,
           file_type: "image/jpeg",
           year: context.year,
@@ -261,21 +266,21 @@ export default function UploadPage() {
       )} dir="rtl">
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
-          <div>
+          <div className="text-right">
             <h1 className="text-4xl font-black text-primary mb-2">مركز الأرشفة المتطور</h1>
             <p className="text-muted-foreground font-bold text-lg">اختر آلية الرفع المناسبة لحجم العمل الحالي</p>
           </div>
           <Tabs value={activeMode} onValueChange={(v: any) => { setActiveMode(v); setStep(1); setFiles([]); setAiResults([]); setManualId(""); setManualStudent(null); }} className="w-full md:w-[450px]">
-            <TabsList className="grid w-full grid-cols-2 h-16 bg-muted/20 backdrop-blur-md rounded-2xl p-1.5 shadow-inner border">
+            <TabsList className="grid w-full grid-cols-2 h-16 bg-white/50 backdrop-blur-md rounded-2xl p-1.5 shadow-xl border border-white">
               <TabsTrigger 
                 value="manual" 
-                className="rounded-xl font-black text-base transition-all duration-500 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:bg-transparent"
+                className="rounded-xl font-black text-base transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Keyboard className="w-5 h-5 ml-2" /> الرفع اليدوي
               </TabsTrigger>
               <TabsTrigger 
                 value="ai" 
-                className="rounded-xl font-black text-base transition-all duration-500 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:bg-transparent"
+                className="rounded-xl font-black text-base transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Cpu className="w-5 h-5 ml-2" /> الرفع الذكي
               </TabsTrigger>
@@ -298,14 +303,14 @@ export default function UploadPage() {
           <Card className="p-8 md:p-12 border-none shadow-2xl rounded-[2.5rem] bg-white animate-slide-up">
             <div className="flex items-center gap-4 mb-10 border-b pb-6">
               <div className="p-4 bg-primary/5 rounded-2xl text-primary shadow-sm"><Layers className="w-8 h-8" /></div>
-              <div>
+              <div className="text-right">
                 <h2 className="text-2xl font-black text-primary">تحديد السياق الأكاديمي</h2>
                 <p className="text-muted-foreground font-bold">هذه البيانات ستكون ثابتة لكافة الأوراق المرفوعة في هذه الجلسة</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-              <div className="space-y-3 text-right">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12 text-right">
+              <div className="space-y-3">
                 <Label className="font-black text-primary pr-1">العام الجامعي</Label>
                 <select 
                   value={context.year} 
@@ -317,7 +322,7 @@ export default function UploadPage() {
                 </select>
               </div>
 
-              <div className="space-y-3 text-right">
+              <div className="space-y-3">
                 <Label className="font-black text-primary pr-1">القسم العلمي</Label>
                 <select 
                   value={context.deptId} 
@@ -332,7 +337,7 @@ export default function UploadPage() {
                 </select>
               </div>
 
-              <div className="space-y-3 text-right">
+              <div className="space-y-3">
                 <Label className="font-black text-primary pr-1">المستوى الدراسي</Label>
                 <select 
                   value={context.level} 
@@ -346,7 +351,7 @@ export default function UploadPage() {
                 </select>
               </div>
 
-              <div className="space-y-3 text-right">
+              <div className="space-y-3">
                 <Label className="font-black text-primary pr-1">الفصل (الترم)</Label>
                 <select 
                   value={context.term} 
@@ -359,7 +364,7 @@ export default function UploadPage() {
                 </select>
               </div>
 
-              <div className="space-y-3 md:col-span-2 text-right">
+              <div className="space-y-3 md:col-span-2">
                 <Label className="font-black text-primary pr-1">المادة الدراسية</Label>
                 <select 
                   disabled={!context.deptId || !context.level || !context.term}
@@ -431,9 +436,9 @@ export default function UploadPage() {
                           <X className="w-6 h-6" />
                         </Button>
                         {activeMode === 'ai' && files.length > 1 && (
-                          <Badge className="mt-4 bg-primary text-white px-5 py-2 rounded-full text-xs font-black shadow-lg">
+                          <div className="mt-4 bg-primary text-white px-5 py-2 rounded-full text-xs font-black shadow-lg">
                             +{files.length - 1} صور أخرى جاهزة للتحليل
-                          </Badge>
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -454,9 +459,9 @@ export default function UploadPage() {
 
               <div className="lg:col-span-7">
                 {activeMode === 'manual' ? (
-                  <Card className="p-10 border-none shadow-2xl rounded-[2.5rem] bg-white h-full space-y-8 flex flex-col">
+                  <Card className="p-10 border-none shadow-2xl rounded-[2.5rem] bg-white h-full space-y-8 flex flex-col text-right">
                     <div className="space-y-4">
-                      <Label className="text-xl font-black text-primary flex items-center gap-3 mb-2">
+                      <Label className="text-xl font-black text-primary flex items-center gap-3 mb-2 justify-start">
                         <Fingerprint className="w-7 h-7 text-secondary" />
                         رقم القيد الجامعي
                       </Label>
@@ -498,7 +503,7 @@ export default function UploadPage() {
 
                     {manualStudent && (
                       <div className="bg-green-50 p-6 rounded-3xl border-2 border-green-200 animate-slide-up mt-auto">
-                         <div className="flex items-center gap-5">
+                         <div className="flex items-center gap-5 justify-start">
                             <div className="w-14 h-14 bg-green-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
                                <UserCheck className="w-8 h-8" />
                             </div>
@@ -513,7 +518,7 @@ export default function UploadPage() {
                     {!manualStudent && manualId && !loading && (
                       <div className="bg-red-50 p-6 rounded-3xl border-2 border-red-200 animate-slide-up flex items-center gap-4 text-red-700">
                          <AlertCircle className="w-8 h-8 shrink-0" />
-                         <p className="font-black text-sm">هذا الرقم غير مسجل. يرجى إضافة بيانات الطالب في صفحة إدارة الطلاب أولاً.</p>
+                         <p className="font-black text-sm text-right">هذا الرقم غير مسجل. يرجى إضافة بيانات الطالب في صفحة إدارة الطلاب أولاً.</p>
                       </div>
                     )}
 
@@ -529,14 +534,14 @@ export default function UploadPage() {
                     </div>
                   </Card>
                 ) : (
-                  <Card className="p-10 border-none shadow-2xl rounded-[2.5rem] bg-white h-full flex flex-col">
+                  <Card className="p-10 border-none shadow-2xl rounded-[2.5rem] bg-white h-full flex flex-col text-right">
                     {aiResults.length > 0 ? (
-                      <div className="flex-1 space-y-6 overflow-hidden">
+                      <div className="flex-1 space-y-6 overflow-hidden flex flex-col">
                         <div className="flex items-center justify-between mb-4 border-b pb-4">
                            <h2 className="text-2xl font-black text-primary flex items-center gap-2"><CheckCircle className="w-7 h-7 text-green-500" />مراجعة النتائج المستخرجة</h2>
                            <span className="bg-primary/10 text-primary px-5 py-2 rounded-full text-xs font-black shadow-sm">{aiResults.length} مستندات جاهزة</span>
                         </div>
-                        <div className="overflow-y-auto pr-2 flex-1 space-y-4 max-h-[450px] custom-scrollbar">
+                        <div className="overflow-y-auto pr-2 flex-1 space-y-4 max-h-[450px]">
                            {aiResults.map((res, i) => (
                              <div key={i} className="p-6 bg-muted/10 rounded-[2rem] border-2 border-transparent hover:border-primary/20 flex flex-col md:flex-row items-center gap-6 transition-all group">
                                <div className="w-20 h-24 relative rounded-2xl overflow-hidden border-2 border-white shadow-lg shrink-0 group-hover:scale-105 transition-transform">
@@ -549,7 +554,7 @@ export default function UploadPage() {
                                       const newRes = [...aiResults];
                                       newRes[i].studentName = e.target.value;
                                       setAiResults(newRes);
-                                    }} className="h-12 rounded-xl font-bold text-sm bg-white border-muted" />
+                                    }} className="h-12 rounded-xl font-bold text-sm bg-white border-muted text-right" />
                                  </div>
                                  <div className="space-y-1.5">
                                     <Label className="text-[10px] font-black text-muted-foreground mr-2">رقم القيد المستخرج</Label>
