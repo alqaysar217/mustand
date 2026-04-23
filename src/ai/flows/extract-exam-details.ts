@@ -29,15 +29,16 @@ export const extractExamDetailsFlow = ai.defineFlow(
     outputSchema: ExtractExamDetailsOutputSchema,
   },
   async (input) => {
+    // استخدام نموذج gemini-1.5-flash المستقر لضمان عدم حدوث خطأ 404
     const promptText = `أنت خبير في تحليل الوثائق الأكاديمية العربية. 
     قم بتحليل صورة ورقة الامتحان واستخرج منها بدقة:
-    1. رقم القيد الجامعي (studentRegistrationId): الأرقام فقط كما تظهر في الورقة.
-    2. اسم الطالب (studentName): الاسم الكامل المكتوب بخط اليد أو المطبوع.
+    1. رقم القيد الجامعي (studentRegistrationId): استخرج الأرقام فقط.
+    2. اسم الطالب (studentName): الاسم الكامل للطالب.
 
     أجب بصيغة JSON فقط بهذا الهيكل:
     {
       "studentRegistrationId": "رقم فقط",
-      "studentName": "الاسم الرباعي"
+      "studentName": "الاسم الكامل"
     }`;
 
     try {
@@ -60,7 +61,7 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
       const output = response.output;
       if (!output) {
-        throw new Error('فشل المحرك في توليد بيانات صالحة');
+        throw new Error('لم يتمكن المحرك من استخراج بيانات واضحة من هذه الصورة');
       }
 
       return output as ExtractExamDetailsOutput;
