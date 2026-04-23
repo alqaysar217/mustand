@@ -87,7 +87,6 @@ export default function UploadPage() {
   const filteredSubjects = useMemo(() => {
     if (!context.deptId || !context.level || !context.term) return [];
     return (allSubjects as any[]).filter(s => {
-      // مطابقة القسم (بالـ ID أو الاسم) + المستوى + الترم
       const deptMatch = s.departmentId === context.deptId || s.departmentName === context.deptName;
       const levelMatch = s.level === context.level || s.level?.includes(context.level);
       const termMatch = s.term === context.term;
@@ -195,7 +194,6 @@ export default function UploadPage() {
         });
       } catch (e: any) {
         console.error('Analysis error:', e);
-        // في حال فشل تحليل ورقة، نضيفها كفشل بدلاً من إيقاف الكل
         results.push({ 
           studentName: "فشل التحليل - يرجى الإدخال يدوياً", 
           studentRegistrationId: "", 
@@ -464,7 +462,7 @@ export default function UploadPage() {
                   </>
                 )}
               </div>
-              <input type="file" min-h-screen ref={fileInputRef} className="hidden" accept="image/*" multiple={activeMode === 'ai'} onChange={handleFileUpload} />
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple={activeMode === 'ai'} onChange={handleFileUpload} />
               
               {files.length > 0 && (
                 <div className="flex justify-center gap-4 mt-6">
