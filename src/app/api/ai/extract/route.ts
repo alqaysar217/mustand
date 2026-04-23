@@ -3,8 +3,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * @fileOverview مسار API للتحليل الذكي للاختبارات باستخدام مكتبة Google AI الرسمية.
- * تم التحديث لضمان أقصى قدر من الاستقرار وتجنب أخطاء الروابط اليدوية (404).
+ * @fileOverview مسار API المطور للتحليل الذكي للاختبارات.
+ * يستخدم Gemini 1.5 Flash (المجاني) مع تحسينات للقراءة العربية.
  */
 
 export async function POST(req: NextRequest) {
@@ -12,35 +12,40 @@ export async function POST(req: NextRequest) {
     const { examImageDataUri } = await req.json();
     const apiKey = process.env.GOOGLE_GENAI_API_KEY;
 
-    if (!apiKey) {
-      console.error('--- [AI ERROR] API Key missing in environment ---');
-      return NextResponse.json({ error: 'مفتاح الـ API غير معرف في النظام.' }, { status: 500 });
+    if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+      console.error('--- [AI ERROR] API Key is missing or invalid ---');
+      return NextResponse.json({ 
+        error: 'مفتاح الـ API غير موجود. يرجى الحصول على مفتاح مجاني من Google AI Studio ووضعه في ملف .env' 
+      }, { status: 500 });
     }
 
-    // تهيئة SDK جوجل الرسمي
+    // تهيئة محرك جوجل
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+      }
+    });
 
-    // استخراج بيانات Base64 ونوع الملف
-    const [header, base64Data] = examImageDataUri.split(',');
-    const mimeType = header.split(':')[1].split(';')[0];
+    // تحضير البيانات
+    const base64Data = examImageDataUri.split(',')[1];
+    const mimeType = examImageDataUri.split(':')[1].split(';')[0];
 
-    const prompt = `تحليل ورقة الامتحان المستخرجة.
-    استخرج بدقة البيانات التالية باللغة العربية:
-    1. رقم القيد (أرقام فقط).
-    2. اسم الطالب (الاسم الرباعي).
-    3. اسم المادة الدراسية.
-    
-    يجب أن تكون المخرجات بصيغة JSON صالحة فقط بهذا الهيكل:
+    const prompt = `أنت خبير في أرشفة الوثائق الأكاديمية العربية. 
+    قم بتحليل صورة ورقة الامتحان المرفقة واستخرج البيانات التالية بدقة:
+    1. رقم القيد الجامعي (Registration ID): ابحث عن أي أرقام تعريفية للطالب.
+    2. اسم الطالب (Student Name): استخرج الاسم الرباعي المكتوب.
+    3. اسم المادة (Subject Name): استخرج اسم المادة الدراسية.
+
+    يجب أن تكون المخرجات بصيغة JSON فقط كالتالي:
     {
-      "studentRegistrationId": "...",
-      "studentName": "...",
-      "subjectName": "..."
+      "studentRegistrationId": "رقم القيد المستخرج",
+      "studentName": "اسم الطالب الكامل",
+      "subjectName": "اسم المادة"
     }
-    لا تضف أي نصوص توضيحية أو مارك داون.`;
+    ملاحظة: إذا لم تجد أي بيان، اترك الحقل فارغاً. ركز جداً على الأرقام العربية واللاتينية المكتوبة يدوياً.`;
 
-    console.log('--- [AI REQUEST START] ---');
-    
     const result = await model.generateContent([
       prompt,
       {
@@ -52,21 +57,24 @@ export async function POST(req: NextRequest) {
     ]);
 
     const response = await result.response;
-    const aiResponseText = response.text();
+    const text = response.text();
     
-    console.log('--- [AI RAW RESPONSE] ---', aiResponseText.substring(0, 100));
+    // تنظيف وتفسير النتيجة
+    const cleanJson = text.replace(/```json|```/g, '').trim();
+    const parsedData = JSON.parse(cleanJson);
 
-    // تنظيف استجابة JSON من أي Markdown محتمل
-    const cleanJson = aiResponseText.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(cleanJson);
-
-    console.log('--- [AI SUCCESSFUL PARSE] ---');
-    return NextResponse.json(parsed);
+    return NextResponse.json(parsedData);
 
   } catch (error: any) {
-    console.error('--- [AI ROUTE CRASH] ---', error);
+    console.error('--- [AI CRASH] ---', error);
+    
+    // نظام الاستجابة للأخطاء الشائعة
+    if (error.message?.includes('429')) {
+      return NextResponse.json({ error: 'تم تجاوز حد الاستخدام المجاني المؤقت. يرجى الانتظار دقيقة والمحاولة ثانية.' }, { status: 429 });
+    }
+    
     return NextResponse.json({ 
-      error: 'فشل النظام في معالجة طلب التحليل الذكي.',
+      error: 'فشل النظام في قراءة الورقة ذكياً.',
       details: error.message 
     }, { status: 500 });
   }
