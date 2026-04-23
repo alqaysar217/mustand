@@ -46,9 +46,8 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs } from "fire
 interface AIResult {
   studentRegistrationId: string;
   studentName: string;
-  subjectName: string;
   fileData: string;
-  isVerified?: boolean;
+  isVerified: boolean;
   dbStudentName?: string;
   dbDepartmentName?: string;
   status: 'pending' | 'success' | 'failed';
@@ -113,7 +112,7 @@ export default function UploadPage() {
   const identifyStudent = async (regId: string) => {
     if (!firestore || !regId) return;
     setLoading(true);
-    setLoadingText("جاري مطابقة رقم القيد...");
+    setLoadingText("جاري البحث في قاعدة البيانات...");
     try {
       const check = await verifyStudentInDB(regId);
       if (check.isVerified) {
@@ -122,13 +121,13 @@ export default function UploadPage() {
           regId: regId, 
           deptName: check.dbDepartmentName || "غير محدد" 
         });
-        toast({ title: "تم التعرف على الطالب بنجاح" });
+        toast({ title: "تم التعرف على الطالب" });
       } else {
         setManualStudent(null);
-        toast({ variant: "destructive", title: "الطالب غير مسجل", description: "يرجى إضافة الطالب أولاً من واجهة إدارة الطلاب." });
+        toast({ variant: "destructive", title: "الطالب غير مسجل" });
       }
     } catch (e) {
-      toast({ variant: "destructive", title: "خطأ في الاتصال" });
+      toast({ variant: "destructive", title: "خطأ في البحث" });
     } finally {
       setLoading(false);
     }
@@ -166,7 +165,7 @@ export default function UploadPage() {
     setLoading(true);
     setLoadingText("جاري استخراج البيانات ذكياً...");
     
-    const results: AIResult[] = [];
+    const tempResults: AIResult[] = [];
 
     for (const file of files) {
       try {
@@ -179,34 +178,32 @@ export default function UploadPage() {
         const responseData = await response.json();
         
         if (!response.ok) {
-          throw new Error(responseData.error || 'خطأ في معالجة الورقة');
+          throw new Error(responseData.error || 'فشل الاتصال بمحرك التحليل');
         }
         
         const dbCheck = await verifyStudentInDB(responseData.studentRegistrationId || "");
         
-        results.push({
-          studentRegistrationId: responseData.studentRegistrationId || "",
+        tempResults.push({
+          studentRegistrationId: responseData.studentRegistrationId || "---",
           studentName: dbCheck.isVerified ? dbCheck.dbStudentName! : (responseData.studentName || "غير معروف"),
           dbDepartmentName: dbCheck.dbDepartmentName || "غير مسجل",
-          subjectName: context.subjectName, 
           fileData: file,
           isVerified: dbCheck.isVerified,
           status: dbCheck.isVerified ? 'success' : 'failed'
         });
       } catch (e: any) {
-        results.push({ 
+        tempResults.push({ 
           studentName: "فشل التحليل", 
-          studentRegistrationId: "", 
-          subjectName: context.subjectName, 
+          studentRegistrationId: "خطأ", 
           fileData: file,
           isVerified: false,
           status: 'failed'
         });
-        toast({ variant: "destructive", title: "خطأ في تحليل ورقة", description: e.message });
+        toast({ variant: "destructive", title: "خطأ في ورقة", description: e.message });
       }
     }
     
-    setAiResults(results);
+    setAiResults(tempResults);
     setLoading(false);
   };
 
@@ -232,7 +229,7 @@ export default function UploadPage() {
   const saveManualArchive = async () => {
     if (!firestore || !manualStudent) return;
     setLoading(true);
-    setLoadingText("جاري الحفظ في الأرشيف...");
+    setLoadingText("جاري الحفظ...");
     try {
       await addDoc(collection(firestore, "archives"), {
         student_id: manualStudent.regId,
@@ -251,12 +248,12 @@ export default function UploadPage() {
         uploadedAt: serverTimestamp()
       });
 
-      toast({ title: "تمت أرشفة المستند بنجاح" });
+      toast({ title: "تمت الأرشفة بنجاح" });
       setFiles([]);
       setManualId("");
       setManualStudent(null);
     } catch (e) {
-      toast({ variant: "destructive", title: "فشل الأرشفة" });
+      toast({ variant: "destructive", title: "فشل الحفظ" });
     } finally {
       setLoading(false);
     }
@@ -264,15 +261,8 @@ export default function UploadPage() {
 
   const saveBatchAI = async () => {
     if (!firestore || aiResults.length === 0) return;
-    
-    const unverified = aiResults.filter(r => !r.isVerified);
-    if (unverified.length > 0) {
-      toast({ variant: "destructive", title: "تنبيه هام", description: "يرجى تصحيح أرقام القيد للطلاب غير المسجلين قبل الاعتماد." });
-      return;
-    }
-
     setLoading(true);
-    setLoadingText("جاري أرشفة كافة الأوراق...");
+    setLoadingText("جاري الأرشفة النهائية...");
     
     try {
       for (const res of aiResults) {
@@ -293,12 +283,12 @@ export default function UploadPage() {
           uploadedAt: serverTimestamp()
         });
       }
-      toast({ title: "اكتملت عملية الأرشفة الذكية بنجاح" });
+      toast({ title: "اكتملت الأرشفة الذكية" });
       setFiles([]);
       setAiResults([]);
       setStep(1); 
     } catch (e) {
-      toast({ variant: "destructive", title: "خطأ أثناء الحفظ النهائي" });
+      toast({ variant: "destructive", title: "خطأ أثناء الحفظ" });
     } finally {
       setLoading(false);
     }
@@ -316,12 +306,12 @@ export default function UploadPage() {
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-4xl font-black text-primary mb-2">منصة رفع الاختبارات</h1>
-            <p className="text-muted-foreground font-bold text-lg">نظام الأرشفة الذكي المدعوم بـ Gemini AI</p>
+            <h1 className="text-4xl font-black text-primary mb-2">رفع الاختبارات</h1>
+            <p className="text-muted-foreground font-bold text-lg">الأرشفة الذكية المدعومة بـ Gemini AI</p>
           </div>
           
           <Tabs value={activeMode} onValueChange={(v: any) => { setActiveMode(v); setStep(1); setFiles([]); setAiResults([]); setManualId(""); setManualStudent(null); }} className="w-full md:w-[450px]">
-            <TabsList className="grid w-full grid-cols-2 h-16 bg-white/50 backdrop-blur-md rounded-2xl p-1.5 shadow-xl border border-white overflow-hidden">
+            <TabsList className="grid w-full grid-cols-2 h-16 bg-white/70 backdrop-blur-md rounded-2xl p-1.5 shadow-xl border border-white overflow-hidden">
               <TabsTrigger 
                 value="manual" 
                 className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
@@ -339,7 +329,7 @@ export default function UploadPage() {
         </div>
 
         {loading && (
-          <div className="fixed inset-0 bg-white/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center gap-6 text-center">
+          <div className="fixed inset-0 bg-white/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center gap-6">
             <div className="relative">
               <div className="w-24 h-24 rounded-full border-4 border-primary/10 border-t-primary animate-spin"></div>
               <Cpu className="absolute inset-0 m-auto w-10 h-10 text-primary animate-pulse" />
@@ -349,36 +339,33 @@ export default function UploadPage() {
         )}
 
         {step === 1 && (
-          <Card className="p-8 md:p-12 border-none shadow-2xl rounded-[3rem] bg-white animate-slide-up border-r-8 border-primary">
-            <div className="flex items-center gap-5 mb-12 border-b pb-8">
-              <div className="p-5 bg-primary/5 rounded-3xl text-primary"><Layers className="w-10 h-10" /></div>
-              <div className="text-right">
-                <h2 className="text-3xl font-black text-primary">تحديد السياق الأكاديمي</h2>
-                <p className="text-muted-foreground font-bold">يرجى تحديد تفاصيل الدفعة المرفوعة لضمان دقة الأرشفة</p>
-              </div>
+          <Card className="p-10 border-none shadow-2xl rounded-[3rem] bg-white animate-slide-up border-r-8 border-primary">
+            <div className="flex items-center gap-5 mb-10 border-b pb-6">
+              <div className="p-4 bg-primary/5 rounded-2xl text-primary"><Layers className="w-8 h-8" /></div>
+              <h2 className="text-2xl font-black text-primary">تحديد تفاصيل الدفعة المرفوعة</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
               <div className="space-y-3">
-                <Label className="font-black text-primary pr-1 flex items-center gap-2"><Calendar className="w-4 h-4 text-secondary" />العام الجامعي</Label>
-                <select value={context.year} onChange={(e) => setContext({...context, year: e.target.value})} className="w-full h-14 px-5 rounded-2xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                <Label className="font-black text-primary flex items-center gap-2"><Calendar className="w-4 h-4 text-secondary" />العام الجامعي</Label>
+                <select value={context.year} onChange={(e) => setContext({...context, year: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
                   <option value="">اختر العام...</option>
                   {academicYears.map((y: any) => <option key={y.id} value={y.label}>{y.label}</option>)}
                 </select>
               </div>
               <div className="space-y-3">
-                <Label className="font-black text-primary pr-1 flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />القسم العلمي</Label>
+                <Label className="font-black text-primary flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />القسم العلمي</Label>
                 <select value={context.deptId} onChange={(e) => {
                   const sel = departments.find((d: any) => d.id === e.target.value) as any;
                   setContext({...context, deptId: e.target.value, deptName: sel?.nameAr || sel?.name || ""});
-                }} className="w-full h-14 px-5 rounded-2xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                }} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
                   <option value="">اختر القسم...</option>
                   {departments.map((d: any) => <option key={d.id} value={d.id}>{d.nameAr || d.name}</option>)}
                 </select>
               </div>
               <div className="space-y-3">
-                <Label className="font-black text-primary pr-1 flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label>
-                <select value={context.level} onChange={(e) => setContext({...context, level: e.target.value})} className="w-full h-14 px-5 rounded-2xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                <Label className="font-black text-primary flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label>
+                <select value={context.level} onChange={(e) => setContext({...context, level: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
                   <option value="">اختر المستوى...</option>
                   {["المستوى الأول", "المستوى الثاني", "المستوى الثالث", "المستوى الرابع", "المستوى الخامس"].map(l => (
                     <option key={l} value={l}>{l}</option>
@@ -386,197 +373,161 @@ export default function UploadPage() {
                 </select>
               </div>
               <div className="space-y-3">
-                <Label className="font-black text-primary pr-1 flex items-center gap-2"><RefreshCcw className="w-4 h-4 text-secondary" />الفصل الدراسي</Label>
-                <select value={context.term} onChange={(e) => setContext({...context, term: e.target.value})} className="w-full h-14 px-5 rounded-2xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                <Label className="font-black text-primary flex items-center gap-2"><RefreshCcw className="w-4 h-4 text-secondary" />الفصل الدراسي</Label>
+                <select value={context.term} onChange={(e) => setContext({...context, term: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
                   <option value="">اختر الفصل...</option>
                   <option value="الفصل الأول">الفصل الأول</option>
                   <option value="الفصل الثاني">الفصل الثاني</option>
                 </select>
               </div>
               <div className="space-y-3 md:col-span-2">
-                <Label className="font-black text-primary pr-1 flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة الدراسية</Label>
+                <Label className="font-black text-primary flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة الدراسية</Label>
                 <select 
                   value={context.subjectId} 
                   onChange={(e) => {
                     const sel = filteredSubjects.find((s: any) => s.id === e.target.value) as any;
                     setContext({...context, subjectId: e.target.value, subjectName: sel?.nameAr || ""});
                   }} 
-                  className="w-full h-14 px-5 rounded-2xl border-2 bg-muted/5 font-black text-primary outline-none focus:border-primary text-right appearance-none"
+                  className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black text-primary outline-none focus:border-primary text-right appearance-none"
                 >
-                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "يرجى تحديد التخصص والمستوى والترم أولاً"}</option>
+                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "يرجى تحديد القسم والمستوى أولاً"}</option>
                   {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
                 </select>
               </div>
             </div>
 
             <div className="flex justify-center">
-              <Button 
-                onClick={() => setStep(2)} 
-                disabled={!context.subjectId || !context.year}
-                className="h-16 px-20 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-3 text-white transition-all hover:scale-105"
-              >
-                تثبيت البيانات والبدء <ArrowRight className="w-6 h-6 rotate-180" />
+              <Button onClick={() => setStep(2)} disabled={!context.subjectId} className="h-14 px-16 rounded-2xl text-lg font-black gradient-blue shadow-xl gap-3">
+                بدء رفع الأوراق <ArrowRight className="w-5 h-5 rotate-180" />
               </Button>
             </div>
           </Card>
         )}
 
         {step === 2 && (
-          <div className="space-y-10 animate-slide-up">
-            {/* Context Summary */}
-            <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border flex flex-col md:flex-row items-center justify-between gap-6 border-r-8 border-secondary">
-               <div className="flex items-center gap-6">
-                  <div className="w-16 h-16 bg-secondary/5 rounded-2xl flex items-center justify-center text-secondary border border-secondary/10"><BookOpen className="w-8 h-8" /></div>
+          <div className="space-y-8 animate-slide-up">
+            {/* Header Info */}
+            <div className="bg-white p-6 rounded-3xl shadow-xl flex items-center justify-between border-r-8 border-secondary">
+               <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-secondary/5 rounded-xl flex items-center justify-center text-secondary"><BookOpen className="w-6 h-6" /></div>
                   <div className="text-right">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase">المادة الأكاديمية المستهدفة</span>
-                    <h3 className="text-2xl font-black text-primary">{context.subjectName}</h3>
-                    <div className="flex items-center gap-3 text-xs font-bold text-secondary mt-1">
-                       <Building2 className="w-3.5 h-3.5" /> <span>{context.deptName}</span>
-                       <span className="w-1 h-1 rounded-full bg-secondary/30" />
-                       <Layers className="w-3.5 h-3.5" /> <span>{context.level} - {context.term}</span>
-                    </div>
+                    <h3 className="text-xl font-black text-primary">{context.subjectName}</h3>
+                    <p className="text-xs font-bold text-muted-foreground">{context.deptName} • {context.level}</p>
                   </div>
                </div>
-               <Button variant="outline" onClick={() => setStep(1)} className="rounded-xl font-black gap-2 h-12 border-2 px-6">
-                 <RefreshCcw className="w-4 h-4" /> تغيير السياق
-               </Button>
+               <Button variant="outline" onClick={() => setStep(1)} className="rounded-xl font-bold h-10 border-2">تغيير المادة</Button>
             </div>
 
-            {/* Step 2: Upload Area - Standalone Row */}
-            <Card className="p-8 border-none shadow-2xl rounded-[3rem] bg-white text-center">
+            {/* Top Row: File Upload Grid */}
+            <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white text-center">
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full min-h-[200px] border-4 border-dashed border-muted rounded-[2.5rem] flex flex-col items-center justify-center gap-5 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
+                className="w-full min-h-[160px] border-4 border-dashed border-muted rounded-3xl flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
               >
                 {files.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6 p-6 w-full">
+                  <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-4 p-4 w-full">
                     {files.map((f, i) => (
-                      <div key={i} className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-lg border-2 border-white group">
+                      <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-lg group">
                         <Image src={f} alt="Page" fill className="object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                           <Button size="icon" variant="destructive" className="h-10 w-10 rounded-xl" onClick={(e) => { e.stopPropagation(); setFiles(prev => prev.filter((_, idx) => idx !== i)); }}><Trash2 className="w-5 h-5" /></Button>
+                           <Button size="icon" variant="destructive" className="h-8 w-8 rounded-lg" onClick={(e) => { e.stopPropagation(); setFiles(prev => prev.filter((_, idx) => idx !== i)); }}><Trash2 className="w-4 h-4" /></Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <>
-                    <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary"><FileUp className="w-10 h-10" /></div>
-                    <div>
-                      <p className="text-xl font-black text-primary mb-1">ارفع صورة الاختبار {activeMode === 'ai' && 'أو مجموعة صور للتحليل'}</p>
-                      <p className="text-muted-foreground font-bold">اضغط هنا للاختيار من جهازك</p>
-                    </div>
+                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary"><FileUp className="w-8 h-8" /></div>
+                    <p className="text-lg font-black text-primary">ارفع صورة الاختبار {activeMode === 'ai' && 'أو مجموعة صور'}</p>
                   </>
                 )}
               </div>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple={activeMode === 'ai'} onChange={handleFileUpload} />
               
-              {files.length > 0 && (
-                <div className="flex justify-center gap-4 mt-8">
-                  <Button variant="outline" onClick={() => { setFiles([]); setAiResults([]); }} className="rounded-xl font-black gap-2 h-14 border-2 px-8">
-                    <Trash2 className="w-5 h-5" /> مسح كافة الصور
-                  </Button>
-                  {activeMode === 'ai' && aiResults.length === 0 && (
-                    <Button onClick={startAIAnalysis} className="rounded-xl font-black gradient-blue shadow-xl px-12 text-white gap-3 h-14 text-lg">
-                      <Scan className="w-6 h-6 animate-pulse" /> بدء التحليل والتحقق الذكي
-                    </Button>
-                  )}
-                </div>
+              {files.length > 0 && activeMode === 'ai' && aiResults.length === 0 && (
+                <Button onClick={startAIAnalysis} className="mt-6 rounded-xl font-black gradient-blue shadow-xl px-12 text-white h-12">
+                  <Scan className="w-5 h-5 ml-2 animate-pulse" /> بدء التحليل الذكي
+                </Button>
               )}
             </Card>
 
-            {/* Verification Section - Standalone Row */}
+            {/* Bottom Row: Results List */}
             {activeMode === 'manual' ? (
               files.length > 0 && (
-                <Card className="p-10 border-none shadow-2xl rounded-[3rem] bg-white animate-slide-up border-b-8 border-green-500">
-                  <div className="flex items-center gap-3 mb-10">
-                    <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center"><UserPlus className="w-6 h-6" /></div>
-                    <h2 className="text-2xl font-black text-primary">مطابقة بيانات الطالب فورياً</h2>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                     <div className="space-y-3">
+                <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white animate-slide-up border-b-8 border-green-500">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     <div className="space-y-2">
                         <Label className="font-black text-primary flex items-center gap-2 pr-1"><Fingerprint className="w-4 h-4 text-secondary" />رقم القيد الجامعي</Label>
                         <div className="flex gap-2">
-                          <Input value={manualId} onChange={(e) => setManualId(e.target.value)} placeholder="أدخل الرقم..." className="h-14 rounded-xl border-2 font-black text-2xl text-center focus:ring-primary" onKeyDown={(e) => e.key === 'Enter' && identifyStudent(manualId)} />
-                          <Button onClick={() => identifyStudent(manualId)} className="h-14 w-14 rounded-xl gradient-blue text-white shrink-0 shadow-lg"><Search className="w-6 h-6" /></Button>
+                          <Input value={manualId} onChange={(e) => setManualId(e.target.value)} placeholder="أدخل الرقم..." className="h-12 rounded-xl border-2 font-black text-xl text-center" onKeyDown={(e) => e.key === 'Enter' && identifyStudent(manualId)} />
+                          <Button onClick={() => identifyStudent(manualId)} className="h-12 w-12 rounded-xl gradient-blue text-white shrink-0"><Search className="w-5 h-5" /></Button>
                         </div>
                      </div>
-                     <div className="space-y-3">
-                        <Label className="font-black text-primary flex items-center gap-2 pr-1"><User className="w-4 h-4 text-secondary" />الاسم الكامل (تلقائي)</Label>
-                        <div className="h-14 bg-muted/10 border-2 rounded-xl px-5 flex items-center font-black text-primary text-lg">{manualStudent?.name || "---"}</div>
+                     <div className="space-y-2">
+                        <Label className="font-black text-primary pr-1">اسم الطالب (تلقائي)</Label>
+                        <div className="h-12 bg-muted/10 border-2 rounded-xl px-4 flex items-center font-bold text-primary">{manualStudent?.name || "---"}</div>
                      </div>
-                     <div className="space-y-3">
-                        <Label className="font-black text-primary flex items-center gap-2 pr-1"><Building2 className="w-4 h-4 text-secondary" />التخصص الدراسي (تلقائي)</Label>
-                        <div className="h-14 bg-muted/10 border-2 rounded-xl px-5 flex items-center font-black text-secondary">{manualStudent?.deptName || "---"}</div>
+                     <div className="space-y-2">
+                        <Label className="font-black text-primary pr-1">التخصص (تلقائي)</Label>
+                        <div className="h-12 bg-muted/10 border-2 rounded-xl px-4 flex items-center font-bold text-secondary">{manualStudent?.deptName || "---"}</div>
                      </div>
                   </div>
-                  
                   {manualStudent && (
-                    <div className="mt-12">
-                      <Button onClick={saveManualArchive} className="w-full h-16 rounded-2xl text-xl font-black bg-green-600 hover:bg-green-700 shadow-xl text-white gap-3 transition-transform active:scale-95">
-                        <CheckCircle2 className="w-7 h-7" /> إتمام وحفظ في الأرشيف
-                      </Button>
-                    </div>
+                    <Button onClick={saveManualArchive} className="w-full mt-8 h-14 rounded-2xl text-lg font-black bg-green-600 hover:bg-green-700 shadow-xl text-white gap-2">
+                      <CheckCircle2 className="w-6 h-6" /> إتمام وحفظ في الأرشيف
+                    </Button>
                   )}
                 </Card>
               )
             ) : (
               aiResults.length > 0 && (
-                <div className="space-y-8 animate-slide-up">
-                  <div className="flex items-center justify-between bg-white px-8 py-5 rounded-[2.5rem] shadow-lg border border-r-8 border-green-500">
-                     <div className="text-right">
-                       <h2 className="text-2xl font-black text-primary flex items-center gap-3"><CheckCircle className="w-7 h-7 text-green-500" /> مراجعة والتحقق من نتائج التحليل</h2>
-                       <p className="text-muted-foreground font-bold text-sm">تأكد من مطابقة الأسماء وأرقام القيد قبل الحفظ النهائي</p>
-                     </div>
-                     <div className="bg-primary/5 text-primary px-8 py-3 rounded-2xl font-black border flex items-center gap-2">
-                       {aiResults.length} ورقة جاهزة للاعتماد
-                     </div>
+                <div className="space-y-6 animate-slide-up">
+                  <div className="flex items-center justify-between bg-white px-8 py-4 rounded-3xl shadow-lg border-r-8 border-green-500">
+                     <h2 className="text-2xl font-black text-primary flex items-center gap-3"><CheckCircle className="w-6 h-6 text-green-500" /> مراجعة والتحقق من النتائج</h2>
+                     <div className="bg-primary/5 text-primary px-6 py-2 rounded-xl font-black border">{aiResults.length} مستندات مستخرجة</div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-6">
+                  <div className="grid grid-cols-1 gap-4">
                      {aiResults.map((res, i) => (
-                       <Card key={i} className={cn("p-6 rounded-[2.5rem] border-2 flex flex-col md:flex-row items-center gap-8 bg-white shadow-xl relative overflow-hidden transition-all", res.isVerified ? "border-green-100" : "border-red-100 bg-red-50/10")}>
-                          <div className={cn("absolute top-0 right-0 w-2.5 h-full", res.isVerified ? "bg-green-500" : "bg-red-500")} />
-                          
-                          <div className="w-32 h-44 relative rounded-2xl overflow-hidden shadow-xl shrink-0 border-4 border-white"><Image src={res.fileData} alt="Exam" fill className="object-cover" /></div>
-                          
-                          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full text-right">
-                             <div className="space-y-2">
-                                <Label className="text-[11px] font-black text-muted-foreground uppercase">اسم الطالب</Label>
-                                <div className={cn("h-12 rounded-xl px-4 flex items-center font-bold truncate", res.isVerified ? "bg-green-50 text-primary" : "bg-red-50 text-red-700")}>{res.studentName}</div>
+                       <Card key={i} className={cn("p-4 rounded-[2rem] border-2 flex flex-col md:flex-row items-center gap-6 bg-white shadow-xl relative overflow-hidden", res.isVerified ? "border-green-100" : "border-red-100 bg-red-50/10")}>
+                          <div className={cn("absolute top-0 right-0 w-2 h-full", res.isVerified ? "bg-green-500" : "bg-red-500")} />
+                          <div className="w-24 h-32 relative rounded-xl overflow-hidden shadow-md shrink-0 border-2 border-white"><Image src={res.fileData} alt="Exam" fill className="object-cover" /></div>
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 w-full text-right">
+                             <div className="space-y-1">
+                                <Label className="text-[10px] font-black text-muted-foreground uppercase">اسم الطالب</Label>
+                                <div className={cn("h-10 rounded-lg px-3 flex items-center font-bold text-sm truncate", res.isVerified ? "bg-green-50 text-primary" : "bg-red-50 text-red-700")}>{res.studentName}</div>
                              </div>
-                             <div className="space-y-2">
-                                <Label className="text-[11px] font-black text-muted-foreground uppercase">رقم القيد المستخرج</Label>
+                             <div className="space-y-1">
+                                <Label className="text-[10px] font-black text-muted-foreground uppercase">رقم القيد المستخرج</Label>
                                 <Input 
                                   value={res.studentRegistrationId} 
                                   onChange={(e) => handleUpdateAiResult(i, 'studentRegistrationId', e.target.value)} 
-                                  className={cn("h-12 rounded-xl font-black text-xl text-center", !res.isVerified ? "border-red-300 ring-red-100" : "border-green-300")} 
+                                  className={cn("h-10 rounded-lg font-black text-lg text-center", !res.isVerified ? "border-red-300 bg-red-50/50" : "border-green-300 bg-green-50/50")} 
                                 />
                              </div>
-                             <div className="space-y-2">
-                                <Label className="text-[11px] font-black text-muted-foreground uppercase">التخصص</Label>
-                                <div className={cn("h-12 rounded-xl px-4 flex items-center font-bold truncate", res.isVerified ? "bg-green-50 text-secondary" : "bg-red-50 text-red-400")}>{res.dbDepartmentName}</div>
+                             <div className="space-y-1">
+                                <Label className="text-[10px] font-black text-muted-foreground uppercase">التخصص</Label>
+                                <div className={cn("h-10 rounded-lg px-3 flex items-center font-bold text-xs truncate", res.isVerified ? "bg-green-50 text-secondary" : "bg-red-50 text-red-400")}>{res.dbDepartmentName}</div>
                              </div>
-                             <div className="flex items-center justify-center lg:justify-end gap-3 pt-6">
+                             <div className="flex items-center justify-end gap-3 pt-4">
                                 {res.isVerified ? (
-                                  <div className="bg-green-500 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-lg shadow-green-100"><CheckCircle2 className="w-5 h-5" /> مطابق</div>
+                                  <div className="bg-green-500 text-white px-4 py-2 rounded-xl font-black text-xs flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> مطابق</div>
                                 ) : (
-                                  <div className="bg-red-500 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-lg shadow-red-100"><XCircle className="w-5 h-5" /> غير مسجل</div>
+                                  <div className="bg-red-500 text-white px-4 py-2 rounded-xl font-black text-xs flex items-center gap-1.5"><XCircle className="w-4 h-4" /> غير مسجل</div>
                                 )}
-                                <Button size="icon" variant="ghost" onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive hover:bg-red-50 rounded-2xl h-12 w-12"><Trash2 className="w-6 h-6" /></Button>
+                                <Button size="icon" variant="ghost" onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive hover:bg-red-50 rounded-xl h-10 w-10"><Trash2 className="w-5 h-5" /></Button>
                              </div>
                           </div>
                        </Card>
                      ))}
                   </div>
 
-                  <Card className="p-8 rounded-[2.5rem] bg-white border-t-8 border-green-500 shadow-2xl flex flex-col md:flex-row gap-6">
-                     <Button onClick={saveBatchAI} className="flex-1 h-20 rounded-3xl text-2xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-4 transition-transform active:scale-95">
-                       <CloudUpload className="w-8 h-8" /> اعتماد وحفظ كافة الأوراق في الأرشيف
+                  <div className="flex gap-4">
+                     <Button onClick={saveBatchAI} className="flex-1 h-16 rounded-2xl text-xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-3">
+                       <CloudUpload className="w-6 h-6" /> اعتماد وحفظ كافة الأوراق في الأرشيف
                      </Button>
-                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-20 px-12 rounded-3xl font-black border-2 hover:bg-red-50 hover:text-red-600 transition-colors text-lg">إلغاء وإعادة الرفع</Button>
-                  </Card>
+                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-16 px-10 rounded-2xl font-black border-2 text-lg">إلغاء الكل</Button>
+                  </div>
                 </div>
               )
             )}

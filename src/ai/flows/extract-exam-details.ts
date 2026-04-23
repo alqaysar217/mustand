@@ -33,18 +33,15 @@ export const extractExamDetailsFlow = ai.defineFlow(
     قم بتحليل صورة ورقة الامتحان واستخرج منها بدقة:
     1. رقم القيد الجامعي (studentRegistrationId): الأرقام فقط كما تظهر في الورقة.
     2. اسم الطالب (studentName): الاسم الكامل المكتوب بخط اليد أو المطبوع.
-    3. اسم المادة (subjectName): من ترويسة الورقة.
 
     أجب بصيغة JSON فقط بهذا الهيكل:
     {
       "studentRegistrationId": "رقم فقط",
-      "studentName": "الاسم الرباعي",
-      "subjectName": "اسم المادة"
+      "studentName": "الاسم الرباعي"
     }`;
 
     try {
       const response = await ai.generate({
-        // استخدام المسمى المباشر للنموذج لضمان التوافق
         model: 'googleai/gemini-1.5-flash',
         prompt: [
           { text: promptText },
@@ -52,7 +49,6 @@ export const extractExamDetailsFlow = ai.defineFlow(
         ],
         config: {
           responseMimeType: 'application/json',
-          // تعطيل الفلاتر لضمان قراءة الأوراق الأكاديمية دون حجب
           safetySettings: [
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -64,14 +60,13 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
       const output = response.output;
       if (!output) {
-        throw new Error('لم يتمكن المحرك من توليد مخرجات صحيحة');
+        throw new Error('فشل المحرك في توليد بيانات صالحة');
       }
 
       return output as ExtractExamDetailsOutput;
     } catch (error: any) {
-      console.error('AI Processing Error:', error);
-      // إرسال تفاصيل الخطأ الحقيقية للمساعدة في التشخيص
-      throw new Error(`فشل التحليل: ${error.message || 'مشكلة في الاتصال بمزود الخدمة'}`);
+      console.error('AI Flow Error:', error);
+      throw new Error(`فشل التحليل الذكي: ${error.message || 'مشكلة في الاتصال بمزود الخدمة'}`);
     }
   }
 );
