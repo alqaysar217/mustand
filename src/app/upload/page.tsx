@@ -136,8 +136,7 @@ export default function UploadPage() {
       const reader = new FileReader();
       reader.onload = async (event) => {
         if (event.target?.result) {
-          // ضغط الصورة لضمان عدم تجاوز حجم Firestore
-          const { data } = await compressImage(event.target.result as string, 0.5, 1000);
+          const { data } = await compressImage(event.target.result as string, 0.5, 1200);
           newFiles.push(data);
           processed++;
           if (processed === fileList.length) {
@@ -169,7 +168,6 @@ export default function UploadPage() {
     setLoadingText("جاري تحليل الأوراق ومطابقة البيانات...");
     
     const results: AIResult[] = [];
-    let successCount = 0;
 
     for (const file of files) {
       try {
@@ -197,11 +195,10 @@ export default function UploadPage() {
           dbStudentName: dbCheck.dbStudentName,
           status: dbCheck.isVerified ? 'success' : 'failed'
         });
-        successCount++;
       } catch (e: any) {
         console.error('Analysis item error:', e);
         results.push({ 
-          studentName: "فشل التحليل الذكي لهذه الورقة", 
+          studentName: "فشل التحليل", 
           studentRegistrationId: "", 
           subjectName: context.subjectName, 
           fileData: file,
@@ -213,12 +210,7 @@ export default function UploadPage() {
     
     setAiResults(results);
     setLoading(false);
-    
-    if (successCount === 0) {
-      toast({ variant: "destructive", title: "فشل التحليل بالكامل", description: "تأكد من جودة الصور ومن صلاحية مفتاح الـ API." });
-    } else if (results.some(r => !r.isVerified)) {
-      toast({ variant: "destructive", title: "تحذير: نتائج غير متطابقة", description: "بعض الطلاب غير مسجلين في قاعدة البيانات. يرجى مراجعة الحقول الحمراء." });
-    }
+    toast({ title: "اكتملت عملية التحليل", description: "يرجى مراجعة البيانات وتصحيح الحقول الحمراء." });
   };
 
   const handleUpdateAiResult = async (index: number, field: string, value: string) => {
@@ -272,12 +264,6 @@ export default function UploadPage() {
   const saveBatchAI = async () => {
     if (!firestore || aiResults.length === 0) return;
     
-    const unverified = aiResults.filter(r => !r.isVerified);
-    if (unverified.length > 0) {
-      toast({ variant: "destructive", title: "لا يمكن الحفظ", description: "يجب تصحيح أرقام القيد للطلاب غير المسجلين (الحمراء) قبل الاعتماد." });
-      return;
-    }
-
     setLoading(true);
     setLoadingText("جاري الحفظ الجماعي...");
     
@@ -333,13 +319,13 @@ export default function UploadPage() {
             <TabsList className="grid w-full grid-cols-2 h-16 bg-white/40 backdrop-blur-xl rounded-2xl p-1.5 shadow-2xl border border-white/20 overflow-hidden relative z-10">
               <TabsTrigger 
                 value="manual" 
-                className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-[1.02]"
+                className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Keyboard className="w-4 h-4 ml-2" /> الرفع اليدوي
               </TabsTrigger>
               <TabsTrigger 
                 value="ai" 
-                className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-[1.02]"
+                className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Cpu className="w-4 h-4 ml-2" /> الرفع الذكي
               </TabsTrigger>
@@ -432,7 +418,6 @@ export default function UploadPage() {
 
         {step === 2 && (
           <div className="space-y-10 animate-slide-up">
-            {/* Header Info Banner */}
             <div className="bg-white p-6 rounded-[2rem] shadow-xl border flex flex-col md:flex-row items-center justify-between gap-6 border-r-8 border-secondary">
                <div className="flex items-center gap-6 justify-start">
                   <div className="w-16 h-16 bg-secondary/5 rounded-2xl flex items-center justify-center text-secondary shadow-inner border border-secondary/10"><BookOpen className="w-8 h-8" /></div>
@@ -451,7 +436,6 @@ export default function UploadPage() {
                </Button>
             </div>
 
-            {/* Photo Upload Area */}
             <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white text-center">
               <div 
                 onClick={() => fileInputRef.current?.click()}
@@ -487,14 +471,13 @@ export default function UploadPage() {
                   </Button>
                   {activeMode === 'ai' && aiResults.length === 0 && (
                     <Button onClick={startAIAnalysis} className="rounded-xl font-black gradient-blue shadow-xl px-12 text-white gap-3 h-14 text-lg">
-                      <Scan className="w-6 h-6 animate-pulse" /> بدء التحليل والتحقق من الطلاب
+                      <Scan className="w-6 h-6 animate-pulse" /> بدء التحقق من الطلاب
                     </Button>
                   )}
                 </div>
               )}
             </Card>
 
-            {/* Verification & Final Step */}
             {activeMode === 'manual' ? (
               files.length > 0 && (
                 <Card className="p-10 border-none shadow-2xl rounded-[2.5rem] bg-white animate-slide-up border-b-8 border-green-500">

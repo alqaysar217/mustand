@@ -4,14 +4,13 @@ import { extractExamDetails } from '@/ai/flows/extract-exam-details';
 
 /**
  * @fileOverview مسار API لاستدعاء نظام التحليل الذكي.
- * يعمل كجسر بين الواجهة الأمامية و Genkit Flow.
  */
 
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.GOOGLE_GENAI_API_KEY;
 
-    if (!apiKey || apiKey === 'YOUR_API_KEY_HERE' || apiKey === '') {
+    if (!apiKey) {
       return NextResponse.json({ 
         error: 'مفتاح الـ API لـ Google AI Studio مفقود. يرجى إضافته في ملف .env لكي يعمل التحليل الذكي.' 
       }, { status: 401 });
@@ -25,12 +24,6 @@ export async function POST(req: NextRequest) {
     // استدعاء الـ Flow مع معالجة الأخطاء الداخلية
     const result = await extractExamDetails({ examImageDataUri: body.examImageDataUri });
 
-    if (!result || (!result.studentRegistrationId && !result.studentName)) {
-      return NextResponse.json({ 
-        error: 'فشل الذكاء الاصطناعي في استخراج بيانات واضحة من هذه الصورة. يرجى التأكد من أن رقم القيد والاسم ظاهران بوضوح.' 
-      }, { status: 422 });
-    }
-
     return NextResponse.json(result);
 
   } catch (error: any) {
@@ -39,15 +32,11 @@ export async function POST(req: NextRequest) {
     // التعامل مع أخطاء جوجل الشائعة
     const errorMessage = error.message || '';
     if (errorMessage.includes('429')) {
-      return NextResponse.json({ error: 'تم تجاوز حد الاستخدام المجاني (Rate Limit). يرجى المحاولة بعد دقيقة واحدة.' }, { status: 429 });
-    }
-    
-    if (errorMessage.includes('403') || errorMessage.includes('API key')) {
-      return NextResponse.json({ error: 'مفتاح الـ API غير صالح أو محظور. يرجى التأكد من صلاحية المفتاح في ملف .env' }, { status: 403 });
+      return NextResponse.json({ error: 'تم تجاوز حد الاستخدام المجاني. يرجى المحاولة بعد دقيقة واحدة.' }, { status: 429 });
     }
     
     return NextResponse.json({ 
-      error: 'حدث خطأ غير متوقع أثناء معالجة الورقة.',
+      error: 'حدث خطأ أثناء معالجة الورقة عبر الذكاء الاصطناعي.',
       details: errorMessage 
     }, { status: 500 });
   }

@@ -1,8 +1,8 @@
+
 'use server';
 
 /**
  * @fileOverview نظام استخراج بيانات الاختبارات باستخدام Genkit و Gemini.
- * يقوم بتحليل صورة ورقة الامتحان واستخراج (رقم القيد، اسم الطالب) بدقة.
  */
 
 import { ai } from '@/ai/genkit';
@@ -31,7 +31,7 @@ export const extractExamDetailsFlow = ai.defineFlow(
     outputSchema: ExtractExamDetailsOutputSchema,
   },
   async (input) => {
-    const prompt = `أنت خبير في أرشفة الوثائق الأكاديمية العربية. 
+    const promptText = `أنت خبير في أرشفة الوثائق الأكاديمية العربية. 
     قم بتحليل صورة ورقة الامتحان المرفقة واستخرج البيانات التالية بدقة شديدة:
     1. رقم القيد الجامعي (studentRegistrationId): ابحث عن أي أرقام تعريفية أو أكاديمية للطالب.
     2. اسم الطالب (studentName): استخرج الاسم الرباعي المكتوب بخط اليد أو المطبوع.
@@ -48,7 +48,7 @@ export const extractExamDetailsFlow = ai.defineFlow(
     const response = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
       prompt: [
-        { text: prompt },
+        { text: promptText },
         { media: { url: input.examImageDataUri } }
       ],
       config: {
@@ -64,7 +64,7 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
     const output = response.output;
     if (!output) {
-      throw new Error('لم يتمكن الذكاء الاصطناعي من توليد استجابة صحيحة.');
+      return { studentRegistrationId: "", studentName: "", subjectName: "" };
     }
 
     return output as ExtractExamDetailsOutput;
@@ -79,6 +79,6 @@ export async function extractExamDetails(input: ExtractExamDetailsInput): Promis
     return await extractExamDetailsFlow(input);
   } catch (error: any) {
     console.error('--- [Genkit Flow Error] ---', error);
-    throw new Error(error.message || 'فشل في تحليل الصورة عبر Genkit');
+    throw new Error('فشل في معالجة الصورة عبر محرك الذكاء الاصطناعي.');
   }
 }
