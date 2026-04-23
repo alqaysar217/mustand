@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -92,8 +91,7 @@ export default function UploadPage() {
   const filteredSubjects = useMemo(() => {
     if (!context.deptId || !context.level || !context.term) return [];
     return (allSubjects as any[]).filter(s => {
-      // مطابقة مرنة للقسم والمستوى والترم
-      const deptMatch = s.departmentId === context.deptId || s.departmentName === context.deptName;
+      const deptMatch = s.departmentId === context.deptId || s.departmentName === context.deptName || s.departmentId === "any";
       const levelMatch = s.level === context.level || s.level?.includes(context.level);
       const termMatch = s.term === context.term;
       return deptMatch && levelMatch && termMatch;
@@ -103,6 +101,7 @@ export default function UploadPage() {
   const identifyStudent = async (regId: string) => {
     if (!firestore || !regId) return;
     setLoading(true);
+    setLoadingText("جاري البحث عن الطالب...");
     try {
       const q = query(collection(firestore, "students"), where("regId", "==", regId));
       const snap = await getDocs(q);
@@ -119,7 +118,7 @@ export default function UploadPage() {
         toast({ variant: "destructive", title: "الطالب غير موجود", description: "يرجى إضافة الطالب من واجهة إدارة الطلاب أولاً." });
       }
     } catch (e) {
-      toast({ variant: "destructive", title: "خطأ في البحث" });
+      toast({ variant: "destructive", title: "خطأ في الاتصال بقاعدة البيانات" });
     } finally {
       setLoading(false);
     }
@@ -139,8 +138,7 @@ export default function UploadPage() {
       const reader = new FileReader();
       reader.onload = async (event) => {
         if (event.target?.result) {
-          // ضغط الصورة لضمان سرعة التحليل وعدم تجاوز حدود الحجم
-          const { data } = await compressImage(event.target.result as string, 0.6, 1200);
+          const { data } = await compressImage(event.target.result as string, 0.5, 1200);
           newFiles.push(data);
           processed++;
           if (processed === fileList.length) {
@@ -155,12 +153,14 @@ export default function UploadPage() {
 
   const verifyStudentInDB = async (regId: string) => {
     if (!firestore || !regId) return { isVerified: false };
-    const q = query(collection(firestore, "students"), where("regId", "==", regId));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const data = snap.docs[0].data();
-      return { isVerified: true, dbStudentName: data.name };
-    }
+    try {
+      const q = query(collection(firestore, "students"), where("regId", "==", regId));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        return { isVerified: true, dbStudentName: data.name };
+      }
+    } catch (e) {}
     return { isVerified: false };
   };
 
@@ -178,18 +178,18 @@ export default function UploadPage() {
           body: JSON.stringify({ examImageDataUri: file })
         });
         
+        const responseData = await response.json().catch(() => ({}));
+        
         if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error || `خطأ من الخادم (${response.status})`);
+          throw new Error(responseData.error || `خطأ من الخادم (${response.status})`);
         }
         
-        const data = await response.json();
-        const dbCheck = await verifyStudentInDB(data.studentRegistrationId || "");
+        const dbCheck = await verifyStudentInDB(responseData.studentRegistrationId || "");
         
         results.push({
-          ...data,
-          studentRegistrationId: data.studentRegistrationId || "",
-          studentName: dbCheck.dbStudentName || data.studentName || "غير معروف",
+          ...responseData,
+          studentRegistrationId: responseData.studentRegistrationId || "",
+          studentName: dbCheck.dbStudentName || responseData.studentName || "غير معروف",
           subjectName: context.subjectName, 
           fileData: file,
           isVerified: dbCheck.isVerified,
@@ -197,14 +197,10 @@ export default function UploadPage() {
           status: dbCheck.isVerified ? 'success' : 'failed'
         });
       } catch (e: any) {
-        console.error('AI Error:', e);
-        toast({ 
-          variant: "destructive", 
-          title: "فشل التحليل الذكي", 
-          description: e.message 
-        });
+        console.error('Analysis error:', e);
+        toast({ variant: "destructive", title: "فشل تحليل إحدى الأوراق", description: e.message });
         results.push({ 
-          studentName: "خطأ في القراءة", 
+          studentName: "فشل التحليل", 
           studentRegistrationId: "", 
           subjectName: context.subjectName, 
           fileData: file,
@@ -352,7 +348,7 @@ export default function UploadPage() {
               <div className="p-4 bg-primary/5 rounded-2xl text-primary"><Layers className="w-8 h-8" /></div>
               <div className="text-right">
                 <h2 className="text-2xl font-black text-primary">سياق الأرشفة الموحد</h2>
-                <p className="text-muted-foreground font-bold">سيتم تطبيق هذه البيانات على كافة الأوراق التي سترفعها الآن</p>
+                <p className="text-muted-foreground font-bold">سيتم تطبيق هذه البيانات على كافة الأوراق التي ستؤرشف الآن</p>
               </div>
             </div>
 
@@ -401,7 +397,7 @@ export default function UploadPage() {
                   }} 
                   className="w-full h-14 px-5 rounded-2xl border-2 bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right disabled:opacity-50"
                 >
-                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "لا توجد مواد لهذا القسم والمستوى والترم"}</option>
+                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "لا توجد مواد تطابق الخيارات أعلاه"}</option>
                   {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
                 </select>
               </div>
@@ -421,7 +417,6 @@ export default function UploadPage() {
 
         {step === 2 && (
           <div className="space-y-10 animate-slide-up">
-            {/* مؤشر السياق الأكاديمي المثبت */}
             <div className="bg-white p-6 rounded-[2rem] shadow-lg border flex flex-col md:flex-row items-center justify-between gap-6">
                <div className="flex items-center gap-5 justify-start">
                   <div className="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center text-primary shadow-inner"><BookOpen className="w-7 h-7" /></div>
@@ -438,11 +433,10 @@ export default function UploadPage() {
                </Button>
             </div>
 
-            {/* منطقة رفع الصور - عرض كامل */}
             <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white text-center">
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full min-h-[250px] border-4 border-dashed border-muted/50 rounded-[2rem] flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
+                className="w-full min-h-[200px] border-4 border-dashed border-muted/50 rounded-[2rem] flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
               >
                 {files.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 p-6 w-full">
@@ -469,7 +463,7 @@ export default function UploadPage() {
               
               {files.length > 0 && (
                 <div className="flex justify-center gap-4 mt-6">
-                  <Button variant="outline" onClick={() => { setFiles([]); setAiResults([]); }} className="rounded-xl font-black gap-2 h-12 border-2"><Trash2 className="w-4 h-4" /> مسح كافة الصور</Button>
+                  <Button variant="outline" onClick={() => { setFiles([]); setAiResults([]); }} className="rounded-xl font-black gap-2 h-12 border-2"><Trash2 className="w-4 h-4" /> مسح الصور</Button>
                   {activeMode === 'ai' && aiResults.length === 0 && (
                     <Button onClick={startAIAnalysis} className="rounded-xl font-black gradient-blue shadow-lg px-10 text-white gap-2 h-12">
                       <Scan className="w-5 h-5" /> بدء التحليل والتحقق الذكي
@@ -479,7 +473,6 @@ export default function UploadPage() {
               )}
             </Card>
 
-            {/* منطقة المراجعة والتحقق */}
             {activeMode === 'manual' ? (
               files.length > 0 && (
                 <Card className="p-10 border-none shadow-2xl rounded-[2.5rem] bg-white animate-slide-up">
@@ -535,9 +528,9 @@ export default function UploadPage() {
                              </div>
                              <div className="flex items-center justify-center md:justify-end gap-3 pt-4">
                                 {res.isVerified ? (
-                                  <div className="bg-green-500 text-white px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 shadow-sm animate-fade-in"><CheckCircle2 className="w-4 h-4" /> مطابق للنظام</div>
+                                  <div className="bg-green-500 text-white px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 shadow-sm"><CheckCircle2 className="w-4 h-4" /> مطابق</div>
                                 ) : (
-                                  <div className="bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 shadow-sm animate-pulse"><XCircle className="w-4 h-4" /> غير مسجل</div>
+                                  <div className="bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 shadow-sm"><XCircle className="w-4 h-4" /> غير مسجل</div>
                                 )}
                                 <Button size="icon" variant="ghost" onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive hover:bg-destructive/10 rounded-xl h-11 w-11"><Trash2 className="w-5 h-5" /></Button>
                              </div>
@@ -547,7 +540,7 @@ export default function UploadPage() {
                   </div>
 
                   <div className="pt-8 border-t flex flex-col md:flex-row gap-4">
-                     <Button onClick={saveBatchAI} className="flex-1 h-16 rounded-2xl text-xl font-black bg-green-600 hover:bg-green-700 shadow-xl text-white gap-3"><CheckCircle className="w-6 h-6" /> اعتماد وحفظ الكل في الأرشيف</Button>
+                     <Button onClick={saveBatchAI} className="flex-1 h-16 rounded-2xl text-xl font-black bg-green-600 hover:bg-green-700 shadow-xl text-white gap-3"><CheckCircle className="w-6 h-6" /> اعتماد وحفظ الكل</Button>
                      <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-16 px-10 rounded-2xl font-black border-2">إلغاء وإعادة المحاولة</Button>
                   </div>
                 </Card>
