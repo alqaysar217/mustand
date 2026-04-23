@@ -33,11 +33,17 @@ export const extractExamDetailsFlow = ai.defineFlow(
   async (input) => {
     const prompt = `أنت خبير في أرشفة الوثائق الأكاديمية العربية. 
     قم بتحليل صورة ورقة الامتحان المرفقة واستخرج البيانات التالية بدقة شديدة:
-    1. رقم القيد الجامعي (Registration ID): ابحث عن أي أرقام تعريفية أو أكاديمية للطالب.
-    2. اسم الطالب (Student Name): استخرج الاسم الرباعي المكتوب بخط اليد أو المطبوع.
-    3. اسم المادة (Subject Name): استخرج اسم المادة الدراسية المكتوبة في ترويسة الورقة.
+    1. رقم القيد الجامعي (studentRegistrationId): ابحث عن أي أرقام تعريفية أو أكاديمية للطالب.
+    2. اسم الطالب (studentName): استخرج الاسم الرباعي المكتوب بخط اليد أو المطبوع.
+    3. اسم المادة (subjectName): استخرج اسم المادة الدراسية المكتوبة في ترويسة الورقة.
 
-    يجب أن تكون المخرجات بصيغة JSON فقط. إذا لم تجد بياناً، اترك الحقل فارغاً.`;
+    يجب أن تكون المخرجات بصيغة JSON فقط مطابقة لهذا المخطط:
+    {
+      "studentRegistrationId": "string",
+      "studentName": "string",
+      "subjectName": "string"
+    }
+    إذا لم تجد بياناً، اترك الحقل فارغاً "".`;
 
     const response = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
@@ -47,6 +53,12 @@ export const extractExamDetailsFlow = ai.defineFlow(
       ],
       config: {
         responseMimeType: 'application/json',
+        safetySettings: [
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+        ]
       }
     });
 

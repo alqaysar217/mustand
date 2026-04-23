@@ -6,7 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { 
   FileUp, 
@@ -14,8 +14,6 @@ import {
   CheckCircle, 
   Loader2, 
   Scan, 
-  UserCheck, 
-  AlertCircle, 
   Building2, 
   BookOpen, 
   Calendar, 
@@ -26,13 +24,11 @@ import {
   Keyboard, 
   Cpu, 
   RefreshCcw, 
-  X, 
   Layers, 
   Search,
   ChevronLeft,
   CheckCircle2,
   XCircle,
-  ImageIcon
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -91,7 +87,8 @@ export default function UploadPage() {
   const filteredSubjects = useMemo(() => {
     if (!context.deptId || !context.level || !context.term) return [];
     return (allSubjects as any[]).filter(s => {
-      const deptMatch = s.departmentId === context.deptId || s.departmentName === context.deptName || s.departmentId === "any";
+      // مطابقة القسم (بالـ ID أو الاسم) + المستوى + الترم
+      const deptMatch = s.departmentId === context.deptId || s.departmentName === context.deptName;
       const levelMatch = s.level === context.level || s.level?.includes(context.level);
       const termMatch = s.term === context.term;
       return deptMatch && levelMatch && termMatch;
@@ -198,9 +195,9 @@ export default function UploadPage() {
         });
       } catch (e: any) {
         console.error('Analysis error:', e);
-        toast({ variant: "destructive", title: "فشل تحليل إحدى الأوراق", description: e.message });
+        // في حال فشل تحليل ورقة، نضيفها كفشل بدلاً من إيقاف الكل
         results.push({ 
-          studentName: "فشل التحليل", 
+          studentName: "فشل التحليل - يرجى الإدخال يدوياً", 
           studentRegistrationId: "", 
           subjectName: context.subjectName, 
           fileData: file,
@@ -212,6 +209,9 @@ export default function UploadPage() {
     
     setAiResults(results);
     setLoading(false);
+    if (results.some(r => r.status === 'failed')) {
+      toast({ variant: "destructive", title: "تنبيه: بعض الأوراق لم تتعرف على الطلاب", description: "يرجى مراجعة وتصحيح أرقام القيد الملونة بالأحمر." });
+    }
   };
 
   const handleUpdateAiResult = async (index: number, field: string, value: string) => {
@@ -264,14 +264,19 @@ export default function UploadPage() {
 
   const saveBatchAI = async () => {
     if (!firestore || aiResults.length === 0) return;
+    
+    const unverified = aiResults.filter(r => !r.isVerified);
+    if (unverified.length > 0) {
+      toast({ variant: "destructive", title: "لا يمكن الحفظ", description: "يجب تصحيح كافة أرقام القيد لطلاب غير مسجلين (بالأحمر) قبل المتابعة." });
+      return;
+    }
+
     setLoading(true);
     setLoadingText("جاري الأرشفة الجماعية...");
     
     try {
       let savedCount = 0;
       for (const res of aiResults) {
-        if (!res.studentRegistrationId) continue;
-        
         await addDoc(collection(firestore, "archives"), {
           student_id: res.studentRegistrationId,
           studentRegId: res.studentRegistrationId,
@@ -397,7 +402,7 @@ export default function UploadPage() {
                   }} 
                   className="w-full h-14 px-5 rounded-2xl border-2 bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right disabled:opacity-50"
                 >
-                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "لا توجد مواد تطابق الخيارات أعلاه"}</option>
+                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "لا توجد مواد لهذا القسم والمستوى"}</option>
                   {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
                 </select>
               </div>
@@ -459,7 +464,7 @@ export default function UploadPage() {
                   </>
                 )}
               </div>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple={activeMode === 'ai'} onChange={handleFileUpload} />
+              <input type="file" min-h-screen ref={fileInputRef} className="hidden" accept="image/*" multiple={activeMode === 'ai'} onChange={handleFileUpload} />
               
               {files.length > 0 && (
                 <div className="flex justify-center gap-4 mt-6">
