@@ -2,8 +2,8 @@
 'use server';
 
 /**
- * @fileOverview نظام استخراج بيانات الاختبارات باستخدام Genkit و Gemini.
- * تم تحسين معالجة الأخطاء وإعدادات الأمان لضمان قراءة كافة الأوراق.
+ * @fileOverview محرك استخراج البيانات المطور.
+ * تم تحسين استقرار النموذج وتعطيل كافة فلاتر الحماية لضمان قراءة كافة المستندات الأكاديمية.
  */
 
 import { ai } from '@/ai/genkit';
@@ -15,8 +15,7 @@ const ExtractExamDetailsInputSchema = z.object({
 
 const ExtractExamDetailsOutputSchema = z.object({
   studentRegistrationId: z.string().optional().describe("رقم القيد الجامعي المستخرج"),
-  studentName: z.string().optional().describe("اسم الطالب المستخرج"),
-  subjectName: z.string().optional().describe("اسم المادة الدراسية"),
+  studentName: z.string().optional().describe("اسم الطالب المستخرج كما هو مكتوب"),
 });
 
 export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSchema>;
@@ -29,20 +28,20 @@ export const extractExamDetailsFlow = ai.defineFlow(
     outputSchema: ExtractExamDetailsOutputSchema,
   },
   async (input) => {
-    // استخدام نموذج gemini-1.5-flash المستقر لضمان عدم حدوث خطأ 404
-    const promptText = `أنت خبير في تحليل الوثائق الأكاديمية العربية. 
-    قم بتحليل صورة ورقة الامتحان واستخرج منها بدقة:
-    1. رقم القيد الجامعي (studentRegistrationId): استخرج الأرقام فقط.
-    2. اسم الطالب (studentName): الاسم الكامل للطالب.
+    const promptText = `أنت خبير في أرشفة الوثائق الأكاديمية. 
+    قم بتحليل صورة ورقة الامتحان واستخرج منها بدقة شديدة:
+    1. رقم القيد الجامعي (studentRegistrationId): استخرج الأرقام فقط (مثلاً: 2021001).
+    2. اسم الطالب (studentName): الاسم الكامل المكتوب في خانة الاسم.
 
     أجب بصيغة JSON فقط بهذا الهيكل:
     {
-      "studentRegistrationId": "رقم فقط",
+      "studentRegistrationId": "رقم القيد",
       "studentName": "الاسم الكامل"
     }`;
 
     try {
       const response = await ai.generate({
+        // استخدام المعرف المباشر لضمان التوافق مع Gemini 1.5 Flash
         model: 'googleai/gemini-1.5-flash',
         prompt: [
           { text: promptText },
@@ -50,24 +49,26 @@ export const extractExamDetailsFlow = ai.defineFlow(
         ],
         config: {
           responseMimeType: 'application/json',
+          // تعطيل فلاتر الحماية لضمان عدم حجب أي ورقة امتحان
           safetySettings: [
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
             { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' }
           ]
         }
       });
 
       const output = response.output;
       if (!output) {
-        throw new Error('لم يتمكن المحرك من استخراج بيانات واضحة من هذه الصورة');
+        throw new Error('لم يتمكن المحرك من استخراج بيانات واضحة');
       }
 
       return output as ExtractExamDetailsOutput;
     } catch (error: any) {
-      console.error('AI Flow Error:', error);
-      throw new Error(`فشل التحليل الذكي: ${error.message || 'مشكلة في الاتصال بمزود الخدمة'}`);
+      console.error('AI Extraction Error:', error);
+      throw new Error(`فشل التحليل الذكي: ${error.message || 'مشكلة في الاتصال بالخادم'}`);
     }
   }
 );
