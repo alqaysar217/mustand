@@ -88,15 +88,13 @@ export default function UploadPage() {
   const { data: allSubjects = [] } = useCollection(subjectsQuery);
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
-  // فلترة المواد بناءً على التخصص والمستوى والترم
   const filteredSubjects = useMemo(() => {
     if (!context.deptId || !context.level || !context.term) return [];
-    return (allSubjects as any[]).filter(s => {
-      const deptMatch = s.departmentId === context.deptId;
-      const levelMatch = s.level === context.level;
-      const termMatch = s.term === context.term;
-      return deptMatch && levelMatch && termMatch;
-    });
+    return (allSubjects as any[]).filter(s => 
+      s.departmentId === context.deptId && 
+      s.level === context.level && 
+      s.term === context.term
+    );
   }, [allSubjects, context.deptId, context.level, context.term]);
 
   const verifyStudentInDB = async (regId: string) => {
@@ -124,7 +122,7 @@ export default function UploadPage() {
           regId: regId, 
           deptName: check.dbDepartmentName || "غير محدد" 
         });
-        toast({ title: "تم التعرف على الطالب" });
+        toast({ title: "تم التعرف على الطالب بنجاح" });
       } else {
         setManualStudent(null);
         toast({ variant: "destructive", title: "الطالب غير مسجل", description: "يرجى إضافة الطالب أولاً من واجهة إدارة الطلاب." });
@@ -150,8 +148,7 @@ export default function UploadPage() {
       const reader = new FileReader();
       reader.onload = async (event) => {
         if (event.target?.result) {
-          // ضغط الصورة لضمان استجابة سريعة من Gemini
-          const { data } = await compressImage(event.target.result as string, 0.5, 1000);
+          const { data } = await compressImage(event.target.result as string, 0.6, 1200);
           newFiles.push(data);
           processed++;
           if (processed === fileList.length) {
@@ -182,7 +179,7 @@ export default function UploadPage() {
         const responseData = await response.json();
         
         if (!response.ok) {
-          throw new Error(responseData.error || `خطأ (${response.status})`);
+          throw new Error(responseData.error || 'خطأ في معالجة الورقة');
         }
         
         const dbCheck = await verifyStudentInDB(responseData.studentRegistrationId || "");
@@ -198,7 +195,7 @@ export default function UploadPage() {
         });
       } catch (e: any) {
         results.push({ 
-          studentName: "فشل في القراءة", 
+          studentName: "فشل التحليل", 
           studentRegistrationId: "", 
           subjectName: context.subjectName, 
           fileData: file,
@@ -224,6 +221,9 @@ export default function UploadPage() {
       if (check.isVerified) {
         newResults[index].studentName = check.dbStudentName!;
         newResults[index].dbDepartmentName = check.dbDepartmentName;
+      } else {
+        newResults[index].studentName = "غير مسجل";
+        newResults[index].dbDepartmentName = "غير مسجل";
       }
     }
     setAiResults(newResults);
@@ -232,7 +232,7 @@ export default function UploadPage() {
   const saveManualArchive = async () => {
     if (!firestore || !manualStudent) return;
     setLoading(true);
-    setLoadingText("جاري الحفظ النهائي...");
+    setLoadingText("جاري الحفظ في الأرشيف...");
     try {
       await addDoc(collection(firestore, "archives"), {
         student_id: manualStudent.regId,
@@ -251,13 +251,12 @@ export default function UploadPage() {
         uploadedAt: serverTimestamp()
       });
 
-      toast({ title: "تمت الأرشفة بنجاح" });
-      // العودة لرفع صورة جديدة مع بقاء السياق
+      toast({ title: "تمت أرشفة المستند بنجاح" });
       setFiles([]);
       setManualId("");
       setManualStudent(null);
     } catch (e) {
-      toast({ variant: "destructive", title: "فشل الحفظ" });
+      toast({ variant: "destructive", title: "فشل الأرشفة" });
     } finally {
       setLoading(false);
     }
@@ -265,8 +264,15 @@ export default function UploadPage() {
 
   const saveBatchAI = async () => {
     if (!firestore || aiResults.length === 0) return;
+    
+    const unverified = aiResults.filter(r => !r.isVerified);
+    if (unverified.length > 0) {
+      toast({ variant: "destructive", title: "تنبيه هام", description: "يرجى تصحيح أرقام القيد للطلاب غير المسجلين قبل الاعتماد." });
+      return;
+    }
+
     setLoading(true);
-    setLoadingText("جاري أرشفة الملفات المراجعة...");
+    setLoadingText("جاري أرشفة كافة الأوراق...");
     
     try {
       for (const res of aiResults) {
@@ -287,44 +293,44 @@ export default function UploadPage() {
           uploadedAt: serverTimestamp()
         });
       }
-      toast({ title: "اكتملت عملية الأرشفة الجماعية" });
+      toast({ title: "اكتملت عملية الأرشفة الذكية بنجاح" });
       setFiles([]);
       setAiResults([]);
       setStep(1); 
     } catch (e) {
-      toast({ variant: "destructive", title: "خطأ أثناء الحفظ" });
+      toast({ variant: "destructive", title: "خطأ أثناء الحفظ النهائي" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB]">
+    <div className="min-h-screen bg-[#F4F7FB] text-right" dir="rtl">
       <Sidebar />
       <Navbar />
       
       <main className={cn(
-        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-7xl mx-auto text-right",
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-7xl mx-auto",
         isOpen ? "mr-0 md:mr-64" : "mr-0"
-      )} dir="rtl">
+      )}>
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
-          <div className="text-right">
-            <h1 className="text-4xl font-black text-primary mb-2">رفع الاختبارات</h1>
-            <p className="text-muted-foreground font-bold text-lg">اختر طريقة الأرشفة المناسبة لك</p>
+          <div>
+            <h1 className="text-4xl font-black text-primary mb-2">منصة رفع الاختبارات</h1>
+            <p className="text-muted-foreground font-bold text-lg">نظام الأرشفة الذكي المدعوم بـ Gemini AI</p>
           </div>
           
           <Tabs value={activeMode} onValueChange={(v: any) => { setActiveMode(v); setStep(1); setFiles([]); setAiResults([]); setManualId(""); setManualStudent(null); }} className="w-full md:w-[450px]">
-            <TabsList className="grid w-full grid-cols-2 h-16 bg-white/80 backdrop-blur-md rounded-2xl p-1.5 shadow-xl border overflow-hidden">
+            <TabsList className="grid w-full grid-cols-2 h-16 bg-white/50 backdrop-blur-md rounded-2xl p-1.5 shadow-xl border border-white overflow-hidden">
               <TabsTrigger 
                 value="manual" 
-                className="rounded-xl font-black text-sm data-[state=active]:gradient-blue data-[state=active]:text-white transition-all shadow-none data-[state=active]:shadow-lg"
+                className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Keyboard className="w-4 h-4 ml-2" /> الرفع اليدوي
               </TabsTrigger>
               <TabsTrigger 
                 value="ai" 
-                className="rounded-xl font-black text-sm data-[state=active]:gradient-blue data-[state=active]:text-white transition-all shadow-none data-[state=active]:shadow-lg"
+                className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Cpu className="w-4 h-4 ml-2" /> الرفع الذكي
               </TabsTrigger>
@@ -348,7 +354,7 @@ export default function UploadPage() {
               <div className="p-5 bg-primary/5 rounded-3xl text-primary"><Layers className="w-10 h-10" /></div>
               <div className="text-right">
                 <h2 className="text-3xl font-black text-primary">تحديد السياق الأكاديمي</h2>
-                <p className="text-muted-foreground font-bold">هذه البيانات ستثبت لكافة الأوراق المرفوعة في هذه الجلسة</p>
+                <p className="text-muted-foreground font-bold">يرجى تحديد تفاصيل الدفعة المرفوعة لضمان دقة الأرشفة</p>
               </div>
             </div>
 
@@ -409,7 +415,7 @@ export default function UploadPage() {
                 disabled={!context.subjectId || !context.year}
                 className="h-16 px-20 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-3 text-white transition-all hover:scale-105"
               >
-                تثبيت السياق والبدء <ArrowRight className="w-6 h-6 rotate-180" />
+                تثبيت البيانات والبدء <ArrowRight className="w-6 h-6 rotate-180" />
               </Button>
             </div>
           </Card>
@@ -422,7 +428,7 @@ export default function UploadPage() {
                <div className="flex items-center gap-6">
                   <div className="w-16 h-16 bg-secondary/5 rounded-2xl flex items-center justify-center text-secondary border border-secondary/10"><BookOpen className="w-8 h-8" /></div>
                   <div className="text-right">
-                    <span className="text-[10px] font-black text-muted-foreground uppercase">المادة المختارة حالياً</span>
+                    <span className="text-[10px] font-black text-muted-foreground uppercase">المادة الأكاديمية المستهدفة</span>
                     <h3 className="text-2xl font-black text-primary">{context.subjectName}</h3>
                     <div className="flex items-center gap-3 text-xs font-bold text-secondary mt-1">
                        <Building2 className="w-3.5 h-3.5" /> <span>{context.deptName}</span>
@@ -432,18 +438,18 @@ export default function UploadPage() {
                   </div>
                </div>
                <Button variant="outline" onClick={() => setStep(1)} className="rounded-xl font-black gap-2 h-12 border-2 px-6">
-                 <RefreshCcw className="w-4 h-4" /> تغيير المادة
+                 <RefreshCcw className="w-4 h-4" /> تغيير السياق
                </Button>
             </div>
 
-            {/* Step 2: Upload Area */}
+            {/* Step 2: Upload Area - Standalone Row */}
             <Card className="p-8 border-none shadow-2xl rounded-[3rem] bg-white text-center">
               <div 
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full min-h-[200px] border-4 border-dashed border-muted rounded-[2.5rem] flex flex-col items-center justify-center gap-5 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
               >
                 {files.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-6 p-6 w-full">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6 p-6 w-full">
                     {files.map((f, i) => (
                       <div key={i} className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-lg border-2 border-white group">
                         <Image src={f} alt="Page" fill className="object-cover" />
@@ -457,7 +463,7 @@ export default function UploadPage() {
                   <>
                     <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary"><FileUp className="w-10 h-10" /></div>
                     <div>
-                      <p className="text-xl font-black text-primary mb-1">ارفع صورة الاختبار {activeMode === 'ai' && 'أو مجموعة صور'}</p>
+                      <p className="text-xl font-black text-primary mb-1">ارفع صورة الاختبار {activeMode === 'ai' && 'أو مجموعة صور للتحليل'}</p>
                       <p className="text-muted-foreground font-bold">اضغط هنا للاختيار من جهازك</p>
                     </div>
                   </>
@@ -468,41 +474,41 @@ export default function UploadPage() {
               {files.length > 0 && (
                 <div className="flex justify-center gap-4 mt-8">
                   <Button variant="outline" onClick={() => { setFiles([]); setAiResults([]); }} className="rounded-xl font-black gap-2 h-14 border-2 px-8">
-                    <Trash2 className="w-5 h-5" /> مسح الصور
+                    <Trash2 className="w-5 h-5" /> مسح كافة الصور
                   </Button>
                   {activeMode === 'ai' && aiResults.length === 0 && (
                     <Button onClick={startAIAnalysis} className="rounded-xl font-black gradient-blue shadow-xl px-12 text-white gap-3 h-14 text-lg">
-                      <Scan className="w-6 h-6 animate-pulse" /> بدء التحليل الذكي للكل
+                      <Scan className="w-6 h-6 animate-pulse" /> بدء التحليل والتحقق الذكي
                     </Button>
                   )}
                 </div>
               )}
             </Card>
 
-            {/* Bottom Row - Results/Lookup */}
+            {/* Verification Section - Standalone Row */}
             {activeMode === 'manual' ? (
               files.length > 0 && (
                 <Card className="p-10 border-none shadow-2xl rounded-[3rem] bg-white animate-slide-up border-b-8 border-green-500">
                   <div className="flex items-center gap-3 mb-10">
                     <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center"><UserPlus className="w-6 h-6" /></div>
-                    <h2 className="text-2xl font-black text-primary">مطابقة بيانات الطالب</h2>
+                    <h2 className="text-2xl font-black text-primary">مطابقة بيانات الطالب فورياً</h2>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                      <div className="space-y-3">
                         <Label className="font-black text-primary flex items-center gap-2 pr-1"><Fingerprint className="w-4 h-4 text-secondary" />رقم القيد الجامعي</Label>
                         <div className="flex gap-2">
-                          <Input value={manualId} onChange={(e) => setManualId(e.target.value)} placeholder="أدخل الرقم هنا..." className="h-14 rounded-xl border-2 font-black text-2xl text-center focus:ring-primary" onKeyDown={(e) => e.key === 'Enter' && identifyStudent(manualId)} />
+                          <Input value={manualId} onChange={(e) => setManualId(e.target.value)} placeholder="أدخل الرقم..." className="h-14 rounded-xl border-2 font-black text-2xl text-center focus:ring-primary" onKeyDown={(e) => e.key === 'Enter' && identifyStudent(manualId)} />
                           <Button onClick={() => identifyStudent(manualId)} className="h-14 w-14 rounded-xl gradient-blue text-white shrink-0 shadow-lg"><Search className="w-6 h-6" /></Button>
                         </div>
                      </div>
                      <div className="space-y-3">
-                        <Label className="font-black text-primary flex items-center gap-2 pr-1"><User className="w-4 h-4 text-secondary" />الاسم الكامل</Label>
-                        <div className="h-14 bg-muted/20 border-2 rounded-xl px-5 flex items-center font-black text-primary text-lg">{manualStudent?.name || "---"}</div>
+                        <Label className="font-black text-primary flex items-center gap-2 pr-1"><User className="w-4 h-4 text-secondary" />الاسم الكامل (تلقائي)</Label>
+                        <div className="h-14 bg-muted/10 border-2 rounded-xl px-5 flex items-center font-black text-primary text-lg">{manualStudent?.name || "---"}</div>
                      </div>
                      <div className="space-y-3">
-                        <Label className="font-black text-primary flex items-center gap-2 pr-1"><Building2 className="w-4 h-4 text-secondary" />التخصص الدراسي</Label>
-                        <div className="h-14 bg-muted/20 border-2 rounded-xl px-5 flex items-center font-black text-secondary">{manualStudent?.deptName || "---"}</div>
+                        <Label className="font-black text-primary flex items-center gap-2 pr-1"><Building2 className="w-4 h-4 text-secondary" />التخصص الدراسي (تلقائي)</Label>
+                        <div className="h-14 bg-muted/10 border-2 rounded-xl px-5 flex items-center font-black text-secondary">{manualStudent?.deptName || "---"}</div>
                      </div>
                   </div>
                   
@@ -518,19 +524,19 @@ export default function UploadPage() {
             ) : (
               aiResults.length > 0 && (
                 <div className="space-y-8 animate-slide-up">
-                  <div className="flex items-center justify-between bg-white px-8 py-5 rounded-[2.5rem] shadow-lg border">
+                  <div className="flex items-center justify-between bg-white px-8 py-5 rounded-[2.5rem] shadow-lg border border-r-8 border-green-500">
                      <div className="text-right">
-                       <h2 className="text-2xl font-black text-primary flex items-center gap-3"><CheckCircle className="w-7 h-7 text-green-500" /> مراجعة والتحقق من النتائج</h2>
-                       <p className="text-muted-foreground font-bold text-sm">تأكد من مطابقة الأسماء وأرقام القيد قبل الاعتماد النهائي</p>
+                       <h2 className="text-2xl font-black text-primary flex items-center gap-3"><CheckCircle className="w-7 h-7 text-green-500" /> مراجعة والتحقق من نتائج التحليل</h2>
+                       <p className="text-muted-foreground font-bold text-sm">تأكد من مطابقة الأسماء وأرقام القيد قبل الحفظ النهائي</p>
                      </div>
                      <div className="bg-primary/5 text-primary px-8 py-3 rounded-2xl font-black border flex items-center gap-2">
-                       {aiResults.length} ورقة جاهزة
+                       {aiResults.length} ورقة جاهزة للاعتماد
                      </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-6">
                      {aiResults.map((res, i) => (
-                       <Card key={i} className={cn("p-6 rounded-[2.5rem] border-2 flex flex-col md:flex-row items-center gap-8 bg-white shadow-xl relative overflow-hidden", res.isVerified ? "border-green-100" : "border-red-100")}>
+                       <Card key={i} className={cn("p-6 rounded-[2.5rem] border-2 flex flex-col md:flex-row items-center gap-8 bg-white shadow-xl relative overflow-hidden transition-all", res.isVerified ? "border-green-100" : "border-red-100 bg-red-50/10")}>
                           <div className={cn("absolute top-0 right-0 w-2.5 h-full", res.isVerified ? "bg-green-500" : "bg-red-500")} />
                           
                           <div className="w-32 h-44 relative rounded-2xl overflow-hidden shadow-xl shrink-0 border-4 border-white"><Image src={res.fileData} alt="Exam" fill className="object-cover" /></div>
@@ -538,15 +544,19 @@ export default function UploadPage() {
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full text-right">
                              <div className="space-y-2">
                                 <Label className="text-[11px] font-black text-muted-foreground uppercase">اسم الطالب</Label>
-                                <div className="h-12 bg-muted/10 rounded-xl px-4 flex items-center font-bold text-primary truncate">{res.studentName}</div>
+                                <div className={cn("h-12 rounded-xl px-4 flex items-center font-bold truncate", res.isVerified ? "bg-green-50 text-primary" : "bg-red-50 text-red-700")}>{res.studentName}</div>
                              </div>
                              <div className="space-y-2">
-                                <Label className="text-[11px] font-black text-muted-foreground uppercase">رقم القيد</Label>
-                                <Input value={res.studentRegistrationId} onChange={(e) => handleUpdateAiResult(i, 'studentRegistrationId', e.target.value)} className={cn("h-12 rounded-xl font-black text-xl text-center", !res.isVerified && "border-red-300 bg-red-50")} />
+                                <Label className="text-[11px] font-black text-muted-foreground uppercase">رقم القيد المستخرج</Label>
+                                <Input 
+                                  value={res.studentRegistrationId} 
+                                  onChange={(e) => handleUpdateAiResult(i, 'studentRegistrationId', e.target.value)} 
+                                  className={cn("h-12 rounded-xl font-black text-xl text-center", !res.isVerified ? "border-red-300 ring-red-100" : "border-green-300")} 
+                                />
                              </div>
                              <div className="space-y-2">
                                 <Label className="text-[11px] font-black text-muted-foreground uppercase">التخصص</Label>
-                                <div className="h-12 bg-muted/10 rounded-xl px-4 flex items-center font-bold text-secondary truncate">{res.dbDepartmentName}</div>
+                                <div className={cn("h-12 rounded-xl px-4 flex items-center font-bold truncate", res.isVerified ? "bg-green-50 text-secondary" : "bg-red-50 text-red-400")}>{res.dbDepartmentName}</div>
                              </div>
                              <div className="flex items-center justify-center lg:justify-end gap-3 pt-6">
                                 {res.isVerified ? (

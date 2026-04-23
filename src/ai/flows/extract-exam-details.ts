@@ -3,7 +3,7 @@
 
 /**
  * @fileOverview نظام استخراج بيانات الاختبارات باستخدام Genkit و Gemini.
- * تم تحسين الـ Prompt لضمان دقة استخراج الأرقام والأسماء العربية.
+ * تم تصحيح مسمى النموذج لضمان التوافق مع API v1.
  */
 
 import { ai } from '@/ai/genkit';
@@ -22,9 +22,6 @@ const ExtractExamDetailsOutputSchema = z.object({
 export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSchema>;
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
-/**
- * تعريف الـ Flow الخاص باستخراج البيانات بـ Prompt محسن لدعم اللغة العربية والتعامل مع الخط اليدوي
- */
 export const extractExamDetailsFlow = ai.defineFlow(
   {
     name: 'extractExamDetailsFlow',
@@ -32,25 +29,22 @@ export const extractExamDetailsFlow = ai.defineFlow(
     outputSchema: ExtractExamDetailsOutputSchema,
   },
   async (input) => {
-    const promptText = `أنت خبير محترف في تحليل الأوراق الأكاديمية العربية. 
-    قم بتحليل صورة ورقة الامتحان المرفقة بدقة شديدة واستخرج:
-    1. رقم القيد الجامعي (studentRegistrationId): ابحث عن أي أرقام تعريفية (عادة تكون 8 أرقام أو أكثر).
-    2. اسم الطالب (studentName): استخرج الاسم الكامل (الثلاثي أو الرباعي) سواء كان مكتوباً بخط اليد أو مطبوعاً.
-    3. اسم المادة (subjectName): ابحث عن اسم المادة في ترويسة الورقة.
+    const promptText = `أنت خبير في تحليل الوثائق الأكاديمية العربية. 
+    قم بتحليل صورة ورقة الامتحان واستخرج:
+    1. رقم القيد الجامعي (studentRegistrationId): الأرقام فقط.
+    2. اسم الطالب (studentName): الاسم الكامل.
+    3. اسم المادة (subjectName): من ترويسة الورقة.
 
-    يجب أن تكون المخرجات بصيغة JSON حصراً بهذا التنسيق:
+    أجب بصيغة JSON فقط:
     {
-      "studentRegistrationId": "الأرقام فقط",
-      "studentName": "الاسم الكامل",
+      "studentRegistrationId": "رقم فقط",
+      "studentName": "الاسم الرباعي",
       "subjectName": "اسم المادة"
-    }
-    ملاحظات هامة:
-    - إذا وجدت رقم القيد مكتوباً، استخرجه كأرقام فقط بدون حروف.
-    - إذا لم تجد بياناً معيناً، اترك الحقل فارغاً "".
-    - لا تضف أي شرح أو نصوص خارج الـ JSON.`;
+    }`;
 
     try {
       const response = await ai.generate({
+        // استخدام المسمى المستقر للنموذج لحل مشكلة الـ 404
         model: 'googleai/gemini-1.5-flash',
         prompt: [
           { text: promptText },
@@ -74,20 +68,12 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
       return output as ExtractExamDetailsOutput;
     } catch (error: any) {
-      console.error('Genkit Generate Error:', error);
-      throw error;
+      console.error('AI Processing Error:', error);
+      throw new Error('فشل النظام في الاتصال بمحرك التحليل. يرجى التحقق من جودة الصورة ومفتاح الـ API.');
     }
   }
 );
 
-/**
- * غلاف لاستدعاء الـ Flow من واجهات الـ Client أو الـ API
- */
 export async function extractExamDetails(input: ExtractExamDetailsInput): Promise<ExtractExamDetailsOutput> {
-  try {
-    return await extractExamDetailsFlow(input);
-  } catch (error: any) {
-    console.error('--- [Genkit Flow Error] ---', error);
-    throw new Error(error.message || 'فشل محرك الذكاء الاصطناعي في تحليل الورقة.');
-  }
+  return await extractExamDetailsFlow(input);
 }
