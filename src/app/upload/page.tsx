@@ -1,18 +1,14 @@
 
 "use client";
 
-/**
- * @fileOverview صفحة رفع وأرشفة الاختبارات مع تصفية فائقة المرونة للمواد.
- * تم تحسين منطق الفلترة لضمان ظهور كافة المواد (سواء اليدوية أو المحقونة).
- */
-
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { 
   FileUp, 
   Trash2, 
@@ -33,43 +29,56 @@ import {
   CloudUpload,
   Keyboard,
   Cpu,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Check,
+  RefreshCcw,
+  X,
+  Layers,
+  Search
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
-import { compressImage, getBase64SizeKB } from "@/lib/storage-utils";
+import { compressImage } from "@/lib/storage-utils";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 
 export default function UploadPage() {
-  const [mode, setMode] = useState<'ai' | 'manual'>('ai');
-  const [step, setStep] = useState(1);
+  const [activeMode, setActiveMode] = useState<'manual' | 'ai'>('manual');
+  const [step, setStep] = useState(1); // 1: Context, 2: Upload/Process
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("جاري المعالجة...");
-  const [files, setFiles] = useState<string[]>([]);
-  const [fileType, setFileType] = useState("image/jpeg");
-  const [extractedData, setExtractedData] = useState({ id: '', name: '', found: false });
-  const [formData, setFormData] = useState({ 
+  
+  // Academic Context (Sticky)
+  const [context, setContext] = useState({ 
     year: '', 
     deptId: '', 
     deptName: '',
-    collegeName: '',
-    subjectId: '', 
-    subjectName: '', 
     level: '', 
-    term: '' 
+    term: '',
+    subjectId: '',
+    subjectName: ''
   });
+
+  // Files State
+  const [files, setFiles] = useState<string[]>([]); // Base64 strings
+  
+  // Manual Flow State
+  const [manualId, setManualId] = useState("");
+  const [manualStudent, setManualStudent] = useState<{name: string, regId: string} | null>(null);
+
+  // AI Flow State
+  const [aiResults, setAiResults] = useState<any[]>([]);
   
   const { toast } = useToast();
   const { isOpen } = useSidebarToggle();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
   const firestore = useFirestore();
 
+  // Queries for selectors
   const deptsQuery = useMemo(() => firestore ? collection(firestore, "departments") : null, [firestore]);
   const subjectsQuery = useMemo(() => firestore ? collection(firestore, "subjects") : null, [firestore]);
   const yearsQuery = useMemo(() => firestore ? collection(firestore, "academicYears") : null, [firestore]);
@@ -78,120 +87,88 @@ export default function UploadPage() {
   const { data: allSubjects = [] } = useCollection(subjectsQuery);
   const { data: academicYears = [] } = useCollection(yearsQuery);
 
-  /**
-   * تصفية المواد بنظام "المطابقة المرنة" (Flexible Matching).
-   * يضمن ظهور المواد حتى لو كانت مرتبطة باسم القسم بدلاً من الـ ID.
-   */
+  // Filter subjects based on context
   const filteredSubjects = useMemo(() => {
-    if (!formData.deptId || !formData.level) return [];
-    
-    const currentDept = (departments as any[]).find(d => d.id === formData.deptId);
-    if (!currentDept) return [];
+    if (!context.deptId || !context.level) return [];
+    return (allSubjects as any[]).filter(s => 
+      (s.departmentId === context.deptId || s.departmentName === context.deptName) && 
+      (s.level === context.level)
+    );
+  }, [allSubjects, context.deptId, context.level, context.deptName]);
 
-    const targetDeptId = currentDept.id.toLowerCase();
-    const targetDeptNameAr = (currentDept.nameAr || currentDept.name || "").toLowerCase();
-    const targetLevelStr = formData.level.toLowerCase();
-
-    return (allSubjects as any[]).filter(s => {
-      // مطابقة المستوى (مرنة: تقبل "المستوى الأول" أو "الأول")
-      const subLevel = (s.level || "").toLowerCase();
-      const levelMatch = subLevel.includes(targetLevelStr) || targetLevelStr.includes(subLevel);
-      if (!levelMatch) return false;
-
-      // مطابقة القسم (مرنة جداً: معرف، اسم، أو رمز)
-      const sDeptId = (s.departmentId || "").toLowerCase();
-      const sDeptName = (s.departmentName || "").toLowerCase();
-
-      return sDeptId === targetDeptId || 
-             sDeptId === currentDept.code?.toLowerCase() ||
-             sDeptName.includes(targetDeptNameAr) || 
-             targetDeptNameAr.includes(sDeptName);
-    });
-  }, [allSubjects, formData.deptId, formData.level, departments]);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = e.target.files;
-    if (fileList && fileList.length > 0) {
-      setLoadingText("جاري معالجة حجم الملف...");
-      setLoading(true);
-      
-      const file = fileList[0];
-      setFileType(file.type);
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        if (event.target?.result) {
-          const { data } = await compressImage(event.target.result as string, 0.6, 1200);
-          setFiles([data]);
-          setLoading(false);
-          setStep(3);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleOCR = async () => {
-    if (files.length === 0 || !firestore) return;
-    setLoadingText("جاري استخراج البيانات ذكياً...");
+  // Handle student identification in manual mode
+  const identifyStudent = async (regId: string) => {
+    if (!firestore || !regId) return;
     setLoading(true);
-    
     try {
-      const response = await fetch('/api/ai/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examImageDataUri: files[0] })
-      });
-
-      if (!response.ok) throw new Error('فشل التحليل الذكي');
-
-      const result = await response.json();
-      
-      // محاولة البحث عن الطالب برقم القيد
-      const studentsRef = collection(firestore, "students");
-      const q = query(studentsRef, where("regId", "==", result.studentRegistrationId || ''));
+      const q = query(collection(firestore, "students"), where("regId", "==", regId));
       const snap = await getDocs(q);
-      
       if (!snap.empty) {
-        const s = snap.docs[0].data();
-        setExtractedData({ id: s.regId, name: s.name, found: true });
+        const data = snap.docs[0].data();
+        setManualStudent({ name: data.name, regId: data.regId });
+        toast({ title: "تم التعرف على الطالب" });
       } else {
-        setExtractedData({ id: result.studentRegistrationId || '', name: result.studentName || '', found: false });
+        setManualStudent(null);
+        toast({ variant: "destructive", title: "الطالب غير مسجل", description: "يرجى التأكد من رقم القيد أو إدخاله يدوياً." });
       }
-
-      setStep(5);
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "فشل التحليل", description: "سننتقل للتعريف اليدوي." });
-      setStep(5);
+    } catch (e) {
+      toast({ variant: "destructive", title: "خطأ في البحث" });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveToArchive = async () => {
-    if (!firestore || !extractedData.id || !formData.subjectId) {
-      toast({ variant: "destructive", title: "بيانات ناقصة" });
-      return;
-    }
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
 
+    setLoading(true);
+    setLoadingText("جاري معالجة الصور...");
+    
+    const newFiles: string[] = [];
+    let processed = 0;
+
+    Array.from(fileList).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        if (event.target?.result) {
+          const { data } = await compressImage(event.target.result as string, 0.6, 1200);
+          newFiles.push(data);
+          processed++;
+          if (processed === fileList.length) {
+            setFiles(prev => activeMode === 'manual' ? [data] : [...prev, ...newFiles]);
+            setLoading(false);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const saveManualArchive = async () => {
+    if (!firestore || !manualId || files.length === 0) return;
     setLoading(true);
     try {
       await addDoc(collection(firestore, "archives"), {
-        student_id: extractedData.id,
-        student_name: extractedData.name,
-        subject_name: formData.subjectName,
-        subjectId: formData.subjectId,
+        student_id: manualId,
+        student_name: manualStudent?.name || "طالب يدوي",
+        subject_name: context.subjectName,
+        subjectId: context.subjectId,
         file_data: files[0],
-        file_type: fileType,
-        year: formData.year,
-        term: formData.term,
-        departmentId: formData.deptId,
-        level: formData.level,
+        file_type: "image/jpeg",
+        year: context.year,
+        term: context.term || "غير محدد",
+        departmentId: context.deptId,
+        departmentName: context.deptName,
+        level: context.level,
         uploadedAt: serverTimestamp()
       });
 
       toast({ title: "تمت الأرشفة بنجاح" });
-      setStep(1);
+      // Reset for next paper but keep context
       setFiles([]);
+      setManualId("");
+      setManualStudent(null);
     } catch (e) {
       toast({ variant: "destructive", title: "فشل الحفظ" });
     } finally {
@@ -199,188 +176,376 @@ export default function UploadPage() {
     }
   };
 
+  const startAIAnalysis = async () => {
+    if (files.length === 0) return;
+    setLoading(true);
+    setLoadingText("جاري تحليل كافة الأوراق عبر Gemini AI...");
+    
+    const results = [];
+    for (const file of files) {
+      try {
+        const response = await fetch('/api/ai/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ examImageDataUri: file })
+        });
+        const data = await response.json();
+        
+        // Auto-merge with context for missing fields
+        results.push({
+          ...data,
+          studentRegistrationId: data.studentRegistrationId || "",
+          studentName: data.studentName || "غير معروف",
+          subjectName: context.subjectName, // Always take selected subject for precision
+          fileData: file
+        });
+      } catch (e) {
+        results.push({ studentName: "فشل التحليل", studentRegistrationId: "", subjectName: context.subjectName, fileData: file });
+      }
+    }
+    
+    setAiResults(results);
+    setLoading(false);
+  };
+
+  const saveBatchAI = async () => {
+    if (!firestore || aiResults.length === 0) return;
+    setLoading(true);
+    setLoadingText("جاري حفظ الأرشيف...");
+    
+    try {
+      for (const res of aiResults) {
+        await addDoc(collection(firestore, "archives"), {
+          student_id: res.studentRegistrationId,
+          student_name: res.studentName,
+          subject_name: context.subjectName,
+          subjectId: context.subjectId,
+          file_data: res.fileData,
+          file_type: "image/jpeg",
+          year: context.year,
+          term: context.term || "غير محدد",
+          departmentId: context.deptId,
+          departmentName: context.deptName,
+          level: context.level,
+          uploadedAt: serverTimestamp()
+        });
+      }
+      toast({ title: `تم حفظ ${aiResults.length} مستند بنجاح` });
+      setFiles([]);
+      setAiResults([]);
+      setStep(1); // Return to context or stay? User said back to upload.
+    } catch (e) {
+      toast({ variant: "destructive", title: "حدث خطأ أثناء الحفظ المتعدد" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#F4F7FB]">
       <Sidebar />
       <Navbar />
       
       <main className={cn(
-        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-5xl mx-auto text-right",
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-6xl mx-auto text-right",
         isOpen ? "mr-0 md:mr-64" : "mr-0"
       )} dir="rtl">
-        <div className="mb-10 text-center">
-          <h1 className="text-4xl font-black text-primary mb-2">نظام الأرشفة الذكي</h1>
-          <p className="text-muted-foreground font-bold">أرشفة سريعة مع استخراج البيانات بدعم Gemini AI</p>
-        </div>
-
-        <div className="flex items-center justify-between mb-16 relative px-4 max-w-3xl mx-auto">
-          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-muted -translate-y-1/2 z-0"></div>
-          {[1, 2, 3, 5].map((s) => (
-            <div 
-              key={s} 
-              className={cn(
-                "relative z-10 w-11 h-11 rounded-full flex items-center justify-center font-bold transition-all border-4 shadow-sm",
-                step >= s ? "bg-primary text-white border-primary scale-110 shadow-lg" : "bg-white text-muted-foreground border-muted"
-              )}
-            >
-              {step > s ? <CheckCircle className="w-6 h-6" /> : (s === 5 ? 4 : s === 3 ? 3 : s)}
-            </div>
-          ))}
-        </div>
-
-        <Card className="p-8 md:p-12 border-none shadow-2xl rounded-[40px] bg-white min-h-[500px] flex flex-col relative overflow-hidden">
-          {loading && (
-            <div className="absolute inset-0 bg-white/90 backdrop-blur-xl z-50 flex flex-col items-center justify-center gap-6 animate-fade-in text-center p-8">
-              <Loader2 className="w-20 h-20 animate-spin text-primary" />
-              <p className="font-black text-2xl text-primary">{loadingText}</p>
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="space-y-10 animate-slide-up flex-1">
-              <div className="flex items-center gap-4 border-b pb-6">
-                <div className="p-3 bg-primary/5 rounded-2xl text-primary"><Info className="w-7 h-7" /></div>
-                <div><h2 className="text-2xl font-black text-primary">تحديد السياق الأكاديمي</h2><p className="text-muted-foreground font-bold text-sm">اختر التخصص والمستوى لجلب قائمة المواد المتاحة</p></div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label className="font-black text-primary flex items-center gap-2"><Calendar className="w-4 h-4 text-secondary" />العام الجامعي</Label>
-                  <select value={formData.year} onChange={(e) => setFormData({...formData, year: e.target.value})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right">
-                    <option value="">اختر العام...</option>
-                    {academicYears.map((y: any) => <option key={y.id} value={y.label}>{y.label}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-3">
-                  <Label className="font-black text-primary flex items-center gap-2"><Building2 className="w-4 h-4 text-secondary" />القسم العلمي</Label>
-                  <select value={formData.deptId} onChange={(e) => {
-                    const sel = departments.find((d: any) => d.id === e.target.value) as any;
-                    setFormData({...formData, deptId: e.target.value, deptName: sel?.nameAr || sel?.name || "", subjectId: '', subjectName: ''});
-                  }} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right">
-                    <option value="">اختر القسم...</option>
-                    {departments.map((d: any) => <option key={d.id} value={d.id}>{d.nameAr || d.name}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-3">
-                  <Label className="font-black text-primary flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label>
-                  <select value={formData.level} onChange={(e) => setFormData({...formData, level: e.target.value, subjectId: '', subjectName: ''})} className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right">
-                    <option value="">اختر المستوى...</option>
-                    <option value="المستوى الأول">المستوى الأول</option>
-                    <option value="المستوى الثاني">المستوى الثاني</option>
-                    <option value="المستوى الثالث">المستوى الثالث</option>
-                    <option value="المستوى الرابع">المستوى الرابع</option>
-                    <option value="المستوى الخامس">المستوى الخامس</option>
-                  </select>
-                </div>
-                <div className="space-y-3">
-                  <Label className="font-black text-primary flex items-center gap-2"><BookOpen className="w-4 h-4 text-secondary" />المادة الدراسية</Label>
-                  <select 
-                    disabled={!formData.deptId || !formData.level} 
-                    value={formData.subjectId} 
-                    onChange={(e) => { 
-                      const sel = allSubjects.find((s: any) => s.id === e.target.value) as any; 
-                      setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", term: sel?.term || "" }); 
-                    }} 
-                    className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right disabled:opacity-50"
-                  >
-                    <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "لا توجد مواد لهذا القسم والمستوى"}</option>
-                    {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-10 animate-slide-up flex-1 flex flex-col items-center justify-center">
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full max-w-xl p-16 border-4 border-dashed border-muted rounded-[40px] flex flex-col items-center gap-6 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group"
-              >
-                <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-sm">
-                  <FileUp className="w-12 h-12" />
-                </div>
-                <p className="text-xl font-black text-primary text-center">اضغط هنا لاختيار صورة الاختبار</p>
-                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-             <div className="animate-slide-up flex-1 space-y-10">
-               <div className="flex flex-col md:flex-row gap-10 items-center justify-center">
-                  <div className="w-full md:w-80 aspect-[3/4] relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-muted/20">
-                    <Image src={files[0]} alt="Preview" fill className="object-contain" />
-                  </div>
-                  <div className="flex-1 max-w-md space-y-6">
-                    <Button onClick={handleOCR} className="w-full h-16 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-3">
-                      <Scan className="w-6 h-6" />
-                      بدء التحليل الذكي الفوري
-                    </Button>
-                    <Button variant="outline" onClick={() => setStep(5)} className="w-full h-16 rounded-2xl text-xl font-black border-2 gap-3">
-                      <Keyboard className="w-6 h-6" />
-                      أرشفة يدوية
-                    </Button>
-                  </div>
-               </div>
-             </div>
-          )}
-
-          {step === 5 && (
-            <div className="animate-slide-up flex-1 space-y-10">
-               <div className={cn("flex items-center gap-6 p-8 rounded-[30px] border-2 shadow-sm", extractedData.found ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200")}>
-                  <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center text-white", extractedData.found ? "bg-green-500" : "bg-orange-500")}>
-                    {extractedData.found ? <UserCheck className="w-9 h-9" /> : <AlertCircle className="w-9 h-9" />}
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-black">{extractedData.found ? "تم التعرف على الطالب" : "تنبيه: الطالب غير مسجل"}</h2>
-                    <p className="text-base font-bold opacity-70">{extractedData.found ? `تمت مطابقة رقم القيد (${extractedData.id}).` : "رقم القيد لم يطابق أي سجل رسمي."}</p>
-                  </div>
-               </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <Label className="font-black text-primary">رقم القيد الجامعي</Label>
-                    <input 
-                      value={extractedData.id} 
-                      onChange={(e) => setExtractedData({...extractedData, id: e.target.value})} 
-                      className="w-full h-16 px-6 rounded-2xl border-2 border-muted focus:border-primary font-black text-2xl text-right outline-none" 
-                    />
-                  </div>
-                  <div className="space-y-3">
-                    <Label className="font-black text-primary">اسم الطالب الكامل</Label>
-                    <input 
-                      value={extractedData.name} 
-                      onChange={(e) => setExtractedData({...extractedData, name: e.target.value})} 
-                      className="w-full h-16 px-6 rounded-2xl border-2 border-muted focus:border-primary font-black text-lg text-right outline-none" 
-                    />
-                  </div>
-                  <div className="space-y-3 md:col-span-2">
-                    <Label className="font-black text-primary">تأكيد المادة المؤرشفة</Label>
-                    <select 
-                      value={formData.subjectId} 
-                      onChange={(e) => { 
-                        const sel = allSubjects.find((s: any) => s.id === e.target.value) as any; 
-                        setFormData({ ...formData, subjectId: e.target.value, subjectName: sel?.nameAr || "", term: sel?.term || "" }); 
-                      }} 
-                      className="w-full h-16 px-6 rounded-2xl border-2 border-muted focus:border-primary font-black text-lg text-right outline-none appearance-none"
-                    >
-                      <option value="">اختر المادة...</option>
-                      {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
-                    </select>
-                  </div>
-               </div>
-            </div>
-          )}
-
-          <div className="mt-auto pt-10 flex items-center justify-between border-t-2 border-muted/30">
-            <Button variant="outline" onClick={() => setStep(prev => prev === 5 ? 3 : Math.max(prev - 1, 1))} disabled={step === 1 || loading} className="h-16 px-10 rounded-2xl font-black gap-4 flex items-center">السابق<ChevronRight className="w-6 h-6" /></Button>
-            {step === 1 && (
-              <Button onClick={() => setStep(2)} disabled={!formData.year || !formData.deptId || !formData.level} className="h-16 px-16 rounded-2xl font-black gap-4 gradient-blue shadow-lg flex items-center"><ChevronLeft className="w-6 h-6" />متابعة للرفع</Button>
-            )}
-            {step === 5 && (
-              <Button onClick={handleSaveToArchive} disabled={loading || !extractedData.id || !formData.subjectId} className="h-16 px-16 rounded-2xl font-black gap-4 bg-green-600 text-white shadow-xl flex items-center"><CloudUpload className="w-6 h-6" />إكمال الأرشفة</Button>
-            )}
+        
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
+          <div>
+            <h1 className="text-4xl font-black text-primary mb-2">مركز الأرشفة المتطور</h1>
+            <p className="text-muted-foreground font-bold text-lg">اختر آلية الرفع المناسبة لحجم العمل الحالي</p>
           </div>
-        </Card>
+          <Tabs value={activeMode} onValueChange={(v: any) => { setActiveMode(v); setStep(1); setFiles([]); setAiResults([]); }} className="w-full md:w-[400px]">
+            <TabsList className="grid w-full grid-cols-2 h-14 bg-white rounded-2xl p-1 shadow-sm border">
+              <TabsTrigger value="manual" className="rounded-xl font-black text-sm data-[state=active]:gradient-blue data-[state=active]:text-white">
+                <Keyboard className="w-4 h-4 ml-2" /> الرفع اليدوي
+              </TabsTrigger>
+              <TabsTrigger value="ai" className="rounded-xl font-black text-sm data-[state=active]:gradient-blue data-[state=active]:text-white">
+                <Cpu className="w-4 h-4 ml-2" /> الرفع الذكي
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {loading && (
+          <div className="fixed inset-0 bg-white/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center gap-6 text-center p-8">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full border-4 border-primary/20 animate-ping absolute inset-0"></div>
+              <Loader2 className="w-24 h-24 animate-spin text-primary relative z-10" />
+            </div>
+            <p className="font-black text-2xl text-primary animate-pulse">{loadingText}</p>
+          </div>
+        )}
+
+        {/* Step 1: Selection Context (Shared) */}
+        {step === 1 && (
+          <Card className="p-8 md:p-12 border-none shadow-2xl rounded-[2.5rem] bg-white animate-slide-up">
+            <div className="flex items-center gap-4 mb-10 border-b pb-6">
+              <div className="p-4 bg-primary/5 rounded-2xl text-primary shadow-sm"><Layers className="w-8 h-8" /></div>
+              <div>
+                <h2 className="text-2xl font-black text-primary">تحديد السياق الأكاديمي</h2>
+                <p className="text-muted-foreground font-bold">هذه البيانات ستكون "ثابتة" لكافة الأوراق التي سترفعها في هذه الجلسة</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+              <div className="space-y-3">
+                <Label className="font-black text-primary pr-1">العام الجامعي</Label>
+                <select 
+                  value={context.year} 
+                  onChange={(e) => setContext({...context, year: e.target.value})}
+                  className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right"
+                >
+                  <option value="">اختر العام...</option>
+                  {academicYears.map((y: any) => <option key={y.id} value={y.label}>{y.label}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="font-black text-primary pr-1">القسم العلمي</Label>
+                <select 
+                  value={context.deptId} 
+                  onChange={(e) => {
+                    const sel = departments.find((d: any) => d.id === e.target.value) as any;
+                    setContext({...context, deptId: e.target.value, deptName: sel?.nameAr || sel?.name || ""});
+                  }}
+                  className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right"
+                >
+                  <option value="">اختر القسم...</option>
+                  {departments.map((d: any) => <option key={d.id} value={d.id}>{d.nameAr || d.name}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="font-black text-primary pr-1">المستوى</Label>
+                <select 
+                  value={context.level} 
+                  onChange={(e) => setContext({...context, level: e.target.value})}
+                  className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right"
+                >
+                  <option value="">اختر المستوى...</option>
+                  {["المستوى الأول", "المستوى الثاني", "المستوى الثالث", "المستوى الرابع", "المستوى الخامس"].map(l => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="font-black text-primary pr-1">الفصل (الترم)</Label>
+                <select 
+                  value={context.term} 
+                  onChange={(e) => setContext({...context, term: e.target.value})}
+                  className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right"
+                >
+                  <option value="">اختر الفصل...</option>
+                  <option value="الفصل الأول">الفصل الأول</option>
+                  <option value="الفصل الثاني">الفصل الثاني</option>
+                </select>
+              </div>
+
+              <div className="space-y-3 md:col-span-2">
+                <Label className="font-black text-primary pr-1">المادة الدراسية</Label>
+                <select 
+                  disabled={!context.deptId || !context.level}
+                  value={context.subjectId} 
+                  onChange={(e) => {
+                    const sel = filteredSubjects.find((s: any) => s.id === e.target.value) as any;
+                    setContext({...context, subjectId: e.target.value, subjectName: sel?.nameAr || ""});
+                  }}
+                  className="w-full h-14 px-5 rounded-2xl border-2 border-muted bg-muted/10 font-black text-primary outline-none focus:border-primary transition-all appearance-none text-right disabled:opacity-50"
+                >
+                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "لا توجد مواد مطابقة للقسم والمستوى"}</option>
+                  {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <Button 
+                onClick={() => setStep(2)} 
+                disabled={!context.year || !context.deptId || !context.level || !context.subjectId}
+                className="h-16 px-20 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-3 transition-transform hover:scale-105 active:scale-95"
+              >
+                بدء عملية الرفع
+                <ChevronLeft className="w-6 h-6" />
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Step 2: Upload and Process */}
+        {step === 2 && (
+          <div className="space-y-8 animate-slide-up">
+            
+            {/* Header with back button */}
+            <div className="bg-white p-4 rounded-3xl shadow-sm border flex items-center justify-between mb-6">
+               <div className="flex items-center gap-4">
+                  <div className="p-2 bg-primary/5 rounded-xl text-primary"><BookOpen className="w-5 h-5" /></div>
+                  <div className="flex flex-col text-right">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">الأرشفة الحالية لـ</span>
+                    <span className="text-sm font-black text-primary">{context.subjectName} - {context.deptName}</span>
+                  </div>
+               </div>
+               <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="rounded-xl font-bold gap-2 text-muted-foreground hover:text-primary">
+                 <RefreshCcw className="w-4 h-4" /> تغيير المادة
+               </Button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              
+              {/* Left Side: Upload Zone */}
+              <div className="lg:col-span-5">
+                <Card className="p-8 border-none shadow-xl rounded-[2.5rem] bg-white h-full flex flex-col items-center justify-center relative overflow-hidden group">
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-full min-h-[300px] border-4 border-dashed border-muted rounded-[2rem] flex flex-col items-center justify-center gap-6 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
+                  >
+                    {files.length > 0 ? (
+                      <div className="relative w-full h-full p-4">
+                        <Image src={files[0]} alt="Preview" width={400} height={500} className="object-contain rounded-xl max-h-[350px] mx-auto shadow-md" />
+                        <div className="absolute top-6 left-6 flex flex-col gap-2">
+                          <Button size="icon" variant="destructive" onClick={(e) => { e.stopPropagation(); setFiles([]); setAiResults([]); }} className="rounded-full shadow-lg"><X className="w-4 h-4" /></Button>
+                        </div>
+                        {activeMode === 'ai' && files.length > 1 && (
+                          <div className="mt-4 bg-primary text-white px-4 py-1.5 rounded-full text-xs font-black shadow-lg mx-auto w-fit">
+                            +{files.length - 1} صور أخرى
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-24 h-24 bg-primary/10 rounded-[2rem] flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-sm">
+                          <FileUp className="w-12 h-12" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xl font-black text-primary mb-1">اضغط لاختيار {activeMode === 'manual' ? 'صورة' : 'مجموعة صور'}</p>
+                          <p className="text-muted-foreground font-bold text-sm">أو اسحب وأفلت الملفات هنا</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple={activeMode === 'ai'} onChange={handleFileUpload} />
+                </Card>
+              </div>
+
+              {/* Right Side: Data Entry */}
+              <div className="lg:col-span-7">
+                {activeMode === 'manual' ? (
+                  <Card className="p-10 border-none shadow-xl rounded-[2.5rem] bg-white h-full space-y-10">
+                    <div className="space-y-4">
+                      <Label className="text-xl font-black text-primary flex items-center gap-3">
+                        <Fingerprint className="w-6 h-6 text-secondary" />
+                        إدخال بيانات الطالب (رقم القيد)
+                      </Label>
+                      <div className="flex gap-3">
+                        <Input 
+                          value={manualId} 
+                          onChange={(e) => setManualId(e.target.value)}
+                          placeholder="أدخل رقم القيد المكتوب في الورقة..." 
+                          className="h-16 rounded-2xl border-2 text-2xl font-black text-center focus:ring-primary/20"
+                          onKeyDown={(e) => e.key === 'Enter' && identifyStudent(manualId)}
+                        />
+                        <Button 
+                          onClick={() => identifyStudent(manualId)}
+                          disabled={!manualId || loading}
+                          className="h-16 w-20 rounded-2xl gradient-blue shadow-lg transition-transform active:scale-90"
+                        >
+                          <Search className="w-8 h-8" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {manualStudent && (
+                      <div className="bg-green-50 p-8 rounded-3xl border-2 border-green-200 animate-slide-up">
+                         <div className="flex items-center gap-6">
+                            <div className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                               <UserCheck className="w-9 h-9" />
+                            </div>
+                            <div className="text-right">
+                               <p className="text-green-700 font-black text-sm mb-1 uppercase tracking-widest">تم مطابقة الطالب</p>
+                               <h3 className="text-2xl font-black text-green-900">{manualStudent.name}</h3>
+                               <p className="text-green-600 font-bold">القيد: {manualStudent.regId}</p>
+                            </div>
+                         </div>
+                      </div>
+                    )}
+
+                    <div className="pt-6">
+                      <Button 
+                        onClick={saveManualArchive}
+                        disabled={!manualId || files.length === 0 || loading}
+                        className="w-full h-20 rounded-[2rem] text-2xl font-black bg-green-600 hover:bg-green-700 shadow-xl gap-4 text-white transition-all transform hover:-translate-y-1"
+                      >
+                        <CloudUpload className="w-8 h-8" />
+                        إتمام الأرشفة والحفظ
+                      </Button>
+                    </div>
+                  </Card>
+                ) : (
+                  <Card className="p-10 border-none shadow-xl rounded-[2.5rem] bg-white h-full flex flex-col">
+                    {aiResults.length > 0 ? (
+                      <div className="flex-1 space-y-6 overflow-hidden">
+                        <div className="flex items-center justify-between mb-4">
+                           <h2 className="text-2xl font-black text-primary">مراجعة النتائج المستخرجة</h2>
+                           <span className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-xs font-black">{aiResults.length} مستند</span>
+                        </div>
+                        <div className="overflow-y-auto pr-2 flex-1 space-y-4 max-h-[500px]">
+                           {aiResults.map((res, i) => (
+                             <div key={i} className="p-5 bg-muted/20 rounded-2xl border border-muted flex items-center gap-4 transition-all hover:border-primary/20">
+                               <div className="w-16 h-20 relative rounded-lg overflow-hidden border bg-white shrink-0">
+                                 <Image src={res.fileData} alt="thumb" fill className="object-cover" />
+                               </div>
+                               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 <div className="space-y-1">
+                                    <Label className="text-[10px] font-black text-muted-foreground mr-1">الاسم المستخرج</Label>
+                                    <Input value={res.studentName} onChange={(e) => {
+                                      const newRes = [...aiResults];
+                                      newRes[i].studentName = e.target.value;
+                                      setAiResults(newRes);
+                                    }} className="h-9 rounded-lg font-bold text-xs" />
+                                 </div>
+                                 <div className="space-y-1">
+                                    <Label className="text-[10px] font-black text-muted-foreground mr-1">رقم القيد</Label>
+                                    <Input value={res.studentRegistrationId} onChange={(e) => {
+                                      const newRes = [...aiResults];
+                                      newRes[i].studentRegistrationId = e.target.value;
+                                      setAiResults(newRes);
+                                    }} className="h-9 rounded-lg font-black text-xs" />
+                                 </div>
+                               </div>
+                               <Button size="icon" variant="ghost" onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                             </div>
+                           ))}
+                        </div>
+                        <Button onClick={saveBatchAI} className="w-full h-16 rounded-2xl text-xl font-black bg-green-600 hover:bg-green-700 shadow-lg text-white gap-3 mt-4">
+                           <CheckCircle className="w-6 h-6" /> تأكيد وحفظ كافة المستندات
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
+                        <div className="w-24 h-24 bg-secondary/10 rounded-full flex items-center justify-center text-secondary shadow-sm border border-secondary/5">
+                           <Cpu className="w-12 h-12" />
+                        </div>
+                        <div className="max-w-xs">
+                           <h3 className="text-2xl font-black text-primary mb-2">بدء التحليل المتعدد</h3>
+                           <p className="text-muted-foreground font-bold">سيقوم Gemini AI بقراءة الأسماء وأرقام القيد من كافة الصور تلقائياً ودمجها مع بيانات المادة المحددة.</p>
+                        </div>
+                        <Button 
+                          onClick={startAIAnalysis}
+                          disabled={files.length === 0 || loading}
+                          className="h-16 px-12 rounded-2xl text-xl font-black gradient-blue shadow-xl gap-4 transition-all hover:scale-105"
+                        >
+                          <Scan className="w-6 h-6" /> بدء التحليل الذكي الفوري
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
