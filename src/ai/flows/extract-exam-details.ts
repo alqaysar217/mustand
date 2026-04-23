@@ -41,7 +41,6 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
     try {
       const response = await ai.generate({
-        // استخدام المعرف المباشر لضمان التوافق مع Gemini 1.5 Flash
         model: 'googleai/gemini-1.5-flash',
         prompt: [
           { text: promptText },
@@ -49,7 +48,6 @@ export const extractExamDetailsFlow = ai.defineFlow(
         ],
         config: {
           responseMimeType: 'application/json',
-          // تعطيل فلاتر الحماية لضمان عدم حجب أي ورقة امتحان
           safetySettings: [
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -62,13 +60,14 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
       const output = response.output;
       if (!output) {
-        throw new Error('لم يتمكن المحرك من استخراج بيانات واضحة');
+        throw new Error('لم يتمكن المحرك من استخراج بيانات واضحة من الصورة');
       }
 
       return output as ExtractExamDetailsOutput;
     } catch (error: any) {
       console.error('AI Extraction Error:', error);
-      throw new Error(`فشل التحليل الذكي: ${error.message || 'مشكلة في الاتصال بالخادم'}`);
+      // إرسال تفاصيل الخطأ الحقيقية للمساعدة في التشخيص
+      throw new Error(`فشل التحليل: ${error.message || 'مشكلة في الاتصال بمحرك Gemini'}`);
     }
   }
 );

@@ -1,10 +1,11 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 /**
- * @fileOverview تدفق بسيط لاختبار صلاحية مفتاح الـ API.
+ * @fileOverview تدفق محسّن لاختبار مفتاح الـ API وإرجاع تفاصيل الخطأ الحقيقية.
  */
 
 export const testApiFlow = ai.defineFlow(
@@ -14,6 +15,7 @@ export const testApiFlow = ai.defineFlow(
     outputSchema: z.object({
       success: z.boolean(),
       message: z.string(),
+      rawError: z.string().optional(),
     }),
   },
   async () => {
@@ -24,14 +26,18 @@ export const testApiFlow = ai.defineFlow(
       });
 
       if (response.text) {
-        return { success: true, message: 'تم الاتصال بمحرك Gemini بنجاح! المفتاح يعمل.' };
+        return { 
+          success: true, 
+          message: 'تم الاتصال بنجاح! المفتاح شغال والمحرك مستعد.' 
+        };
       }
       throw new Error('لم يتم تلقي رد من المحرك');
     } catch (error: any) {
-      console.error('Test API Error:', error);
+      console.error('Detailed Test API Error:', error);
       return { 
         success: false, 
-        message: `فشل الاتصال: ${error.message || 'تأكد من صلاحية المفتاح في Google AI Studio'}` 
+        message: 'فشل الاتصال بالمحرك.',
+        rawError: error.message || 'خطأ غير معروف'
       };
     }
   }

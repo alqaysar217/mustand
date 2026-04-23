@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -34,14 +35,15 @@ import {
   ArrowLeft,
   Image as ImageIcon,
   ShieldCheck,
-  Activity
+  Activity,
+  History,
+  Check
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 import { compressImage } from "@/lib/storage-utils";
-import Tesseract from 'tesseract.js';
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
@@ -120,12 +122,12 @@ export default function UploadPage() {
       const res = await fetch('/api/ai/test');
       const data = await res.json();
       if (data.success) {
-        toast({ title: "اختبار المفتاح", description: data.message });
+        toast({ title: "متصل بنجاح", description: data.message });
       } else {
-        toast({ variant: "destructive", title: "خطأ في المفتاح", description: data.message });
+        toast({ variant: "destructive", title: "فشل الاختبار", description: data.rawError || data.message });
       }
     } catch (e: any) {
-      toast({ variant: "destructive", title: "فشل الاختبار", description: "تعذر الاتصال بالخادم الداخلي." });
+      toast({ variant: "destructive", title: "خطأ فني", description: "تعذر الاتصال بخادم التحليل." });
     } finally {
       setApiTesting(false);
     }
@@ -143,10 +145,10 @@ export default function UploadPage() {
           regId: regId, 
           deptName: check.dbDepartmentName || "غير محدد" 
         });
-        toast({ title: "تم التعرف على الطالب" });
+        toast({ title: "تم التعرف على الطالب بنجاح" });
       } else {
         setManualStudent(null);
-        toast({ variant: "destructive", title: "الطالب غير مسجل" });
+        toast({ variant: "destructive", title: "الطالب غير مسجل", description: "يرجى مراجعة رقم القيد المكتوب." });
       }
     } catch (e) {
       toast({ variant: "destructive", title: "خطأ في البحث" });
@@ -185,7 +187,7 @@ export default function UploadPage() {
   const startAIAnalysis = async () => {
     if (files.length === 0) return;
     setLoading(true);
-    setLoadingText("جاري استخراج البيانات ذكياً...");
+    setLoadingText("جاري قراءة البيانات ذكياً...");
     
     const tempResults: AIResult[] = [];
 
@@ -216,8 +218,8 @@ export default function UploadPage() {
       } catch (e: any) {
         tempResults.push({ 
           studentName: "فشل التحليل", 
-          studentRegistrationId: "يرجى الكتابة", 
-          fileData: file,
+          studentRegistrationId: "تحرير يدوي", 
+          fileData: file, 
           isVerified: false,
           status: 'failed'
         });
@@ -251,7 +253,7 @@ export default function UploadPage() {
   const saveManualArchive = async () => {
     if (!firestore || !manualStudent) return;
     setLoading(true);
-    setLoadingText("جاري الحفظ...");
+    setLoadingText("جاري الحفظ في الأرشيف...");
     try {
       await addDoc(collection(firestore, "archives"), {
         student_id: manualStudent.regId,
@@ -270,16 +272,7 @@ export default function UploadPage() {
         uploadedAt: serverTimestamp()
       });
 
-      await addDoc(collection(firestore, "logs"), {
-        user: "موظف الأرشفة",
-        role: "employee",
-        action: "أرشفة يدوية ناجحة",
-        target: `${manualStudent.name} - ${context.subjectName}`,
-        type: 'archive',
-        timestamp: serverTimestamp()
-      });
-
-      toast({ title: "تمت الأرشفة" });
+      toast({ title: "تمت الأرشفة بنجاح" });
       setFiles([]);
       setManualId("");
       setManualStudent(null);
@@ -293,7 +286,7 @@ export default function UploadPage() {
   const saveBatchAI = async () => {
     if (!firestore || aiResults.length === 0) return;
     setLoading(true);
-    setLoadingText("أرشفة الدفعة...");
+    setLoadingText("جاري أرشفة الدفعة...");
     try {
       for (const res of aiResults) {
         await addDoc(collection(firestore, "archives"), {
@@ -313,12 +306,12 @@ export default function UploadPage() {
           uploadedAt: serverTimestamp()
         });
       }
-      toast({ title: "اكتملت الأرشفة الذكية" });
+      toast({ title: "اكتملت الأرشفة الذكية بنجاح" });
       setFiles([]);
       setAiResults([]);
       setStep(1); 
     } catch (e) {
-      toast({ variant: "destructive", title: "خطأ أثناء الحفظ" });
+      toast({ variant: "destructive", title: "خطأ أثناء الحفظ النهائي" });
     } finally {
       setLoading(false);
     }
@@ -357,13 +350,13 @@ export default function UploadPage() {
                   value="manual" 
                   className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
                 >
-                  <Keyboard className="w-4 h-4 ml-2" /> يدوي
+                  <Keyboard className="w-4 h-4 ml-2" /> أرشفة يدوية
                 </TabsTrigger>
                 <TabsTrigger 
                   value="ai" 
                   className="rounded-xl font-black text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
                 >
-                  <Cpu className="w-4 h-4 ml-2" /> ذكي
+                  <Cpu className="w-4 h-4 ml-2" /> أرشفة ذكية
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -435,7 +428,7 @@ export default function UploadPage() {
                   }} 
                   className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black text-primary outline-none focus:border-primary text-right appearance-none"
                 >
-                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "يرجى تحديد القسم والمستوى"}</option>
+                  <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "يرجى تحديد القسم والمستوى أولاً"}</option>
                   {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
                 </select>
               </div>
@@ -443,7 +436,7 @@ export default function UploadPage() {
 
             <div className="flex justify-center">
               <Button onClick={() => setStep(2)} disabled={!context.subjectId} className="h-16 px-20 rounded-[2rem] text-xl font-black gradient-blue shadow-2xl gap-4 text-white hover:scale-105 transition-transform">
-                متابعة الرفع <ArrowLeft className="w-6 h-6" />
+                متابعة الخطوة التالية <ArrowLeft className="w-6 h-6" />
               </Button>
             </div>
           </Card>
@@ -468,9 +461,11 @@ export default function UploadPage() {
                     <ImageIcon className="w-7 h-7 text-secondary" />
                     {files.length > 0 ? `صور الأوراق (${files.length})` : 'رفع صور الاختبارات'}
                   </h2>
-                  <Button variant="ghost" onClick={() => fileInputRef.current?.click()} className="text-secondary font-black hover:bg-secondary/5 h-12 px-4 rounded-xl border-2 border-transparent">
-                    <UserPlus className="w-5 h-5 ml-2" /> إضافة المزيد
-                  </Button>
+                  {files.length > 0 && (
+                    <Button variant="ghost" onClick={() => fileInputRef.current?.click()} className="text-secondary font-black hover:bg-secondary/5 h-12 px-4 rounded-xl border-2 border-transparent">
+                      <UserPlus className="w-5 h-5 ml-2" /> إضافة المزيد
+                    </Button>
+                  )}
                </div>
 
               <div 
@@ -481,7 +476,7 @@ export default function UploadPage() {
                 )}
               >
                 {files.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-5 w-full">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-5 w-full">
                     {files.map((f, i) => (
                       <div key={i} className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl group border-4 border-white transition-transform hover:scale-105">
                         <Image src={f} alt="Exam Page" fill className="object-cover" />
@@ -494,8 +489,8 @@ export default function UploadPage() {
                 ) : (
                   <div className="animate-fade-in flex flex-col items-center gap-3">
                     <div className="w-20 h-20 bg-primary/10 rounded-[1.5rem] flex items-center justify-center text-primary mb-2 shadow-lg"><FileUp className="w-10 h-10" /></div>
-                    <p className="text-xl font-black text-primary">اضغط لرفع الصور</p>
-                    <p className="text-sm font-bold text-muted-foreground">يدعم صور (JPG, PNG)</p>
+                    <p className="text-xl font-black text-primary">اضغط هنا لرفع الصور من جهازك</p>
+                    <p className="text-sm font-bold text-muted-foreground">يمكنك رفع عدة صور في آن واحد</p>
                   </div>
                 )}
               </div>
@@ -503,7 +498,7 @@ export default function UploadPage() {
               
               {files.length > 0 && activeMode === 'ai' && aiResults.length === 0 && (
                 <Button onClick={startAIAnalysis} className="mt-10 rounded-2xl font-black gradient-blue shadow-2xl px-16 text-white h-16 text-xl hover:scale-105 transition-all">
-                  <Scan className="w-7 h-7 ml-3 animate-pulse" /> بدء التحليل الذكي
+                  <Scan className="w-7 h-7 ml-3 animate-pulse" /> بدء التحليل والاستخراج الذكي
                 </Button>
               )}
             </Card>
@@ -524,17 +519,17 @@ export default function UploadPage() {
                         </div>
                      </div>
                      <div className="space-y-3">
-                        <Label className="font-black text-primary pr-1">الاسم</Label>
+                        <Label className="font-black text-primary pr-1">الاسم الكامل من القاعدة</Label>
                         <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg", manualStudent ? "text-primary bg-primary/5" : "text-muted-foreground")}>{manualStudent?.name || "---"}</div>
                      </div>
                      <div className="space-y-3">
-                        <Label className="font-black text-primary pr-1">التخصص</Label>
+                        <Label className="font-black text-primary pr-1">التخصص الدراسي</Label>
                         <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg", manualStudent ? "text-secondary bg-secondary/5" : "text-muted-foreground")}>{manualStudent?.deptName || "---"}</div>
                      </div>
                   </div>
                   {manualStudent && (
                     <Button onClick={saveManualArchive} className="w-full mt-12 h-20 rounded-[2rem] text-2xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-4">
-                      <CheckCircle2 className="w-8 h-8" /> حفظ وإتمام الأرشفة
+                      <CheckCircle2 className="w-8 h-8" /> حفظ وإتمام عملية الأرشفة
                     </Button>
                   )}
                 </Card>
@@ -546,9 +541,9 @@ export default function UploadPage() {
                      <div className="text-right">
                         <h2 className="text-2xl font-black text-primary flex items-center gap-3">
                           <CheckCircle className="w-7 h-7 text-green-500" /> 
-                          مراجعة واعتماد النتائج
+                          مراجعة واعتماد النتائج المستخرجة
                         </h2>
-                        <p className="text-muted-foreground font-bold text-sm">تأكد من مطابقة الأوراق (الخلفية الحمراء تعني غير مسجل)</p>
+                        <p className="text-muted-foreground font-bold text-sm">تأكد من مطابقة الأوراق؛ الحافة الحمراء تعني طالب غير مسجل.</p>
                      </div>
                      <div className="bg-primary/5 text-primary px-10 py-3 rounded-2xl font-black border-2 border-primary/10 shadow-sm text-lg">{aiResults.length} ورقة مستخرجة</div>
                   </div>
@@ -563,7 +558,7 @@ export default function UploadPage() {
                           <div className="w-32 h-44 relative rounded-2xl overflow-hidden shadow-2xl shrink-0 border-4 border-white"><Image src={res.fileData} alt="Extracted" fill className="object-cover" /></div>
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-8 w-full text-right">
                              <div className="space-y-2">
-                                <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-1"><User className="w-3 h-3" /> الاسم</Label>
+                                <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-1"><User className="w-3 h-3" /> اسم الطالب</Label>
                                 <div className={cn("h-14 rounded-xl px-4 flex items-center font-black text-lg truncate shadow-sm", res.isVerified ? "bg-green-50 text-primary border border-green-200" : "bg-red-50 text-red-700 border border-red-200")}>{res.studentName}</div>
                              </div>
                              <div className="space-y-2">
@@ -593,9 +588,9 @@ export default function UploadPage() {
 
                   <div className="flex flex-col sm:flex-row gap-6 pt-10">
                      <Button onClick={saveBatchAI} className="flex-1 h-24 rounded-[2.5rem] text-3xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-6 transition-all border-b-8 border-green-800">
-                       <CloudUpload className="w-10 h-10" /> اعتماد وحفظ الدفعة
+                       <CloudUpload className="w-10 h-10" /> اعتماد وحفظ الدفعة بالكامل
                      </Button>
-                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-24 px-16 rounded-[2.5rem] font-black border-4 text-2xl hover:bg-white transition-all">إلغاء الكل</Button>
+                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-24 px-16 rounded-[2.5rem] font-black border-4 text-2xl hover:bg-white transition-all">إلغاء العملية</Button>
                   </div>
                 </div>
               )
