@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { extractExamDetails } from '@/ai/flows/extract-exam-details';
 
@@ -21,8 +22,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'لم يتم إرسال صورة للتحليل.' }, { status: 400 });
     }
 
-    // استدعاء الـ Flow
+    // استدعاء الـ Flow مع معالجة الأخطاء الداخلية
     const result = await extractExamDetails({ examImageDataUri: body.examImageDataUri });
+
+    if (!result || (!result.studentRegistrationId && !result.studentName)) {
+      return NextResponse.json({ 
+        error: 'فشل الذكاء الاصطناعي في استخراج بيانات واضحة من هذه الصورة. يرجى التأكد من أن رقم القيد والاسم ظاهران بوضوح.' 
+      }, { status: 422 });
+    }
 
     return NextResponse.json(result);
 
@@ -30,13 +37,18 @@ export async function POST(req: NextRequest) {
     console.error('--- [API ROUTE CRASH] ---', error);
     
     // التعامل مع أخطاء جوجل الشائعة
-    if (error.message?.includes('429')) {
-      return NextResponse.json({ error: 'تم تجاوز حد الاستخدام المجاني. يرجى المحاولة بعد دقيقة.' }, { status: 429 });
+    const errorMessage = error.message || '';
+    if (errorMessage.includes('429')) {
+      return NextResponse.json({ error: 'تم تجاوز حد الاستخدام المجاني (Rate Limit). يرجى المحاولة بعد دقيقة واحدة.' }, { status: 429 });
+    }
+    
+    if (errorMessage.includes('403') || errorMessage.includes('API key')) {
+      return NextResponse.json({ error: 'مفتاح الـ API غير صالح أو محظور. يرجى التأكد من صلاحية المفتاح في ملف .env' }, { status: 403 });
     }
     
     return NextResponse.json({ 
-      error: 'فشل النظام في قراءة الورقة. تأكد من جودة الصورة.',
-      details: error.message 
+      error: 'حدث خطأ غير متوقع أثناء معالجة الورقة.',
+      details: errorMessage 
     }, { status: 500 });
   }
 }
