@@ -28,17 +28,13 @@ import {
   Layers, 
   Search,
   CheckCircle2,
-  XCircle,
   AlertCircle,
-  ArrowRight,
-  UserPlus,
   ArrowLeft,
+  UserPlus,
   Image as ImageIcon,
-  ShieldCheck,
   Activity,
-  History,
-  Check,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
