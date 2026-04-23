@@ -32,7 +32,8 @@ import {
   Search,
   ChevronLeft,
   CheckCircle2,
-  XCircle
+  XCircle,
+  ImageIcon
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -321,13 +322,13 @@ export default function UploadPage() {
             <TabsList className="grid w-full grid-cols-2 h-16 bg-white/50 backdrop-blur-md rounded-2xl p-1.5 shadow-xl border border-white">
               <TabsTrigger 
                 value="manual" 
-                className="rounded-xl font-black text-base transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg"
+                className="rounded-xl font-black text-base transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Keyboard className="w-5 h-5 ml-2" /> الرفع اليدوي
               </TabsTrigger>
               <TabsTrigger 
                 value="ai" 
-                className="rounded-xl font-black text-base transition-all duration-300 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg"
+                className="rounded-xl font-black text-base transition-all duration-300 data-[state=active]:gradient-blue data-[state=active]:text-white data-[state=active]:shadow-lg"
               >
                 <Cpu className="w-5 h-5 ml-2" /> الرفع الذكي
               </TabsTrigger>
@@ -462,38 +463,64 @@ export default function UploadPage() {
                </Button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              <div className="lg:col-span-5">
+            <div className={cn(
+              "grid gap-8",
+              activeMode === 'manual' || (activeMode === 'ai' && aiResults.length === 0) 
+                ? "grid-cols-1 lg:grid-cols-12" 
+                : "grid-cols-1"
+            )}>
+              <div className={cn(
+                activeMode === 'manual' || (activeMode === 'ai' && aiResults.length === 0) 
+                  ? "lg:col-span-5" 
+                  : "w-full"
+              )}>
                 <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white h-full flex flex-col items-center justify-center relative overflow-hidden group">
                   <div 
                     onClick={() => fileInputRef.current?.click()}
                     className="w-full h-full min-h-[350px] border-4 border-dashed border-muted/50 rounded-[2rem] flex flex-col items-center justify-center gap-6 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
                   >
                     {files.length > 0 ? (
-                      <div className="relative w-full h-full p-4 flex flex-col items-center">
-                        <div className="relative w-full aspect-[3/4] max-h-[400px]">
-                           <Image src={files[0]} alt="Preview" fill className="object-contain rounded-xl shadow-lg" />
-                        </div>
-                        <Button 
-                          size="icon" 
-                          variant="destructive" 
-                          onClick={(e) => { e.stopPropagation(); setFiles([]); setAiResults([]); setManualId(""); setManualStudent(null); }} 
-                          className="mt-6 rounded-full shadow-lg h-12 w-12"
-                        >
-                          <X className="w-6 h-6" />
-                        </Button>
-                        {activeMode === 'ai' && files.length > 1 && (
-                          <div className="mt-4 bg-primary text-white px-5 py-2 rounded-full text-xs font-black shadow-lg">
-                            {files.length} صور جاهزة للتحليل
+                      <div className="relative w-full h-full p-6 flex flex-col items-center">
+                        {activeMode === 'manual' ? (
+                          <div className="relative w-full aspect-[3/4] max-h-[400px]">
+                            <Image src={files[0]} alt="Preview" fill className="object-contain rounded-xl shadow-lg" />
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 w-full">
+                            {files.map((f, i) => (
+                              <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-md border-2 border-white group/img">
+                                <Image src={f} alt={`Page ${i+1}`} fill className="object-cover" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-white font-black text-xs">صفحة {i+1}</span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
+                        <div className="flex gap-4 mt-8">
+                          <Button 
+                            variant="destructive" 
+                            onClick={(e) => { e.stopPropagation(); setFiles([]); setAiResults([]); setManualId(""); setManualStudent(null); }} 
+                            className="rounded-2xl shadow-lg h-12 px-6 gap-2"
+                          >
+                            <Trash2 className="w-5 h-5" /> مسح الكل
+                          </Button>
+                          {activeMode === 'ai' && aiResults.length === 0 && (
+                            <Button 
+                              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} 
+                              className="rounded-2xl shadow-lg h-12 px-6 gap-2 bg-secondary text-white"
+                            >
+                              <ImageIcon className="w-5 h-5" /> إضافة المزيد
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <>
                         <div className="w-24 h-24 bg-primary/10 rounded-[2rem] flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-sm">
                           <FileUp className="w-12 h-12" />
                         </div>
-                        <div className="text-center">
+                        <div className="text-center px-4">
                           <p className="text-2xl font-black text-primary mb-2">اضغط لرفع ورقة الاختبار</p>
                           <p className="text-muted-foreground font-bold text-sm">أو اسحب الصورة وأفلتها هنا</p>
                         </div>
@@ -504,7 +531,11 @@ export default function UploadPage() {
                 </Card>
               </div>
 
-              <div className="lg:col-span-7">
+              <div className={cn(
+                activeMode === 'manual' || (activeMode === 'ai' && aiResults.length === 0) 
+                  ? "lg:col-span-7" 
+                  : "w-full"
+              )}>
                 {activeMode === 'manual' ? (
                   <Card className="p-10 border-none shadow-2xl rounded-[2.5rem] bg-white h-full space-y-8 flex flex-col text-right">
                     <div className="space-y-4">
@@ -581,111 +612,124 @@ export default function UploadPage() {
                     </div>
                   </Card>
                 ) : (
-                  <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white h-full flex flex-col text-right">
+                  <>
                     {aiResults.length > 0 ? (
-                      <div className="flex-1 space-y-6 overflow-hidden flex flex-col">
-                        <div className="flex items-center justify-between mb-4 border-b pb-4">
+                      <Card className="p-8 md:p-10 border-none shadow-2xl rounded-[2.5rem] bg-white w-full space-y-8 flex flex-col text-right animate-slide-up">
+                        <div className="flex items-center justify-between mb-4 border-b pb-6">
                            <div className="space-y-1">
-                             <h2 className="text-2xl font-black text-primary flex items-center gap-2">مراجعة والتحقق من النتائج</h2>
-                             <p className="text-muted-foreground text-xs font-bold">تأكد من مطابقة أرقام القيد قبل الاعتماد النهائي</p>
+                             <h2 className="text-3xl font-black text-primary flex items-center gap-3">
+                               <CheckCircle className="w-8 h-8 text-green-500" />
+                               مراجعة والتحقق من النتائج
+                             </h2>
+                             <p className="text-muted-foreground font-bold">تأكد من مطابقة أرقام القيد وحالة التحقق قبل الاعتماد النهائي في الأرشيف.</p>
                            </div>
-                           <span className="bg-primary/10 text-primary px-5 py-2 rounded-full text-xs font-black shadow-sm">{aiResults.length} ورقة جاهزة</span>
+                           <div className="bg-primary/10 text-primary px-8 py-3 rounded-2xl text-lg font-black shadow-sm">{aiResults.length} ورقة جاهزة</div>
                         </div>
                         
-                        <div className="overflow-y-auto pr-2 flex-1 space-y-4 max-h-[500px]">
+                        <div className="grid grid-cols-1 gap-6">
                            {aiResults.map((res, i) => (
                              <div key={i} className={cn(
-                               "p-5 rounded-[2rem] border-2 flex flex-col md:flex-row items-center gap-6 transition-all group",
-                               res.isVerified ? "bg-green-50/50 border-green-100" : "bg-red-50/50 border-red-100"
+                               "p-6 rounded-[2.5rem] border-2 flex flex-col md:flex-row items-center gap-8 transition-all group hover:shadow-xl",
+                               res.isVerified ? "bg-green-50/40 border-green-100" : "bg-red-50/40 border-red-100"
                              )}>
-                               <div className="w-20 h-24 relative rounded-2xl overflow-hidden border-2 border-white shadow-md shrink-0 group-hover:scale-105 transition-transform">
+                               <div className="w-32 h-40 relative rounded-[2rem] overflow-hidden border-4 border-white shadow-lg shrink-0 group-hover:scale-105 transition-transform">
                                  <Image src={res.fileData} alt="thumb" fill className="object-cover" />
+                                 <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black px-2 py-0.5 rounded-full">#{i+1}</div>
                                </div>
                                
-                               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                                 <div className="space-y-1.5">
-                                    <Label className="text-[10px] font-black text-muted-foreground mr-2">اسم الطالب المستخرج</Label>
-                                    <Input 
-                                      value={res.studentName} 
-                                      onChange={(e) => handleUpdateAiResult(i, 'studentName', e.target.value)} 
-                                      className="h-11 rounded-xl font-bold text-sm bg-white border-muted" 
-                                    />
+                               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+                                 <div className="space-y-2">
+                                    <Label className="text-xs font-black text-muted-foreground mr-2">اسم الطالب المستخرج</Label>
+                                    <div className="relative">
+                                      <Input 
+                                        value={res.studentName} 
+                                        onChange={(e) => handleUpdateAiResult(i, 'studentName', e.target.value)} 
+                                        className="h-14 rounded-2xl font-bold text-base bg-white border-muted pr-10" 
+                                      />
+                                      <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                    </div>
                                  </div>
-                                 <div className="space-y-1.5">
-                                    <Label className="text-[10px] font-black text-muted-foreground mr-2">رقم القيد</Label>
+                                 <div className="space-y-2">
+                                    <Label className="text-xs font-black text-muted-foreground mr-2">رقم القيد الجامعي</Label>
                                     <div className="relative">
                                       <Input 
                                         value={res.studentRegistrationId} 
                                         onChange={(e) => handleUpdateAiResult(i, 'studentRegistrationId', e.target.value)} 
                                         className={cn(
-                                          "h-11 rounded-xl font-black text-sm bg-white pr-10",
+                                          "h-14 rounded-2xl font-black text-xl bg-white pr-12",
                                           res.isVerified ? "border-green-500 text-green-700" : "border-red-500 text-red-700"
                                         )} 
                                       />
-                                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                        {res.isVerified ? (
-                                          <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                        ) : (
-                                          <XCircle className="w-5 h-5 text-red-500" />
-                                        )}
-                                      </div>
+                                      <Fingerprint className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                     </div>
+                                 </div>
+                                 <div className="flex flex-col justify-center items-center md:items-end gap-2">
+                                    <Label className="text-xs font-black text-muted-foreground mb-1">حالة التحقق</Label>
+                                    {res.isVerified ? (
+                                      <div className="bg-green-100 text-green-700 px-6 py-2 rounded-full font-black text-sm flex items-center gap-2 shadow-sm border border-green-200">
+                                        <CheckCircle2 className="w-5 h-5" /> مطابق للسجلات
+                                      </div>
+                                    ) : (
+                                      <div className="bg-red-100 text-red-700 px-6 py-2 rounded-full font-black text-sm flex items-center gap-2 shadow-sm border border-red-200">
+                                        <XCircle className="w-5 h-5" /> غير مسجل
+                                      </div>
+                                    )}
                                  </div>
                                </div>
 
-                               <div className="flex flex-col gap-2 shrink-0">
+                               <div className="flex shrink-0">
                                  <Button 
                                   size="icon" 
                                   variant="ghost" 
                                   onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} 
-                                  className="text-destructive hover:bg-red-100 rounded-xl w-10 h-10 shadow-sm"
+                                  className="text-destructive hover:bg-red-100 rounded-2xl w-14 h-14 shadow-sm border border-transparent hover:border-red-200 transition-colors"
                                  >
-                                   <Trash2 className="w-5 h-5" />
+                                   <Trash2 className="w-7 h-7" />
                                  </Button>
                                </div>
                              </div>
                            ))}
                         </div>
                         
-                        <div className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="pt-10 grid grid-cols-1 md:grid-cols-2 gap-6 border-t mt-6">
                           <Button 
                             onClick={saveBatchAI} 
                             disabled={aiResults.length === 0 || loading}
-                            className="h-16 rounded-[2rem] text-xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-3"
+                            className="h-20 rounded-[2.5rem] text-2xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-4 transform transition-transform hover:-translate-y-1"
                           >
-                             <CheckCircle className="w-6 h-6" /> اعتماد وحفظ الكل
+                             <CheckCircle className="w-8 h-8" /> اعتماد وحفظ الكل في الأرشيف
                           </Button>
                           <Button 
                             variant="outline"
                             onClick={() => { setAiResults([]); setFiles([]); }}
-                            className="h-16 rounded-[2rem] text-xl font-black border-2 gap-3"
+                            className="h-20 rounded-[2.5rem] text-2xl font-black border-2 border-muted hover:bg-muted/10 gap-4"
                           >
-                             <RefreshCcw className="w-6 h-6" /> إلغاء وإعادة المحاولة
+                             <RefreshCcw className="w-8 h-8" /> إلغاء وإعادة المحاولة
                           </Button>
                         </div>
-                      </div>
+                      </Card>
                     ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center space-y-10">
+                      <Card className="p-12 border-none shadow-2xl rounded-[2.5rem] bg-white h-full flex flex-col items-center justify-center text-center space-y-10">
                         <div className="relative">
                            <div className="absolute inset-0 bg-secondary/20 rounded-full blur-3xl animate-pulse"></div>
-                           <div className="w-32 h-32 bg-white rounded-[2.5rem] flex items-center justify-center text-secondary shadow-2xl border-2 border-secondary/5 relative z-10">
-                              <Cpu className="w-16 h-16" />
+                           <div className="w-40 h-40 bg-white rounded-[3.5rem] flex items-center justify-center text-secondary shadow-2xl border-2 border-secondary/5 relative z-10">
+                              <Cpu className="w-20 h-20" />
                            </div>
                         </div>
-                        <div className="max-w-sm space-y-4">
-                           <h3 className="text-3xl font-black text-primary">بدء التحليل والتحقق</h3>
-                           <p className="text-muted-foreground font-bold leading-relaxed">سيقوم Gemini AI بمسح الأوراق، وسنقوم فوراً بمطابقة الأسماء مع قاعدة البيانات لضمان دقة الأرشفة.</p>
+                        <div className="max-w-md space-y-4">
+                           <h3 className="text-4xl font-black text-primary">بدء التحليل والتحقق</h3>
+                           <p className="text-muted-foreground font-bold text-lg leading-relaxed">سيقوم Gemini AI بمسح الأوراق، وسنقوم فوراً بمطابقة الأسماء مع قاعدة البيانات لضمان دقة الأرشفة.</p>
                         </div>
                         <Button 
                           onClick={startAIAnalysis}
                           disabled={files.length === 0 || loading}
-                          className="h-20 px-16 rounded-[2.5rem] text-2xl font-black gradient-blue shadow-2xl gap-5 transition-all hover:scale-105 active:scale-95 text-white"
+                          className="h-24 px-20 rounded-[3rem] text-3xl font-black gradient-blue shadow-2xl gap-6 transition-all hover:scale-105 active:scale-95 text-white"
                         >
-                          <Scan className="w-8 h-8" /> بدء التحليل الذكي الفوري
+                          <Scan className="w-10 h-10" /> بدء التحليل الذكي الفوري
                         </Button>
-                      </div>
+                      </Card>
                     )}
-                  </Card>
+                  </>
                 )}
               </div>
             </div>
