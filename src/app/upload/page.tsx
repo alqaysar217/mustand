@@ -37,7 +37,8 @@ import {
   ShieldCheck,
   Activity,
   History,
-  Check
+  Check,
+  AlertTriangle
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -122,12 +123,17 @@ export default function UploadPage() {
       const res = await fetch('/api/ai/test');
       const data = await res.json();
       if (data.success) {
-        toast({ title: "متصل بنجاح", description: data.message });
+        toast({ title: "تم الاتصال بنجاح", description: data.message });
       } else {
-        toast({ variant: "destructive", title: "فشل الاختبار", description: data.rawError || data.message });
+        // إظهار الخطأ الحقيقي للمستخدم للمساعدة في التشخيص
+        toast({ 
+          variant: "destructive", 
+          title: "فشل الاختبار التقني", 
+          description: data.rawError || data.message || "خطأ غير معروف في المفتاح"
+        });
       }
     } catch (e: any) {
-      toast({ variant: "destructive", title: "خطأ فني", description: "تعذر الاتصال بخادم التحليل." });
+      toast({ variant: "destructive", title: "خطأ في الشبكة", description: "تعذر الوصول لخادم التشخيص." });
     } finally {
       setApiTesting(false);
     }
@@ -145,13 +151,13 @@ export default function UploadPage() {
           regId: regId, 
           deptName: check.dbDepartmentName || "غير محدد" 
         });
-        toast({ title: "تم التعرف على الطالب بنجاح" });
+        toast({ title: "تم التعرف على الطالب" });
       } else {
         setManualStudent(null);
-        toast({ variant: "destructive", title: "الطالب غير مسجل", description: "يرجى مراجعة رقم القيد المكتوب." });
+        toast({ variant: "destructive", title: "طالب غير مسجل", description: "رقم القيد غير موجود في النظام." });
       }
     } catch (e) {
-      toast({ variant: "destructive", title: "خطأ في البحث" });
+      toast({ variant: "destructive", title: "فشل البحث" });
     } finally {
       setLoading(false);
     }
@@ -273,6 +279,7 @@ export default function UploadPage() {
       });
 
       toast({ title: "تمت الأرشفة بنجاح" });
+      // تصفير الصورة ورقم القيد للبدء بالورقة التالية فوراً
       setFiles([]);
       setManualId("");
       setManualStudent(null);
@@ -306,12 +313,12 @@ export default function UploadPage() {
           uploadedAt: serverTimestamp()
         });
       }
-      toast({ title: "اكتملت الأرشفة الذكية بنجاح" });
+      toast({ title: "اكتملت الأرشفة الذكية" });
       setFiles([]);
       setAiResults([]);
       setStep(1); 
     } catch (e) {
-      toast({ variant: "destructive", title: "خطأ أثناء الحفظ النهائي" });
+      toast({ variant: "destructive", title: "خطأ أثناء الحفظ" });
     } finally {
       setLoading(false);
     }
@@ -443,7 +450,7 @@ export default function UploadPage() {
         )}
 
         {step === 2 && (
-          <div className="space-y-10 animate-slide-up">
+          <div className="space-y-10 animate-slide-up pb-20">
             <div className="bg-white p-6 rounded-[2rem] shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 border-r-8 border-secondary">
                <div className="flex items-center gap-5">
                   <div className="w-14 h-14 bg-secondary/5 rounded-2xl flex items-center justify-center text-secondary border border-secondary/10 shadow-inner"><BookOpen className="w-8 h-8" /></div>
@@ -459,9 +466,9 @@ export default function UploadPage() {
                <div className="flex items-center justify-between mb-8 px-2">
                   <h2 className="text-2xl font-black text-primary flex items-center gap-3">
                     <ImageIcon className="w-7 h-7 text-secondary" />
-                    {files.length > 0 ? `صور الأوراق (${files.length})` : 'رفع صور الاختبارات'}
+                    {files.length > 0 ? `صور الأوراق المرفوعة (${files.length})` : 'رفع صور الاختبارات'}
                   </h2>
-                  {files.length > 0 && (
+                  {files.length > 0 && aiResults.length === 0 && (
                     <Button variant="ghost" onClick={() => fileInputRef.current?.click()} className="text-secondary font-black hover:bg-secondary/5 h-12 px-4 rounded-xl border-2 border-transparent">
                       <UserPlus className="w-5 h-5 ml-2" /> إضافة المزيد
                     </Button>
@@ -480,9 +487,11 @@ export default function UploadPage() {
                     {files.map((f, i) => (
                       <div key={i} className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-xl group border-4 border-white transition-transform hover:scale-105">
                         <Image src={f} alt="Exam Page" fill className="object-cover" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                           <Button size="icon" variant="destructive" className="h-10 w-10 rounded-xl shadow-lg" onClick={(e) => { e.stopPropagation(); setFiles(prev => prev.filter((_, idx) => idx !== i)); }}><Trash2 className="w-5 h-5" /></Button>
-                        </div>
+                        {aiResults.length === 0 && (
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                             <Button size="icon" variant="destructive" className="h-10 w-10 rounded-xl shadow-lg" onClick={(e) => { e.stopPropagation(); setFiles(prev => prev.filter((_, idx) => idx !== i)); }}><Trash2 className="w-5 h-5" /></Button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -536,61 +545,96 @@ export default function UploadPage() {
               )
             ) : (
               aiResults.length > 0 && (
-                <div className="space-y-8 animate-slide-up pb-10">
+                <div className="space-y-8 animate-slide-up">
                   <div className="flex flex-col md:flex-row items-center justify-between bg-white px-10 py-6 rounded-[2.5rem] shadow-xl border-r-8 border-green-500 gap-4">
                      <div className="text-right">
                         <h2 className="text-2xl font-black text-primary flex items-center gap-3">
                           <CheckCircle className="w-7 h-7 text-green-500" /> 
                           مراجعة واعتماد النتائج المستخرجة
                         </h2>
-                        <p className="text-muted-foreground font-bold text-sm">تأكد من مطابقة الأوراق؛ الحافة الحمراء تعني طالب غير مسجل.</p>
+                        <p className="text-muted-foreground font-bold text-sm">تأكد من مطابقة الأوراق؛ الحافة الحمراء تعني طالب غير مسجل في النظام.</p>
                      </div>
                      <div className="bg-primary/5 text-primary px-10 py-3 rounded-2xl font-black border-2 border-primary/10 shadow-sm text-lg">{aiResults.length} ورقة مستخرجة</div>
                   </div>
 
+                  {/* قائمة المراجعة - عرض رأسي ومنظم بكامل العرض */}
                   <div className="grid grid-cols-1 gap-6">
                      {aiResults.map((res, i) => (
                        <Card key={i} className={cn(
                          "p-6 rounded-[2.5rem] border-4 flex flex-col md:flex-row items-center gap-8 bg-white shadow-xl relative overflow-hidden transition-all", 
                          res.isVerified ? "border-green-400" : "border-red-400 bg-red-50/20"
                         )}>
+                          {/* مؤشر جانبي للحالة */}
                           <div className={cn("absolute top-0 right-0 w-4 h-full", res.isVerified ? "bg-green-400" : "bg-red-400")} />
-                          <div className="w-32 h-44 relative rounded-2xl overflow-hidden shadow-2xl shrink-0 border-4 border-white"><Image src={res.fileData} alt="Extracted" fill className="object-cover" /></div>
+                          
+                          {/* معاينة الصورة المرفوعة */}
+                          <div className="w-32 h-44 relative rounded-2xl overflow-hidden shadow-2xl shrink-0 border-4 border-white">
+                             <Image src={res.fileData} alt="Extracted" fill className="object-cover" />
+                          </div>
+
+                          {/* البيانات المستخرجة والتحقق */}
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-8 w-full text-right">
                              <div className="space-y-2">
                                 <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-1"><User className="w-3 h-3" /> اسم الطالب</Label>
-                                <div className={cn("h-14 rounded-xl px-4 flex items-center font-black text-lg truncate shadow-sm", res.isVerified ? "bg-green-50 text-primary border border-green-200" : "bg-red-50 text-red-700 border border-red-200")}>{res.studentName}</div>
+                                <div className={cn(
+                                  "h-14 rounded-xl px-4 flex items-center font-black text-lg truncate shadow-sm", 
+                                  res.isVerified ? "bg-green-50 text-primary border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+                                )}>
+                                  {res.studentName}
+                                </div>
                              </div>
+                             
                              <div className="space-y-2">
                                 <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-1"><Fingerprint className="w-3 h-3" /> رقم القيد</Label>
                                 <Input 
                                   value={res.studentRegistrationId} 
                                   onChange={(e) => handleUpdateAiResult(i, 'studentRegistrationId', e.target.value)} 
-                                  className={cn("h-14 rounded-xl font-black text-2xl text-center", !res.isVerified ? "border-red-500 ring-red-100 ring-4" : "border-green-500 ring-green-100 ring-4")} 
+                                  className={cn(
+                                    "h-14 rounded-xl font-black text-2xl text-center", 
+                                    !res.isVerified ? "border-red-500 ring-red-100 ring-4" : "border-green-500 ring-green-100 ring-4"
+                                  )} 
                                 />
                              </div>
+
                              <div className="space-y-2">
                                 <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-1"><Building2 className="w-3 h-3" /> التخصص</Label>
-                                <div className={cn("h-14 rounded-xl px-4 flex items-center font-black text-sm truncate shadow-sm", res.isVerified ? "bg-green-50 text-secondary border border-green-100" : "bg-red-50 text-red-500 border border-red-100")}>{res.dbDepartmentName}</div>
+                                <div className={cn(
+                                  "h-14 rounded-xl px-4 flex items-center font-black text-sm truncate shadow-sm", 
+                                  res.isVerified ? "bg-green-50 text-secondary border border-green-100" : "bg-red-50 text-red-500 border border-red-100"
+                                )}>
+                                  {res.dbDepartmentName}
+                                </div>
                              </div>
+
                              <div className="flex items-center justify-end gap-5">
                                 {res.isVerified ? (
-                                  <div className="bg-green-500 text-white px-8 py-4 rounded-2xl font-black text-base flex items-center gap-3 shadow-lg shadow-green-500/30"><CheckCircle2 className="w-6 h-6" /> مطابق</div>
+                                  <div className="bg-green-500 text-white px-8 py-4 rounded-2xl font-black text-base flex items-center gap-3 shadow-lg shadow-green-500/30">
+                                    <CheckCircle2 className="w-6 h-6" /> مطابق
+                                  </div>
                                 ) : (
-                                  <div className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-base flex items-center gap-3 shadow-lg shadow-red-600/30"><XCircle className="w-6 h-6" /> غير مسجل</div>
+                                  <div className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black text-base flex items-center gap-3 shadow-lg shadow-red-600/30">
+                                    <AlertTriangle className="w-6 h-6" /> غير مسجل
+                                  </div>
                                 )}
-                                <Button size="icon" variant="ghost" onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive hover:bg-red-100 rounded-2xl h-14 w-14 transition-all"><Trash2 className="w-6 h-6" /></Button>
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost" 
+                                  onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} 
+                                  className="text-destructive hover:bg-red-100 rounded-2xl h-14 w-14 transition-all"
+                                >
+                                  <Trash2 className="w-6 h-6" />
+                                </Button>
                              </div>
                           </div>
                        </Card>
                      ))}
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-6 pt-10">
+                  <div className="flex flex-col sm:flex-row gap-6 pt-10 pb-10">
                      <Button onClick={saveBatchAI} className="flex-1 h-24 rounded-[2.5rem] text-3xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-6 transition-all border-b-8 border-green-800">
                        <CloudUpload className="w-10 h-10" /> اعتماد وحفظ الدفعة بالكامل
                      </Button>
-                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-24 px-16 rounded-[2.5rem] font-black border-4 text-2xl hover:bg-white transition-all">إلغاء العملية</Button>
+                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-24 px-16 rounded-[2.5rem] font-black border-4 text-2xl hover:bg-white transition-all">إلغاء وإعادة الرفع</Button>
                   </div>
                 </div>
               )
