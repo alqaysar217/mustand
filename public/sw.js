@@ -1,12 +1,21 @@
-// Service Worker بسيط لتمكين ميزة التثبيت (PWA)
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
+// Service Worker لتمكين العمل بدون اتصال وتحسين الأداء
+const CACHE_NAME = 'mustand-cache-v1';
+const urlsToCache = [
+  '/',
+  '/manifest.json',
+  '/logo-mustand.png'
+];
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(urlsToCache))
+  );
 });
 
 self.addEventListener('fetch', (event) => {
-  // يمكن إضافة منطق التخزين المؤقت هنا لاحقاً للعمل بدون إنترنت
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => response || fetch(event.request))
+  );
 });

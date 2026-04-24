@@ -1,11 +1,12 @@
 {
-  "name": "مستند - نظام الأرشفة الذكي",
+  "name": "نظام مستند للأرشفة الذكية",
   "short_name": "مستند",
-  "description": "نظام إدارة وأرشفة الاختبارات الذكي مع استخراج البيانات تلقائياً",
+  "description": "نظام إدارة وأرشفة الاختبارات الجامعية بالذكاء الاصطناعي",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0B3C5D",
   "theme_color": "#0B3C5D",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/logo-mustand.png",
