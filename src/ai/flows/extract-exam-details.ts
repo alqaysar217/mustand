@@ -3,6 +3,7 @@
 
 /**
  * @fileOverview محرك استخراج البيانات المطور باستخدام Gemini 1.5 Flash.
+ * تم ضبطه ليعمل بأقصى درجات الاستقرار مع الصور العربية وتجاوز فلاتر الحماية.
  */
 
 import { ai } from '@/ai/genkit';
@@ -39,6 +40,7 @@ export const extractExamDetailsFlow = ai.defineFlow(
     }`;
 
     try {
+      // استخدام النموذج gemini-1.5-flash مباشرة لضمان العمل مع المفتاح المجاني
       const response = await ai.generate({
         model: 'googleai/gemini-1.5-flash', 
         prompt: [

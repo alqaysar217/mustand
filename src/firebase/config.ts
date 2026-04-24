@@ -1,8 +1,8 @@
+
 'use client';
 
 /**
  * إعدادات Firebase الخاصة بمشروعك الحقيقي.
- * تم التحديث باستخدام البيانات المقدمة لربط المنصة بالسحابة بشكل كامل.
  */
 export const firebaseConfig = {
   apiKey: "AIzaSyAZQcotZ-uTLSwumPTV2-sWPQe1UGB98Fw",
