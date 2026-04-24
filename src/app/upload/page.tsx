@@ -28,12 +28,12 @@ import {
   Layers, 
   Search,
   CheckCircle2,
-  Activity,
   AlertTriangle,
   ImageIcon,
   ArrowLeft,
   UserPlus,
-  Info
+  Info,
+  ShieldCheck
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -118,16 +118,16 @@ export default function UploadPage() {
       const res = await fetch('/api/ai/test');
       const data = await res.json();
       if (data.success) {
-        toast({ title: "تم الاتصال بنجاح!", description: data.message });
+        toast({ title: "تم الاتصال بنجاح!", description: "المفتاح يعمل والمحرك مستعد للتحليل." });
       } else {
         toast({ 
           variant: "destructive", 
-          title: "فشل الاتصال التقني", 
-          description: data.rawError || "المفتاح غير مفعل أو به قيود جغرافية."
+          title: "فشل اختبار المفتاح", 
+          description: data.rawError || "يرجى التحقق من تفعيل Generative Language API في مشروعك."
         });
       }
     } catch (e: any) {
-      toast({ variant: "destructive", title: "خطأ في الشبكة", description: "تعذر الوصول لخادم التشخيص." });
+      toast({ variant: "destructive", title: "خطأ في الشبكة", description: "تعذر الاتصال بخادم الاختبار." });
     } finally {
       setApiTesting(false);
     }
@@ -242,6 +242,9 @@ export default function UploadPage() {
       if (check.isVerified) {
         newResults[index].studentName = check.dbStudentName!;
         newResults[index].dbDepartmentName = check.dbDepartmentName;
+      } else {
+        newResults[index].studentName = "طالب غير مسجل";
+        newResults[index].dbDepartmentName = "غير موجود في سجلات الطلاب";
       }
     }
     setAiResults(newResults);
@@ -267,6 +270,16 @@ export default function UploadPage() {
         departmentName: context.deptName,
         level: context.level,
         uploadedAt: serverTimestamp()
+      });
+
+      // تسجيل في السجل
+      await addDoc(collection(firestore, "logs"), {
+        user: "موظف أرشفة",
+        role: "employee",
+        action: "أرشفة يدوية ناجحة",
+        target: `${manualStudent.name} - ${context.subjectName}`,
+        type: 'archive',
+        timestamp: serverTimestamp()
       });
 
       toast({ title: "تمت الأرشفة بنجاح" });
@@ -333,7 +346,7 @@ export default function UploadPage() {
           <div className="flex flex-col items-end gap-3 w-full md:w-auto">
             <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 mb-2">
                <Info className="w-4 h-4 text-blue-600" />
-               <span className="text-[10px] font-black text-blue-800">مشروعك: studio-4772676541-75c95</span>
+               <span className="text-[10px] font-black text-blue-800">مشروعك في AI Studio: studio-4772676541-75c95</span>
                <Button 
                 onClick={checkApiConnection} 
                 disabled={apiTesting}
@@ -456,16 +469,16 @@ export default function UploadPage() {
                <Button variant="outline" onClick={() => setStep(1)} className="rounded-xl font-black h-12 px-6 border-2 hover:bg-muted/50 gap-2"><RefreshCcw className="w-4 h-4" /> تغيير المادة</Button>
             </div>
 
-            {/* منطقة الرفع الرأسية */}
+            {/* منطقة الرفع الرأسية - الصور بالأعلى والنتائج بالأسفل */}
             <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white text-center">
                <div className="flex items-center justify-between mb-8 px-2">
                   <h2 className="text-2xl font-black text-primary flex items-center gap-3">
                     <ImageIcon className="w-7 h-7 text-secondary" />
-                    {files.length > 0 ? `صور الأوراق المرفوعة (${files.length})` : 'رفع صور الاختبارات'}
+                    صور الأوراق المرفوعة ({files.length})
                   </h2>
-                  {files.length > 0 && aiResults.length === 0 && (
+                  {aiResults.length === 0 && (
                     <Button variant="ghost" onClick={() => fileInputRef.current?.click()} className="text-secondary font-black hover:bg-secondary/5 h-12 px-4 rounded-xl border-2 border-transparent">
-                      <UserPlus className="w-5 h-5 ml-2" /> إضافة المزيد
+                      <UserPlus className="w-5 h-5 ml-2" /> إضافة صور
                     </Button>
                   )}
                </div>
@@ -473,7 +486,7 @@ export default function UploadPage() {
               <div 
                 onClick={() => files.length === 0 && fileInputRef.current?.click()}
                 className={cn(
-                  "w-full min-h-[220px] rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all duration-500",
+                  "w-full min-h-[200px] rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all duration-500",
                   files.length === 0 ? "border-4 border-dashed border-muted cursor-pointer hover:border-primary hover:bg-primary/5" : "bg-muted/10 p-8"
                 )}
               >
@@ -545,11 +558,11 @@ export default function UploadPage() {
                      <div className="text-right">
                         <h2 className="text-2xl font-black text-primary flex items-center gap-3">
                           <CheckCircle className="w-8 h-8 text-green-500" /> 
-                          مراجعة واعتماد نتائج التحليل
+                          مراجعة نتائج التحليل والتدقيق
                         </h2>
-                        <p className="text-muted-foreground font-bold text-base">تأكد من مطابقة الأوراق؛ الحافة الحمراء تعني طالب غير مسجل.</p>
+                        <p className="text-muted-foreground font-bold text-base">يرجى التأكد من مطابقة الأوراق؛ البطاقات الحمراء تعني أن الطالب غير مسجل.</p>
                      </div>
-                     <div className="bg-primary/5 text-primary px-10 py-4 rounded-2xl font-black border-2 border-primary/10 shadow-sm text-2xl">{aiResults.length} ورقة مستخرجة</div>
+                     <div className="bg-primary/5 text-primary px-10 py-4 rounded-2xl font-black border-2 border-primary/10 shadow-sm text-2xl">{aiResults.length} مستند مستخرج</div>
                   </div>
 
                   {/* قائمة المراجعة - عرض رأسي ومنظم بكامل العرض */}
@@ -557,13 +570,13 @@ export default function UploadPage() {
                      {aiResults.map((res, i) => (
                        <Card key={i} className={cn(
                          "p-8 rounded-[3rem] border-4 flex flex-col md:flex-row items-center gap-10 bg-white shadow-2xl relative overflow-hidden transition-all", 
-                         res.isVerified ? "border-green-400" : "border-red-400 bg-red-50/20"
+                         res.isVerified ? "border-green-400" : "border-red-500 bg-red-50/20 shadow-red-100"
                         )}>
                           {/* مؤشر جانبي للحالة */}
-                          <div className={cn("absolute top-0 right-0 w-5 h-full", res.isVerified ? "bg-green-400" : "bg-red-400")} />
+                          <div className={cn("absolute top-0 right-0 w-5 h-full", res.isVerified ? "bg-green-400" : "bg-red-500")} />
                           
                           {/* معاينة الصورة المرفوعة */}
-                          <div className="w-40 h-56 relative rounded-2xl overflow-hidden shadow-2xl shrink-0 border-4 border-white group cursor-zoom-in">
+                          <div className="w-44 h-60 relative rounded-2xl overflow-hidden shadow-2xl shrink-0 border-4 border-white group cursor-zoom-in">
                              <Image src={res.fileData} alt="Extracted" fill className="object-cover" />
                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Search className="w-8 h-8 text-white" /></div>
                           </div>
@@ -574,7 +587,7 @@ export default function UploadPage() {
                                 <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-2 justify-start"><User className="w-4 h-4" /> اسم الطالب</Label>
                                 <div className={cn(
                                   "h-16 rounded-xl px-4 flex items-center font-black text-xl truncate shadow-sm", 
-                                  res.isVerified ? "bg-green-50 text-primary border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+                                  res.isVerified ? "bg-green-50 text-primary border border-green-200" : "bg-red-100 text-red-800 border border-red-300"
                                 )}>
                                   {res.studentName}
                                 </div>
@@ -587,16 +600,16 @@ export default function UploadPage() {
                                   onChange={(e) => handleUpdateAiResult(i, 'studentRegistrationId', e.target.value)} 
                                   className={cn(
                                     "h-16 rounded-xl font-black text-3xl text-center transition-all", 
-                                    !res.isVerified ? "border-red-500 ring-red-100 ring-4" : "border-green-500 ring-green-100 ring-4"
+                                    !res.isVerified ? "border-red-500 ring-red-200 ring-4 bg-white" : "border-green-500 ring-green-100 ring-4 bg-white"
                                   )} 
                                 />
                              </div>
 
                              <div className="space-y-3">
-                                <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-2 justify-start"><Building2 className="w-4 h-4" /> التخصص</Label>
+                                <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-2 justify-start"><Building2 className="w-4 h-4" /> التخصص الدراسي</Label>
                                 <div className={cn(
                                   "h-16 rounded-xl px-4 flex items-center font-black text-sm truncate shadow-sm", 
-                                  res.isVerified ? "bg-green-50 text-secondary border border-green-100" : "bg-red-50 text-red-500 border border-red-100"
+                                  res.isVerified ? "bg-green-50 text-secondary border border-green-100" : "bg-red-50 text-red-500 border border-red-200"
                                 )}>
                                   {res.dbDepartmentName}
                                 </div>
@@ -605,7 +618,7 @@ export default function UploadPage() {
                              <div className="flex items-center justify-end gap-6">
                                 {res.isVerified ? (
                                   <div className="bg-green-500 text-white px-10 py-5 rounded-2xl font-black text-lg flex items-center gap-4 shadow-lg shadow-green-500/30 animate-fade-in">
-                                    <CheckCircle2 className="w-7 h-7" /> مطابق
+                                    <ShieldCheck className="w-7 h-7" /> مطابق
                                   </div>
                                 ) : (
                                   <div className="bg-red-600 text-white px-10 py-5 rounded-2xl font-black text-lg flex items-center gap-4 shadow-lg shadow-red-600/30 animate-fade-in">
@@ -628,9 +641,9 @@ export default function UploadPage() {
 
                   <div className="flex flex-col sm:flex-row gap-8 pt-10 pb-20">
                      <Button onClick={saveBatchAI} className="flex-1 h-28 rounded-[3rem] text-4xl font-black gradient-blue shadow-2xl text-white gap-8 transition-all border-b-8 border-primary/50">
-                       <CloudUpload className="w-12 h-12" /> اعتماد وحفظ الدفعة بالكامل
+                       <CloudUpload className="w-12 h-12" /> اعتماد وأرشفة الدفعة بالكامل
                      </Button>
-                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-28 px-20 rounded-[3rem] font-black border-4 text-3xl hover:bg-white transition-all">إلغاء وإعادة الرفع</Button>
+                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-28 px-20 rounded-[3rem] font-black border-4 text-3xl hover:bg-white transition-all text-primary">إلغاء وإعادة الرفع</Button>
                   </div>
                 </div>
               )

@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview محرك استخراج البيانات المطور والمستقر تماماً.
+ * @fileOverview محرك استخراج البيانات المطور باستخدام Gemini 1.5 Flash.
  */
 
 import { ai } from '@/ai/genkit';
@@ -27,9 +27,10 @@ export const extractExamDetailsFlow = ai.defineFlow(
     outputSchema: ExtractExamDetailsOutputSchema,
   },
   async (input) => {
-    const promptText = `أنت خبير أرشفة أكاديمية. حلل صورة ورقة الامتحان واستخرج:
-    1. studentRegistrationId: استخرج الأرقام فقط (مثلاً: 2021001).
-    2. studentName: الاسم الكامل المكتوب بوضوح.
+    const promptText = `أنت خبير أرشفة أكاديمية متخصص في تحليل أوراق الامتحانات العربية.
+    حلل الصورة واستخرج بدقة متناهية:
+    1. studentRegistrationId: استخرج أرقام رقم القيد فقط (مثلاً: 2021100).
+    2. studentName: اسم الطالب الكامل المكتوب بخط اليد أو المطبوع.
 
     أجب بصيغة JSON فقط:
     {
@@ -39,7 +40,7 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
     try {
       const response = await ai.generate({
-        model: 'googleai/gemini-1.5-flash', // تأكد من استخدام هذا المسمى المستقر
+        model: 'googleai/gemini-1.5-flash', 
         prompt: [
           { text: promptText },
           { media: { url: input.examImageDataUri } }
@@ -58,13 +59,13 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
       const output = response.output;
       if (!output) {
-        throw new Error('لم يتمكن المحرك من قراءة بيانات الورقة.');
+        throw new Error('لم يتمكن المحرك من قراءة بيانات الورقة، يرجى التأكد من وضوح الصورة.');
       }
 
       return output as ExtractExamDetailsOutput;
     } catch (error: any) {
       console.error('AI Flow Error:', error);
-      throw new Error(`خطأ Gemini: ${error.message || 'مشكلة في الاتصال بالخدمة'}`);
+      throw new Error(`خطأ في التحليل: ${error.message || 'مشكلة في الاتصال بالذكاء الاصطناعي'}`);
     }
   }
 );
