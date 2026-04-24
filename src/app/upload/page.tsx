@@ -33,7 +33,9 @@ import {
   ArrowLeft,
   UserPlus,
   Info,
-  ShieldCheck
+  ShieldCheck,
+  XCircle,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -118,12 +120,12 @@ export default function UploadPage() {
       const res = await fetch('/api/ai/test');
       const data = await res.json();
       if (data.success) {
-        toast({ title: "تم الاتصال بنجاح!", description: "المفتاح يعمل والمحرك مستعد للتحليل." });
+        toast({ title: "تم الاتصال بنجاح!", description: "المفتاح يعمل والمحرك مستعد للتحليل الذكي." });
       } else {
         toast({ 
           variant: "destructive", 
           title: "فشل اختبار المفتاح", 
-          description: data.rawError || "يرجى التحقق من تفعيل Generative Language API في مشروعك."
+          description: data.rawError || "يرجى التحقق من صحة المفتاح في AI Studio."
         });
       }
     } catch (e: any) {
@@ -162,7 +164,7 @@ export default function UploadPage() {
     if (!fileList || fileList.length === 0) return;
 
     setLoading(true);
-    setLoadingText("جاري معالجة وتحسين جودة الصور...");
+    setLoadingText("جاري ضغط وتحسين جودة الصور...");
     
     const newFiles: string[] = [];
     let processed = 0;
@@ -187,7 +189,7 @@ export default function UploadPage() {
   const startAIAnalysis = async () => {
     if (files.length === 0) return;
     setLoading(true);
-    setLoadingText("جاري استخراج البيانات عبر محرك Gemini...");
+    setLoadingText("جاري استخراج البيانات عبر محرك Gemini 1.5...");
     
     const tempResults: AIResult[] = [];
 
@@ -209,7 +211,7 @@ export default function UploadPage() {
         const dbCheck = await verifyStudentInDB(regId);
         
         tempResults.push({
-          studentRegistrationId: regId || "---",
+          studentRegistrationId: regId || "",
           studentName: dbCheck.isVerified ? dbCheck.dbStudentName! : (responseData.studentName || "غير معروف"),
           dbDepartmentName: dbCheck.dbDepartmentName || (dbCheck.isVerified ? "" : "غير مسجل"),
           fileData: file,
@@ -219,7 +221,7 @@ export default function UploadPage() {
       } catch (e: any) {
         tempResults.push({ 
           studentName: "فشل التحليل الذكي", 
-          studentRegistrationId: "يرجى الإدخال يدوياً", 
+          studentRegistrationId: "", 
           fileData: file, 
           isVerified: false,
           status: 'failed'
@@ -244,7 +246,7 @@ export default function UploadPage() {
         newResults[index].dbDepartmentName = check.dbDepartmentName;
       } else {
         newResults[index].studentName = "طالب غير مسجل";
-        newResults[index].dbDepartmentName = "غير موجود في سجلات الطلاب";
+        newResults[index].dbDepartmentName = "غير موجود في النظام";
       }
     }
     setAiResults(newResults);
@@ -270,16 +272,6 @@ export default function UploadPage() {
         departmentName: context.deptName,
         level: context.level,
         uploadedAt: serverTimestamp()
-      });
-
-      // تسجيل في السجل
-      await addDoc(collection(firestore, "logs"), {
-        user: "موظف أرشفة",
-        role: "employee",
-        action: "أرشفة يدوية ناجحة",
-        target: `${manualStudent.name} - ${context.subjectName}`,
-        type: 'archive',
-        timestamp: serverTimestamp()
       });
 
       toast({ title: "تمت الأرشفة بنجاح" });
@@ -339,14 +331,14 @@ export default function UploadPage() {
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-4xl font-black text-primary mb-2 tracking-tight">أرشفة الأوراق</h1>
+            <h1 className="text-4xl font-black text-primary mb-2 tracking-tight">أرشفة الاختبارات</h1>
             <p className="text-muted-foreground font-bold text-lg">نظام الكشف الذكي المطور (Gemini 1.5 Flash)</p>
           </div>
 
           <div className="flex flex-col items-end gap-3 w-full md:w-auto">
             <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 mb-2">
                <Info className="w-4 h-4 text-blue-600" />
-               <span className="text-[10px] font-black text-blue-800">مشروعك في AI Studio: studio-4772676541-75c95</span>
+               <span className="text-[10px] font-black text-blue-800">مشروعك في AI Studio: 242985731141</span>
                <Button 
                 onClick={checkApiConnection} 
                 disabled={apiTesting}
@@ -457,7 +449,7 @@ export default function UploadPage() {
 
         {step === 2 && (
           <div className="space-y-10 animate-slide-up pb-20">
-            {/* عرض المادة الحالية */}
+            {/* المادة الحالية */}
             <div className="bg-white p-6 rounded-[2rem] shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 border-r-8 border-secondary">
                <div className="flex items-center gap-5">
                   <div className="w-14 h-14 bg-secondary/5 rounded-2xl flex items-center justify-center text-secondary border border-secondary/10 shadow-inner"><BookOpen className="w-8 h-8" /></div>
@@ -469,7 +461,7 @@ export default function UploadPage() {
                <Button variant="outline" onClick={() => setStep(1)} className="rounded-xl font-black h-12 px-6 border-2 hover:bg-muted/50 gap-2"><RefreshCcw className="w-4 h-4" /> تغيير المادة</Button>
             </div>
 
-            {/* منطقة الرفع الرأسية - الصور بالأعلى والنتائج بالأسفل */}
+            {/* صف الصور المرفوعة (علوي) */}
             <Card className="p-8 border-none shadow-2xl rounded-[2.5rem] bg-white text-center">
                <div className="flex items-center justify-between mb-8 px-2">
                   <h2 className="text-2xl font-black text-primary flex items-center gap-3">
@@ -520,12 +512,13 @@ export default function UploadPage() {
               )}
             </Card>
 
+            {/* صف مراجعة النتائج والتحقق (سفلي - كامل العرض) */}
             {activeMode === 'manual' ? (
               files.length > 0 && (
                 <Card className="p-10 border-none shadow-2xl rounded-[3rem] bg-white animate-slide-up border-b-8 border-green-500">
                   <div className="flex items-center gap-3 mb-8">
                      <div className="p-3 bg-green-50 rounded-xl text-green-600"><CheckCircle2 className="w-7 h-7" /></div>
-                     <h2 className="text-2xl font-black text-primary">التحقق من بيانات الطالب</h2>
+                     <h2 className="text-2xl font-black text-primary">التحقق اليدوي من بيانات الطالب</h2>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                      <div className="space-y-3 text-right">
@@ -536,17 +529,17 @@ export default function UploadPage() {
                         </div>
                      </div>
                      <div className="space-y-3 text-right">
-                        <Label className="font-black text-primary pr-1">اسم الطالب من قاعدة البيانات</Label>
+                        <Label className="font-black text-primary pr-1">الاسم الكامل</Label>
                         <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-xl shadow-sm", manualStudent ? "text-primary bg-primary/5" : "text-muted-foreground")}>{manualStudent?.name || "---"}</div>
                      </div>
                      <div className="space-y-3 text-right">
-                        <Label className="font-black text-primary pr-1">التخصص / القسم</Label>
+                        <Label className="font-black text-primary pr-1">التخصص</Label>
                         <div className={cn("h-14 bg-muted/20 border-2 border-transparent rounded-xl px-4 flex items-center font-black text-lg shadow-sm", manualStudent ? "text-secondary bg-secondary/5" : "text-muted-foreground")}>{manualStudent?.deptName || "---"}</div>
                      </div>
                   </div>
                   {manualStudent && (
                     <Button onClick={saveManualArchive} className="w-full mt-12 h-20 rounded-[2.5rem] text-3xl font-black bg-green-600 hover:bg-green-700 shadow-2xl text-white gap-4 transition-all">
-                      <CheckCircle2 className="w-10 h-10" /> إتمام عملية الأرشفة والحفظ
+                      <CheckCircle2 className="w-10 h-10" /> إتمام الأرشفة وحفظ الورقة
                     </Button>
                   )}
                 </Card>
@@ -558,78 +551,73 @@ export default function UploadPage() {
                      <div className="text-right">
                         <h2 className="text-2xl font-black text-primary flex items-center gap-3">
                           <CheckCircle className="w-8 h-8 text-green-500" /> 
-                          مراجعة نتائج التحليل والتدقيق
+                          مراجعة نتائج التحقق الذكي
                         </h2>
-                        <p className="text-muted-foreground font-bold text-base">يرجى التأكد من مطابقة الأوراق؛ البطاقات الحمراء تعني أن الطالب غير مسجل.</p>
+                        <p className="text-muted-foreground font-bold text-base">البطاقات الحمراء تعني أن الطالب غير مسجل؛ يرجى تصحيح القيد يدوياً.</p>
                      </div>
-                     <div className="bg-primary/5 text-primary px-10 py-4 rounded-2xl font-black border-2 border-primary/10 shadow-sm text-2xl">{aiResults.length} مستند مستخرج</div>
+                     <div className="bg-primary/5 text-primary px-10 py-4 rounded-2xl font-black border-2 border-primary/10 shadow-sm text-2xl">{aiResults.length} مستند</div>
                   </div>
 
-                  {/* قائمة المراجعة - عرض رأسي ومنظم بكامل العرض */}
                   <div className="grid grid-cols-1 gap-8">
                      {aiResults.map((res, i) => (
                        <Card key={i} className={cn(
                          "p-8 rounded-[3rem] border-4 flex flex-col md:flex-row items-center gap-10 bg-white shadow-2xl relative overflow-hidden transition-all", 
-                         res.isVerified ? "border-green-400" : "border-red-500 bg-red-50/20 shadow-red-100"
+                         res.isVerified ? "border-green-400" : "border-red-500 bg-red-50/20"
                         )}>
-                          {/* مؤشر جانبي للحالة */}
                           <div className={cn("absolute top-0 right-0 w-5 h-full", res.isVerified ? "bg-green-400" : "bg-red-500")} />
                           
-                          {/* معاينة الصورة المرفوعة */}
-                          <div className="w-44 h-60 relative rounded-2xl overflow-hidden shadow-2xl shrink-0 border-4 border-white group cursor-zoom-in">
+                          <div className="w-44 h-60 relative rounded-2xl overflow-hidden shadow-2xl shrink-0 border-4 border-white">
                              <Image src={res.fileData} alt="Extracted" fill className="object-cover" />
-                             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><Search className="w-8 h-8 text-white" /></div>
                           </div>
 
-                          {/* البيانات المستخرجة والتحقق */}
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-10 w-full text-right">
                              <div className="space-y-3">
-                                <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-2 justify-start"><User className="w-4 h-4" /> اسم الطالب</Label>
+                                <Label className="text-xs font-black text-muted-foreground flex items-center gap-2 justify-start"><User className="w-4 h-4" /> اسم الطالب</Label>
                                 <div className={cn(
                                   "h-16 rounded-xl px-4 flex items-center font-black text-xl truncate shadow-sm", 
-                                  res.isVerified ? "bg-green-50 text-primary border border-green-200" : "bg-red-100 text-red-800 border border-red-300"
+                                  res.isVerified ? "bg-green-50 text-primary" : "bg-red-100 text-red-800"
                                 )}>
                                   {res.studentName}
                                 </div>
                              </div>
                              
                              <div className="space-y-3">
-                                <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-2 justify-start"><Fingerprint className="w-4 h-4" /> رقم القيد</Label>
+                                <Label className="text-xs font-black text-muted-foreground flex items-center gap-2 justify-start"><Fingerprint className="w-4 h-4" /> رقم القيد</Label>
                                 <Input 
                                   value={res.studentRegistrationId} 
                                   onChange={(e) => handleUpdateAiResult(i, 'studentRegistrationId', e.target.value)} 
                                   className={cn(
-                                    "h-16 rounded-xl font-black text-3xl text-center transition-all", 
-                                    !res.isVerified ? "border-red-500 ring-red-200 ring-4 bg-white" : "border-green-500 ring-green-100 ring-4 bg-white"
+                                    "h-16 rounded-xl font-black text-3xl text-center", 
+                                    !res.isVerified ? "border-red-500 ring-red-100 ring-4" : "border-green-500"
                                   )} 
                                 />
                              </div>
 
                              <div className="space-y-3">
-                                <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-2 justify-start"><Building2 className="w-4 h-4" /> التخصص الدراسي</Label>
+                                <Label className="text-xs font-black text-muted-foreground flex items-center gap-2 justify-start"><Building2 className="w-4 h-4" /> التخصص</Label>
                                 <div className={cn(
                                   "h-16 rounded-xl px-4 flex items-center font-black text-sm truncate shadow-sm", 
-                                  res.isVerified ? "bg-green-50 text-secondary border border-green-100" : "bg-red-50 text-red-500 border border-red-200"
+                                  res.isVerified ? "bg-green-50 text-secondary" : "bg-red-100 text-red-500"
                                 )}>
                                   {res.dbDepartmentName}
                                 </div>
                              </div>
 
-                             <div className="flex items-center justify-end gap-6">
+                             <div className="flex items-center justify-end gap-4">
                                 {res.isVerified ? (
-                                  <div className="bg-green-500 text-white px-10 py-5 rounded-2xl font-black text-lg flex items-center gap-4 shadow-lg shadow-green-500/30 animate-fade-in">
-                                    <ShieldCheck className="w-7 h-7" /> مطابق
+                                  <div className="bg-green-500 text-white h-16 px-8 rounded-2xl font-black flex items-center gap-3 shadow-lg">
+                                    <ShieldCheck className="w-6 h-6" /> مطابق
                                   </div>
                                 ) : (
-                                  <div className="bg-red-600 text-white px-10 py-5 rounded-2xl font-black text-lg flex items-center gap-4 shadow-lg shadow-red-600/30 animate-fade-in">
-                                    <AlertTriangle className="w-7 h-7" /> غير مسجل
+                                  <div className="bg-red-600 text-white h-16 px-8 rounded-2xl font-black flex items-center gap-3 shadow-lg">
+                                    <AlertTriangle className="w-6 h-6" /> غير مسجل
                                   </div>
                                 )}
                                 <Button 
                                   size="icon" 
                                   variant="ghost" 
                                   onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} 
-                                  className="text-destructive hover:bg-red-100 rounded-2xl h-16 w-16 transition-all"
+                                  className="text-destructive hover:bg-red-100 rounded-2xl h-16 w-16"
                                 >
                                   <Trash2 className="w-8 h-8" />
                                 </Button>
@@ -640,10 +628,10 @@ export default function UploadPage() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-8 pt-10 pb-20">
-                     <Button onClick={saveBatchAI} className="flex-1 h-28 rounded-[3rem] text-4xl font-black gradient-blue shadow-2xl text-white gap-8 transition-all border-b-8 border-primary/50">
+                     <Button onClick={saveBatchAI} className="flex-1 h-28 rounded-[3rem] text-4xl font-black gradient-blue shadow-2xl text-white gap-8 border-b-8 border-primary/50">
                        <CloudUpload className="w-12 h-12" /> اعتماد وأرشفة الدفعة بالكامل
                      </Button>
-                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-28 px-20 rounded-[3rem] font-black border-4 text-3xl hover:bg-white transition-all text-primary">إلغاء وإعادة الرفع</Button>
+                     <Button variant="outline" onClick={() => { setAiResults([]); setFiles([]); }} className="h-28 px-20 rounded-[3rem] font-black border-4 text-3xl text-primary">إلغاء وإعادة الرفع</Button>
                   </div>
                 </div>
               )
