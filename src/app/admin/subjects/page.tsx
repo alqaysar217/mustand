@@ -10,16 +10,12 @@ import {
   Search, 
   Edit2, 
   Trash2, 
-  PlusCircle,
   Building2,
   Loader2,
   Filter,
   Type,
   Layers,
-  CheckCircle,
-  DatabaseZap,
   RefreshCw,
-  AlertTriangle,
   Save,
   X
 } from "lucide-react";
@@ -47,7 +43,7 @@ import { useToast } from "@/hooks/use-toast";
 
 // Firebase
 import { useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc, getDocs, writeBatch } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 
 export default function SubjectsPage() {
   const [mounted, setMounted] = useState(false);
@@ -109,7 +105,7 @@ export default function SubjectsPage() {
       .then(() => {
         setIsAddDialogOpen(false);
         setNewSubject({ nameAr: "", nameEn: "", departmentId: "", level: "المستوى الأول", term: "الفصل الأول" });
-        toast({ title: "تمت إضافة المادة" });
+        toast({ title: "تمت إضافة المادة بنجاح" });
       })
       .finally(() => setSubmitting(false));
   };
@@ -175,21 +171,39 @@ export default function SubjectsPage() {
                   </DialogTitle>
                   <DialogDescription className="font-bold text-muted-foreground">أدخل بيانات المادة الدراسية لربطها بالتخصص والمستوى.</DialogDescription>
                 </DialogHeader>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
                   <div className="space-y-2">
-                    <Label className="font-bold text-primary flex items-center gap-2 justify-start mb-1">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                       <Type className="w-4 h-4 text-secondary" />
                       اسم المادة (عربي)
                     </Label>
-                    <Input value={newSubject.nameAr} onChange={(e) => setNewSubject({...newSubject, nameAr: e.target.value})} placeholder="مثال: برمجة 1" className="rounded-xl h-11" />
+                    <Input 
+                      value={newSubject.nameAr} 
+                      onChange={(e) => setNewSubject({...newSubject, nameAr: e.target.value})} 
+                      placeholder="مثال: برمجة 1" 
+                      className="rounded-xl h-11 border-muted font-bold text-right" 
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-bold text-primary flex items-center gap-2 justify-start mb-1">
-                      <Building2 className="w-4 h-4 text-secondary" />
-                      التخصص
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                      <Type className="w-4 h-4 text-secondary" />
+                      اسم المادة (English)
                     </Label>
-                    <Select onValueChange={(v) => setNewSubject({...newSubject, departmentId: v})}>
-                      <SelectTrigger className="rounded-xl h-11 text-right font-bold">
+                    <Input 
+                      value={newSubject.nameEn} 
+                      onChange={(e) => setNewSubject({...newSubject, nameEn: e.target.value})} 
+                      placeholder="Programming 1" 
+                      className="rounded-xl h-11 border-muted text-left font-mono" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                      <Building2 className="w-4 h-4 text-secondary" />
+                      التخصص الدراسي
+                    </Label>
+                    <Select value={newSubject.departmentId} onValueChange={(v) => setNewSubject({...newSubject, departmentId: v})}>
+                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
                         <SelectValue placeholder="اختر التخصص" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
@@ -198,12 +212,12 @@ export default function SubjectsPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-bold text-primary flex items-center gap-2 justify-start mb-1">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
                       <Layers className="w-4 h-4 text-secondary" />
-                      المستوى
+                      المستوى الدراسي
                     </Label>
                     <Select value={newSubject.level} onValueChange={(v) => setNewSubject({...newSubject, level: v})}>
-                      <SelectTrigger className="rounded-xl h-11">
+                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
                         <SelectValue placeholder="المستوى" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl font-bold">
@@ -211,12 +225,36 @@ export default function SubjectsPage() {
                         <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
                         <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
                         <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                        <SelectItem value="المستوى الخامس">المستوى الخامس</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-primary font-bold flex items-center gap-2 justify-start mb-1">
+                      <RefreshCw className="w-4 h-4 text-secondary" />
+                      الفصل الدراسي
+                    </Label>
+                    <Select value={newSubject.term} onValueChange={(v) => setNewSubject({...newSubject, term: v})}>
+                      <SelectTrigger className="rounded-xl h-11 border-muted text-right font-bold">
+                        <SelectValue placeholder="اختر الفصل" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl font-bold">
+                        <SelectItem value="الفصل الأول">الفصل الأول</SelectItem>
+                        <SelectItem value="الفصل الثاني">الفصل الثاني</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <DialogFooter className="flex-row gap-3 pt-8">
-                  <Button disabled={submitting} onClick={handleAddSubject} className="flex-1 rounded-xl gradient-blue h-12 font-bold text-white shadow-lg">حفظ المادة</Button>
+
+                <DialogFooter className="flex-row gap-3 pt-8 border-t mt-6">
+                  <Button 
+                    disabled={submitting} 
+                    onClick={handleAddSubject} 
+                    className="flex-1 rounded-xl gradient-blue h-12 font-bold text-white shadow-lg gap-2"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    حفظ المادة
+                  </Button>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
                 </DialogFooter>
               </div>
