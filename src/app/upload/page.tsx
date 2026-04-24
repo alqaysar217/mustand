@@ -32,11 +32,9 @@ import {
   ImageIcon,
   ArrowLeft,
   UserPlus,
-  Info,
   ShieldCheck,
-  XCircle,
-  X,
-  Zap
+  Zap,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -121,12 +119,12 @@ export default function UploadPage() {
       const res = await fetch('/api/ai/test');
       const data = await res.json();
       if (data.success) {
-        toast({ title: "تم الاتصال بنجاح!", description: "المفتاح يعمل والمحرك مستعد للتحليل الذكي." });
+        toast({ title: "تم الاتصال بنجاح!", description: data.message });
       } else {
         toast({ 
           variant: "destructive", 
           title: "فشل اختبار المفتاح", 
-          description: data.rawError || "يرجى التحقق من صحة المفتاح في AI Studio ومطابقته لرقم المشروع."
+          description: data.rawError || "تأكد من شحن رصيد OpenRouter أو صحة المفتاح."
         });
       }
     } catch (e: any) {
@@ -165,7 +163,7 @@ export default function UploadPage() {
     if (!fileList || fileList.length === 0) return;
 
     setLoading(true);
-    setLoadingText("جاري ضغط وتحسين جودة الصور...");
+    setLoadingText("جاري تحسين جودة الصور...");
     
     const newFiles: string[] = [];
     let processed = 0;
@@ -190,7 +188,7 @@ export default function UploadPage() {
   const startAIAnalysis = async () => {
     if (files.length === 0) return;
     setLoading(true);
-    setLoadingText("جاري استخراج البيانات عبر محرك Gemini 1.5...");
+    setLoadingText("جاري استخراج البيانات عبر Gemini 2.0...");
     
     const tempResults: AIResult[] = [];
 
@@ -204,17 +202,15 @@ export default function UploadPage() {
         
         const responseData = await response.json();
         
-        if (!response.ok) {
-          throw new Error(responseData.error || `خطأ (${response.status})`);
-        }
+        if (!response.ok) throw new Error(responseData.error);
         
         const regId = responseData.studentRegistrationId || "";
         const dbCheck = await verifyStudentInDB(regId);
         
         tempResults.push({
           studentRegistrationId: regId || "",
-          studentName: dbCheck.isVerified ? dbCheck.dbStudentName! : (responseData.studentName || "غير معروف"),
-          dbDepartmentName: dbCheck.dbDepartmentName || (dbCheck.isVerified ? "" : "غير مسجل"),
+          studentName: dbCheck.isVerified ? dbCheck.dbStudentName! : (responseData.studentName || "طالب غير مسجل"),
+          dbDepartmentName: dbCheck.dbDepartmentName || (dbCheck.isVerified ? "" : "غير مسجل في النظام"),
           fileData: file,
           isVerified: dbCheck.isVerified,
           status: dbCheck.isVerified ? 'success' : 'failed'
@@ -276,7 +272,6 @@ export default function UploadPage() {
       });
 
       toast({ title: "تمت الأرشفة بنجاح" });
-      // تصفير الصورة والرقم للورقة التالية مع بقاء المادة
       setFiles([]);
       setManualId("");
       setManualStudent(null);
@@ -310,7 +305,7 @@ export default function UploadPage() {
           uploadedAt: serverTimestamp()
         });
       }
-      toast({ title: "اكتملت الأرشفة الذكية للدفعة" });
+      toast({ title: "اكتملت الأرشفة الذكية للدفعة بنجاح" });
       setFiles([]);
       setAiResults([]);
       setStep(1); 
@@ -327,20 +322,20 @@ export default function UploadPage() {
       <Navbar />
       
       <main className={cn(
-        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-7xl mx-auto",
+        "transition-all duration-300 p-6 md:p-10 animate-fade-in max-w-full mx-auto",
         isOpen ? "mr-0 md:mr-64" : "mr-0"
       )}>
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-4xl font-black text-primary mb-2 tracking-tight">أرشفة الاختبارات</h1>
-            <p className="text-muted-foreground font-bold text-lg">نظام الكشف الذكي المطور (Gemini 1.5 Flash)</p>
+            <h1 className="text-4xl font-black text-primary mb-2 tracking-tight">أرشفة ذكية متطورة</h1>
+            <p className="text-muted-foreground font-bold text-lg">بواسطة Gemini 2.0 Flash و OpenRouter</p>
           </div>
 
           <div className="flex flex-col items-end gap-3 w-full md:w-auto">
             <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 mb-2">
                <Zap className="w-4 h-4 text-blue-600 animate-pulse" />
-               <span className="text-[10px] font-black text-blue-800">مشروعك: studio-4772676541-75c95</span>
+               <span className="text-[10px] font-black text-blue-800 uppercase">المحرك: OpenRouter Cloud</span>
                <Button 
                 onClick={checkApiConnection} 
                 disabled={apiTesting}
@@ -555,7 +550,7 @@ export default function UploadPage() {
                           <CheckCircle className="w-8 h-8 text-green-500" /> 
                           مراجعة نتائج التحقق الذكي
                         </h2>
-                        <p className="text-muted-foreground font-bold text-base">البطاقات الحمراء تعني أن الطالب غير مسجل؛ يرجى تصحيح القيد يدوياً.</p>
+                        <p className="text-muted-foreground font-bold text-base">يرجى تصحيح الأرقام في البطاقات الحمراء لتطابق سجلات النظام.</p>
                      </div>
                      <div className="bg-primary/5 text-primary px-10 py-4 rounded-2xl font-black border-2 border-primary/10 shadow-sm text-2xl">{aiResults.length} مستند</div>
                   </div>

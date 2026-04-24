@@ -2,12 +2,11 @@
 'use server';
 
 /**
- * @fileOverview محرك استخراج البيانات المطور ليطابق نجاح اختبار curl.
- * تم ضبطه ليعمل بأقصى درجات الاستقرار مع Gemini 1.5 Flash.
+ * @fileOverview محرك استخراج البيانات المطور للعمل عبر OpenRouter.
+ * تم ضبطه ليطابق الكود الناجح للمستخدم مع استخدام Gemini 2.0 Flash.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const ExtractExamDetailsInputSchema = z.object({
   examImageDataUri: z.string().describe("صورة ورقة الامتحان كـ Data URI (Base64)"),
@@ -21,57 +20,55 @@ const ExtractExamDetailsOutputSchema = z.object({
 export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSchema>;
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
-export const extractExamDetailsFlow = ai.defineFlow(
-  {
-    name: 'extractExamDetailsFlow',
-    inputSchema: ExtractExamDetailsInputSchema,
-    outputSchema: ExtractExamDetailsOutputSchema,
-  },
-  async (input) => {
-    const promptText = `أنت خبير أرشفة أكاديمية متخصص في تحليل أوراق الامتحانات العربية.
-    حلل الصورة واستخرج بدقة متناهية:
-    1. studentRegistrationId: استخرج أرقام رقم القيد فقط (مثلاً: 2021100).
-    2. studentName: اسم الطالب الكامل المكتوب بخط اليد أو المطبوع.
-
-    أجب بصيغة JSON فقط:
-    {
-      "studentRegistrationId": "رقم القيد",
-      "studentName": "الاسم الكامل"
-    }`;
-
-    try {
-      // استخدام الموديل gemini-1.5-flash المتوافق مع المفتاح المجاني
-      const response = await ai.generate({
-        model: 'googleai/gemini-1.5-flash', 
-        prompt: [
-          { text: promptText },
-          { media: { url: input.examImageDataUri } }
-        ],
-        config: {
-          responseMimeType: 'application/json',
-          safetySettings: [
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' }
-          ]
-        }
-      });
-
-      const output = response.output;
-      if (!output) {
-        throw new Error('لم يتمكن المحرك من استخراج بيانات الورقة. يرجى التأكد من وضوح الصورة ومطابقة المفتاح للمشروع.');
-      }
-
-      return output as ExtractExamDetailsOutput;
-    } catch (error: any) {
-      console.error('AI Flow Technical Error:', error);
-      throw new Error(`خطأ تقني: ${error.message || 'فشل الاتصال بمحرك Gemini'}`);
-    }
-  }
-);
+// مفتاح OpenRouter الذي أثبت نجاحه مع المستخدم
+const OPENROUTER_API_KEY = "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";
 
 export async function extractExamDetails(input: ExtractExamDetailsInput): Promise<ExtractExamDetailsOutput> {
-  return await extractExamDetailsFlow(input);
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://mustand-archive.app', // معرف اختياري
+        'X-Title': 'Mustand Smart Archive'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-001',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: "أنت خبير أرشفة. استخرج 'studentRegistrationId' (رقم القيد) و 'studentName' (اسم الطالب الكامل) من هذه الصورة العربية. أجب فقط بصيغة JSON كالتالي: {\"studentRegistrationId\": \"الرقم\", \"studentName\": \"الاسم\"}. إذا لم تجد القيمة ضعها نصاً فارغاً."
+              },
+              {
+                type: 'image_url',
+                image_url: { url: input.examImageDataUri }
+              }
+            ]
+          }
+        ],
+        response_format: { type: "json_object" }
+      })
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error?.message || "فشل الاتصال بمحرك OpenRouter");
+    }
+
+    const content = JSON.parse(data.choices[0].message.content);
+    
+    return {
+      studentRegistrationId: content.studentRegistrationId || "",
+      studentName: content.studentName || ""
+    };
+
+  } catch (error: any) {
+    console.error('AI Extraction Error:', error);
+    throw new Error(`خطأ في التحليل الذكي: ${error.message}`);
+  }
 }

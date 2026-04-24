@@ -1,35 +1,40 @@
 
 import { NextResponse } from 'next/server';
-import { ai } from '@/ai/genkit';
 
 /**
- * مسار مطور لاختبار مفتاح الـ API والتأكد من تفعيل خدمة Gemini.
+ * مسار فحص الاتصال عبر OpenRouter لضمان عمل المفتاح.
  */
 export async function GET() {
+  const OPENROUTER_API_KEY = "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";
+  
   try {
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('مفتاح الـ API مفقود من ملف الإعدادات .env');
-    }
-
-    const response = await ai.generate({
-      model: 'googleai/gemini-1.5-flash',
-      prompt: 'أجب بكلمة واحدة فقط: "متصل"',
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-001',
+        messages: [{ role: 'user', content: 'أجب بكلمة واحدة: متصل' }]
+      })
     });
 
-    if (response.text) {
+    const data = await response.json();
+    
+    if (response.ok && data.choices) {
       return NextResponse.json({ 
         success: true, 
-        message: 'تم الاتصال بنجاح! المفتاح شغال والمحرك مستعد للعمل.' 
+        message: 'تم الاتصال بنجاح بمحرك OpenRouter! المفتاح يعمل والموديل Gemini 2.0 مستعد.' 
       });
     }
-    throw new Error('لم يتم تلقي رد من المحرك.');
+    
+    throw new Error(data.error?.message || 'رد غير معروف من الخادم');
   } catch (error: any) {
-    console.error('API Test Error:', error);
     return NextResponse.json({ 
       success: false, 
-      message: 'فشل الاتصال بمحرك Gemini.',
-      rawError: error.message || 'خطأ غير معروف في الـ API'
+      message: 'فشل الاتصال بالمحرك.',
+      rawError: error.message
     }, { status: 500 });
   }
 }
