@@ -32,7 +32,7 @@ export function Navbar() {
       setCurrentUser(JSON.parse(session));
     }
 
-    const handleBeforeInstallPrompt = (e: Event) => {
+    const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
@@ -88,12 +88,12 @@ export function Navbar() {
 
       {/* الجهة اليسرى */}
       <div className="flex items-center gap-3">
-        {/* زر التثبيت لسطح المكتب والجوال */}
+        {/* زر التثبيت كتطبيق - يظهر فقط إذا كان المتصفح يدعم ذلك ولم يتم التثبيت بعد */}
         {deferredPrompt && (
           <Button 
             onClick={handleInstallClick}
             variant="outline" 
-            className="hidden sm:flex items-center gap-2 rounded-xl h-10 border-primary/20 text-primary font-bold hover:bg-primary/5"
+            className="hidden sm:flex items-center gap-2 rounded-xl h-10 border-2 border-primary/20 text-primary font-bold hover:bg-primary/5 animate-pulse"
           >
             <Download className="w-4 h-4" />
             تثبيت التطبيق
@@ -137,10 +137,11 @@ export function Navbar() {
                       </Link>
                     );
                   })}
+                  
                   {deferredPrompt && (
                     <button 
                       onClick={handleInstallClick}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/10 text-white hover:bg-white/20 transition-all text-right mt-4"
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white/20 text-white hover:bg-white/30 transition-all text-right mt-4 border border-white/10"
                     >
                       <Download className="w-5 h-5" />
                       <span className="text-sm font-bold">تثبيت التطبيق على الجهاز</span>

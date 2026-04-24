@@ -21,12 +21,6 @@ export const metadata: Metadata = {
     icon: '/logo-mustand.png',
     apple: '/apple-touch-icon.png',
   },
-  openGraph: {
-    title: 'مستند - نظام الأرشفة الذكي',
-    description: 'نظام إدارة وأرشفة الاختبارات الذكي مع استخراج البيانات تلقائياً',
-    images: ['/logo-mustand.png'],
-    type: 'website',
-  },
 };
 
 export const viewport: Viewport = {
@@ -54,7 +48,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="مستند" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="apple-touch-startup-image" href="/apple-splash.png" />
         
         {/* منع التكبير التلقائي عند الضغط على الحقول في الآيفون */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
