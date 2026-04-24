@@ -131,17 +131,25 @@ export default function AdminArchivePage() {
   };
 
   const handleMoveToBin = async (item: any) => {
-    if (!firestore) return;
+    if (!firestore || !item.id) return;
     try {
       const { id, ...originalData } = item;
+      
+      // تنقية البيانات من أي قيم undefined
+      const cleanedData = Object.entries(originalData).reduce((acc: any, [key, value]) => {
+        if (value !== undefined) acc[key] = value;
+        return acc;
+      }, {});
+
       await addDoc(collection(firestore, "recycleBin"), {
         type: 'archive',
-        originalData,
+        originalData: cleanedData,
         originalId: id,
         deletedAt: serverTimestamp(),
-        name: item.studentName,
-        identifier: item.subjectName
+        name: item.studentName || item.student_name || "ملف بيانات ناقصة",
+        identifier: item.subjectName || item.subject_name || "مادة غير محددة"
       });
+
       await deleteDoc(doc(firestore, "archives", id));
 
       // تسجيل في السجل
@@ -149,14 +157,15 @@ export default function AdminArchivePage() {
         user: "المدير العام",
         role: "manager",
         action: "حذف ملف من الأرشيف",
-        target: `${item.studentName} - ${item.subjectName}`,
+        target: `${item.studentName || 'غير معروف'} - ${item.subjectName || 'مادة ناقصة'}`,
         type: 'delete',
         timestamp: serverTimestamp()
       });
 
       toast({ title: "تم نقل الملف لسلة المحذوفات" });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في النقل" });
+      console.error("Move error:", error);
+      toast({ variant: "destructive", title: "خطأ في النقل", description: "تعذر نقل الملف بسبب نقص في البيانات الأساسية." });
     }
   };
 
@@ -273,7 +282,7 @@ export default function AdminArchivePage() {
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 backdrop-blur-[1px]">
                         <Button size="icon" onClick={() => setViewingArchive(item)} className="rounded-lg h-8 w-8 bg-white text-primary shadow-lg hover:bg-white/90" title="معاينة"><Eye className="w-4 h-4" /></Button>
                         <Button size="icon" onClick={() => setEditingArchive(item)} className="rounded-lg h-8 w-8 bg-blue-500 text-white shadow-lg hover:bg-blue-600" title="تعديل"><Edit2 className="w-4 h-4" /></Button>
-                        <Button size="icon" onClick={() => handleDownload(item)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90" title="تنزيل المستند"><Download className="w-4 h-4" /></Button>
+                        <Button size="icon" onClick={() => handleDownload(item)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90" title="تنزيل"><Download className="w-4 h-4" /></Button>
                         <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" onClick={() => handleMoveToBin(item)} title="حذف"><Trash2 className="w-4 h-4" /></Button>
                       </div>
                       <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
@@ -303,7 +312,7 @@ export default function AdminArchivePage() {
                   <table className="w-full text-right min-w-[700px]">
                     <thead>
                       <tr className="bg-muted/30 border-b">
-                        <th className="p-5 font-black text-primary">الطالب</th>
+                        <th className="p-5 font-black text-primary">الطلاب</th>
                         <th className="p-5 font-black text-primary">المادة / القسم</th>
                         <th className="p-5 font-black text-primary text-center">السنة / الترم</th>
                         <th className="p-5 font-black text-primary">المستوى</th>

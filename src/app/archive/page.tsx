@@ -110,21 +110,30 @@ export default function ArchivePage() {
   };
 
   const handleMoveToBin = async (item: any) => {
-    if (!firestore) return;
+    if (!firestore || !item.id) return;
     try {
       const { id, ...originalData } = item;
+      
+      // تنقية البيانات من أي قيم undefined لأن Firestore يرفضها
+      const cleanedData = Object.entries(originalData).reduce((acc: any, [key, value]) => {
+        if (value !== undefined) acc[key] = value;
+        return acc;
+      }, {});
+
       await addDoc(collection(firestore, "recycleBin"), {
         type: 'archive',
-        originalData,
+        originalData: cleanedData,
         originalId: id,
         deletedAt: serverTimestamp(),
-        name: item.student_name || item.studentName,
-        identifier: item.subject_name || item.subjectName
+        name: item.student_name || item.studentName || "ملف بيانات ناقصة",
+        identifier: item.subject_name || item.subjectName || "مادة غير محددة"
       });
+      
       await deleteDoc(doc(firestore, "archives", id));
       toast({ title: "تم نقل الملف لسلة المحذوفات" });
     } catch (error) {
-      toast({ variant: "destructive", title: "خطأ في النقل" });
+      console.error("Move to bin error:", error);
+      toast({ variant: "destructive", title: "خطأ في النقل", description: "تعذر نقل الملف بسبب نقص في البيانات الأساسية." });
     }
   };
 
