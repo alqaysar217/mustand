@@ -320,10 +320,6 @@ export default function UploadPage() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8 md:mb-12">
           <div className="text-center md:text-right">
             <h1 className="text-3xl md:text-4xl font-black text-primary mb-2 tracking-tight">بوابة الأرشفة الرقمية</h1>
-            <p className="text-muted-foreground font-bold text-sm md:text-lg flex items-center justify-center md:justify-start gap-2">
-              <Zap className="w-5 h-5 text-blue-500 animate-pulse" />
-              مدعوم بـ Gemini 2.0 Flash للتعرف الضوئي
-            </p>
           </div>
 
           <Tabs value={activeMode} onValueChange={(v: any) => { setActiveMode(v); setStep(1); setFiles([]); setAiResults([]); setManualId(""); setManualStudent(null); }} className="w-full md:w-[400px]">
