@@ -2,7 +2,7 @@
 'use client';
 
 /**
- * إعدادات Firebase الخاصة بمشروعك الحقيقي.
+ * إعدادات Firebase الخاصة بمشروعك الحقيقي studio-4772676541-75c95.
  */
 export const firebaseConfig = {
   apiKey: "AIzaSyAZQcotZ-uTLSwumPTV2-sWPQe1UGB98Fw",

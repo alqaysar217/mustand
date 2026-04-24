@@ -2,8 +2,8 @@
 'use server';
 
 /**
- * @fileOverview محرك استخراج البيانات المطور باستخدام Gemini 1.5 Flash.
- * تم ضبطه ليعمل بأقصى درجات الاستقرار مع الصور العربية وتجاوز فلاتر الحماية.
+ * @fileOverview محرك استخراج البيانات المطور ليطابق نجاح اختبار curl.
+ * تم ضبطه ليعمل بأقصى درجات الاستقرار مع Gemini 1.5 Flash.
  */
 
 import { ai } from '@/ai/genkit';
@@ -40,7 +40,7 @@ export const extractExamDetailsFlow = ai.defineFlow(
     }`;
 
     try {
-      // استخدام النموذج gemini-1.5-flash مباشرة لضمان العمل مع المفتاح المجاني
+      // استخدام الموديل gemini-1.5-flash المتوافق مع المفتاح المجاني
       const response = await ai.generate({
         model: 'googleai/gemini-1.5-flash', 
         prompt: [
@@ -61,13 +61,13 @@ export const extractExamDetailsFlow = ai.defineFlow(
 
       const output = response.output;
       if (!output) {
-        throw new Error('لم يتمكن المحرك من قراءة بيانات الورقة، يرجى التأكد من وضوح الصورة.');
+        throw new Error('لم يتمكن المحرك من استخراج بيانات الورقة. يرجى التأكد من وضوح الصورة ومطابقة المفتاح للمشروع.');
       }
 
       return output as ExtractExamDetailsOutput;
     } catch (error: any) {
-      console.error('AI Flow Error:', error);
-      throw new Error(`خطأ في التحليل: ${error.message || 'مشكلة في الاتصال بالذكاء الاصطناعي'}`);
+      console.error('AI Flow Technical Error:', error);
+      throw new Error(`خطأ تقني: ${error.message || 'فشل الاتصال بمحرك Gemini'}`);
     }
   }
 );

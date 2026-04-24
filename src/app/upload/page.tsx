@@ -35,7 +35,8 @@ import {
   Info,
   ShieldCheck,
   XCircle,
-  X
+  X,
+  Zap
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -125,7 +126,7 @@ export default function UploadPage() {
         toast({ 
           variant: "destructive", 
           title: "فشل اختبار المفتاح", 
-          description: data.rawError || "يرجى التحقق من صحة المفتاح في AI Studio."
+          description: data.rawError || "يرجى التحقق من صحة المفتاح في AI Studio ومطابقته لرقم المشروع."
         });
       }
     } catch (e: any) {
@@ -338,13 +339,13 @@ export default function UploadPage() {
 
           <div className="flex flex-col items-end gap-3 w-full md:w-auto">
             <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 mb-2">
-               <Info className="w-4 h-4 text-blue-600" />
+               <Zap className="w-4 h-4 text-blue-600 animate-pulse" />
                <span className="text-[10px] font-black text-blue-800">مشروعك: studio-4772676541-75c95</span>
                <Button 
                 onClick={checkApiConnection} 
                 disabled={apiTesting}
                 variant="ghost"
-                className="h-7 px-3 text-[10px] font-black bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-2"
+                className="h-7 px-3 text-[10px] font-black bg-blue-600 text-white rounded-lg hover:bg-blue-700 mr-2 shadow-sm"
               >
                 {apiTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : "فحص المفتاح"}
               </Button>
@@ -392,7 +393,7 @@ export default function UploadPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
               <div className="space-y-3 text-right">
                 <Label className="font-black text-primary flex items-center gap-2 pr-1 justify-start"><Calendar className="w-4 h-4 text-secondary" />العام الجامعي</Label>
-                <select value={context.year} onChange={(e) => setContext({...context, year: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                <select value={context.year} onChange={(e) => setContext({...context, year: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none shadow-inner">
                   <option value="">اختر العام...</option>
                   {academicYears.map((y: any) => <option key={y.id} value={y.label}>{y.label}</option>)}
                 </select>
@@ -402,14 +403,14 @@ export default function UploadPage() {
                 <select value={context.deptId} onChange={(e) => {
                   const sel = departments.find((d: any) => d.id === e.target.value) as any;
                   setContext({...context, deptId: e.target.value, deptName: sel?.nameAr || sel?.name || ""});
-                }} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                }} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none shadow-inner">
                   <option value="">اختر القسم...</option>
                   {departments.map((d: any) => <option key={d.id} value={d.id}>{d.nameAr || d.name}</option>)}
                 </select>
               </div>
               <div className="space-y-3 text-right">
                 <Label className="font-black text-primary flex items-center gap-2 pr-1 justify-start"><GraduationCap className="w-4 h-4 text-secondary" />المستوى الدراسي</Label>
-                <select value={context.level} onChange={(e) => setContext({...context, level: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                <select value={context.level} onChange={(e) => setContext({...context, level: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none shadow-inner">
                   <option value="">اختر المستوى...</option>
                   {["المستوى الأول", "المستوى الثاني", "المستوى الثالث", "المستوى الرابع", "المستوى الخامس"].map(l => (
                     <option key={l} value={l}>{l}</option>
@@ -418,7 +419,7 @@ export default function UploadPage() {
               </div>
               <div className="space-y-3 text-right">
                 <Label className="font-black text-primary flex items-center gap-2 pr-1 justify-start"><RefreshCcw className="w-4 h-4 text-secondary" />الفصل الدراسي</Label>
-                <select value={context.term} onChange={(e) => setContext({...context, term: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none">
+                <select value={context.term} onChange={(e) => setContext({...context, term: e.target.value})} className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black outline-none focus:border-primary text-right appearance-none shadow-inner">
                   <option value="">اختر الفصل...</option>
                   <option value="الفصل الأول">الفصل الأول</option>
                   <option value="الفصل الثاني">الفصل الثاني</option>
@@ -432,7 +433,7 @@ export default function UploadPage() {
                     const sel = filteredSubjects.find((s: any) => s.id === e.target.value) as any;
                     setContext({...context, subjectId: e.target.value, subjectName: sel?.nameAr || ""});
                   }} 
-                  className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black text-primary outline-none focus:border-primary text-right appearance-none"
+                  className="w-full h-12 px-4 rounded-xl border-2 bg-muted/5 font-black text-primary outline-none focus:border-primary text-right appearance-none shadow-inner"
                 >
                   <option value="">{filteredSubjects.length > 0 ? "اختر المادة..." : "يرجى تحديد القسم والمستوى أولاً"}</option>
                   {filteredSubjects.map((s: any) => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
