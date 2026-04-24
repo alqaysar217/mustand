@@ -45,9 +45,10 @@ import { useSidebarToggle } from "@/components/providers/SidebarProvider";
 import { compressImage } from "@/lib/storage-utils";
 import { Badge } from "@/components/ui/badge";
 
-// Firebase
+// Firebase & AI Action
 import { useFirestore, useCollection } from "@/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { extractExamDetails } from "@/ai/flows/extract-exam-details";
 
 interface AIResult {
   studentRegistrationId: string;
@@ -145,14 +146,8 @@ export default function UploadPage() {
 
   const processSingleImageAI = async (file: string): Promise<AIResult> => {
     try {
-      const response = await fetch('/api/ai/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examImageDataUri: file })
-      });
-      
-      const responseData = await response.json();
-      if (!response.ok) throw new Error(responseData.error || "خطأ في الاتصال بالمحرك");
+      // الاتصال المباشر بـ Server Action بدلاً من API Route
+      const responseData = await extractExamDetails({ examImageDataUri: file });
       
       const regId = responseData.studentRegistrationId || "";
       const dbCheck = await verifyStudentInDB(regId);
@@ -295,7 +290,7 @@ export default function UploadPage() {
         });
       }
       toast({ title: `تمت أرشفة ${validResults.length} ورقة بنجاح` });
-      setAiResults(aiResults.filter(r => !r.isVerified)); // إبقاء غير المطابقين فقط للمراجعة
+      setAiResults(aiResults.filter(r => !r.isVerified));
       if (validResults.length === aiResults.length) {
         setFiles([]);
         setStep(1);
@@ -419,7 +414,6 @@ export default function UploadPage() {
 
         {step === 2 && (
           <div className="space-y-6 md:space-y-10 animate-slide-up pb-20">
-            {/* عرض المادة الحالية - متجاوب */}
             <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-[2rem] shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 border-r-8 border-secondary">
                <div className="flex items-center gap-4 md:gap-5 w-full md:w-auto">
                   <div className="w-12 h-12 md:w-14 md:h-14 bg-secondary/5 rounded-2xl flex items-center justify-center text-secondary shrink-0"><BookOpen className="w-6 h-6 md:w-8 md:h-8" /></div>
@@ -433,7 +427,6 @@ export default function UploadPage() {
                </Button>
             </div>
 
-            {/* منطقة رفع الصور */}
             <Card className="p-6 md:p-8 border-none shadow-2xl rounded-[2rem] bg-white">
               <div className="flex items-center justify-between mb-6 md:mb-8">
                   <h2 className="text-xl md:text-2xl font-black text-primary flex items-center gap-3">
@@ -483,7 +476,6 @@ export default function UploadPage() {
               )}
             </Card>
 
-            {/* مراجعة النتائج */}
             {activeMode === 'manual' ? (
               files.length > 0 && (
                 <Card className="p-6 md:p-10 border-none shadow-2xl rounded-[2rem] bg-white animate-slide-up border-b-8 border-green-500">
@@ -532,19 +524,16 @@ export default function UploadPage() {
                          "p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] border-2 md:border-4 flex flex-col md:flex-row items-center gap-4 md:gap-8 bg-white shadow-xl relative overflow-hidden transition-all", 
                          res.status === 'success' ? "border-green-400" : res.status === 'error' ? "border-orange-400 bg-orange-50/10" : "border-red-500 bg-red-50/20"
                         )}>
-                          {/* شريط الحالة الجانبي */}
                           <div className={cn("absolute top-0 right-0 w-2 md:w-3 h-full", 
                             res.status === 'success' ? "bg-green-400" : res.status === 'error' ? "bg-orange-400" : "bg-red-500"
                           )} />
                           
-                          {/* صورة مصغرة */}
                           <div className="w-full md:w-32 h-40 md:h-44 relative rounded-xl overflow-hidden shadow-lg shrink-0 border-2 border-white">
                              <Image src={res.fileData} alt="Extracted" fill className="object-cover" />
                              {res.status === 'pending' && <div className="absolute inset-0 bg-white/60 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
                           </div>
 
                           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 w-full text-right">
-                             {/* الاسم */}
                              <div className="space-y-1">
                                 <Label className="text-[10px] md:text-xs font-black text-muted-foreground mr-1">الاسم من السجلات</Label>
                                 <div className={cn(
@@ -555,7 +544,6 @@ export default function UploadPage() {
                                 </div>
                              </div>
                              
-                             {/* رقم القيد */}
                              <div className="space-y-1">
                                 <Label className="text-[10px] md:text-xs font-black text-muted-foreground mr-1">رقم القيد</Label>
                                 <Input 
@@ -569,7 +557,6 @@ export default function UploadPage() {
                                 />
                              </div>
 
-                             {/* الحالة والرسائل */}
                              <div className="lg:col-span-2 flex flex-col sm:flex-row items-center justify-between gap-4">
                                <div className="flex flex-col gap-1 w-full sm:w-auto">
                                  {res.status === 'success' ? (
