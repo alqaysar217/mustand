@@ -276,7 +276,7 @@ export default function SubjectsPage() {
       </div>
 
       <Card className="p-6 border-none shadow-xl rounded-3xl bg-white overflow-hidden">
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
+        <div className="flex flex-col lg:flex-row gap-4 mb-8">
           <div className="flex-[2] relative">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input 
@@ -289,13 +289,29 @@ export default function SubjectsPage() {
           </div>
           <div className="flex-1">
              <Select value={filterDept} onValueChange={setFilterDept}>
-               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold">
+               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
                  <Filter className="w-4 h-4 ml-2 opacity-50" />
-                 <SelectValue placeholder="كل التخصصات" />
+                 <SelectValue placeholder="التخصص" />
                </SelectTrigger>
                <SelectContent className="rounded-xl font-bold">
                  <SelectItem value="all">كافة التخصصات</SelectItem>
                  {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.nameAr || d.name}</SelectItem>)}
+               </SelectContent>
+             </Select>
+          </div>
+          <div className="flex-1">
+             <Select value={filterLevel} onValueChange={setFilterLevel}>
+               <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-primary">
+                 <Layers className="w-4 h-4 ml-2 opacity-50" />
+                 <SelectValue placeholder="المستوى" />
+               </SelectTrigger>
+               <SelectContent className="rounded-xl font-bold">
+                 <SelectItem value="all">كافة المستويات</SelectItem>
+                 <SelectItem value="المستوى الأول">المستوى الأول</SelectItem>
+                 <SelectItem value="المستوى الثاني">المستوى الثاني</SelectItem>
+                 <SelectItem value="المستوى الثالث">المستوى الثالث</SelectItem>
+                 <SelectItem value="المستوى الرابع">المستوى الرابع</SelectItem>
+                 <SelectItem value="المستوى الخامس">المستوى الخامس</SelectItem>
                </SelectContent>
              </Select>
           </div>
