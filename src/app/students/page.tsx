@@ -12,8 +12,6 @@ import {
   UserPlus, 
   Edit2, 
   Trash2,
-  CheckCircle2,
-  XCircle,
   Loader2,
   Fingerprint,
   User,
@@ -25,7 +23,8 @@ import {
   ShieldCheck,
   School,
   Calendar,
-  X
+  X,
+  AlertTriangle
 } from "lucide-react";
 import {
   Table,
@@ -46,6 +45,17 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -494,14 +504,43 @@ export default function StudentsManagementPage() {
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleMoveToBin(student)}
-                          className="rounded-xl hover:bg-destructive/10 text-destructive h-9 w-9"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="rounded-xl hover:bg-destructive/10 text-destructive h-9 w-9"
+                              title="حذف"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-6 max-w-[380px]" dir="rtl">
+                            <AlertDialogHeader className="flex flex-col items-center space-y-4">
+                              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
+                                <AlertTriangle className="w-8 h-8 text-red-500" />
+                              </div>
+                              <div className="space-y-2 w-full text-right">
+                                <AlertDialogTitle className="text-xl font-black text-primary">نقل إلى المحذوفات</AlertDialogTitle>
+                                <AlertDialogDescription className="font-bold text-muted-foreground text-xs leading-relaxed">
+                                  هل أنت متأكد من حذف سجل الطالب <span className="text-red-600 font-black">({student.name})</span>؟ يمكن للمدير استعادته لاحقاً.
+                                </AlertDialogDescription>
+                              </div>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="flex flex-col gap-2 mt-6 w-full">
+                              <AlertDialogAction 
+                                onClick={() => handleMoveToBin(student)} 
+                                className="w-full rounded-xl bg-red-600 hover:bg-red-700 font-black h-12 text-white shadow-lg border-none order-1"
+                              >
+                                نعم، احذف السجل
+                              </AlertDialogAction>
+                              <AlertDialogCancel className="w-full rounded-xl font-black border-2 h-12 text-primary hover:bg-muted/50 transition-all order-2">
+                                تراجع
+                              </AlertDialogCancel>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -514,7 +553,7 @@ export default function StudentsManagementPage() {
         </Card>
       </main>
 
-      {/* Edit Dialog - مخصص لإكمال البيانات الناقصة */}
+      {/* Edit Dialog */}
       <Dialog open={!!editingStudent} onOpenChange={(open) => !open && setEditingStudent(null)}>
         <DialogContent className="max-w-3xl rounded-[2.5rem] border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
           <div className="p-10">
@@ -645,4 +684,3 @@ export default function StudentsManagementPage() {
     </div>
   );
 }
-

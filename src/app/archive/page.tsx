@@ -22,7 +22,8 @@ import {
   Fingerprint,
   Clock,
   Download,
-  FileText
+  FileText,
+  AlertTriangle
 } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -35,6 +36,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -114,7 +126,6 @@ export default function ArchivePage() {
     try {
       const { id, ...originalData } = item;
       
-      // تنقية البيانات من أي قيم undefined لأن Firestore يرفضها
       const cleanedData = Object.entries(originalData).reduce((acc: any, [key, value]) => {
         if (value !== undefined) acc[key] = value;
         return acc;
@@ -148,7 +159,7 @@ export default function ArchivePage() {
       
       <main className={cn("transition-all duration-300 p-4 md:p-10 animate-fade-in text-right", isOpen ? "mr-0 md:mr-64" : "mr-0")} dir="rtl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-          <div><h1 className="text-2xl md:text-3xl font-black text-primary mb-1">الأرشيف المركزي</h1><p className="text-muted-foreground font-bold text-sm">إدارة ومراجعة كافة الاختبارات المؤرشفة (Base64 في Firestore)</p></div>
+          <div><h1 className="text-2xl md:text-3xl font-black text-primary mb-1">الأرشيف المركزي</h1><p className="text-muted-foreground font-bold text-sm">إدارة ومراجعة كافة الاختبارات المؤرشفة</p></div>
           <div className="flex items-center gap-3 bg-white p-1.5 rounded-2xl shadow-sm border self-end md:self-auto">
             <Button variant={view === 'grid' ? 'default' : 'ghost'} size="sm" onClick={() => setView('grid')} className={cn("rounded-xl px-4 gap-2 h-9", view === 'grid' && "gradient-blue shadow-md text-white")}><LayoutGrid className="w-4 h-4" />شبكة</Button>
             <Button variant={view === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setView('list')} className={cn("rounded-xl px-4 gap-2 h-9", view === 'list' && "gradient-blue shadow-md text-white")}><List className="w-4 h-4" />قائمة</Button>
@@ -241,7 +252,38 @@ export default function ArchivePage() {
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[1px]">
                           <Button size="icon" onClick={() => setViewingExam(item)} className="rounded-lg h-8 w-8 bg-white text-primary shadow-lg hover:bg-white/90" title="معاينة"><Eye className="w-4 h-4" /></Button>
                           <Button size="icon" onClick={() => handleDownload(item)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90" title="تنزيل"><Download className="w-4 h-4" /></Button>
-                          <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" onClick={() => handleMoveToBin(item)} title="حذف"><Trash2 className="w-4 h-4" /></Button>
+                          
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" title="حذف">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-6 max-w-[380px]" dir="rtl">
+                              <AlertDialogHeader className="flex flex-col items-center space-y-4">
+                                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
+                                  <AlertTriangle className="w-8 h-8 text-red-500" />
+                                </div>
+                                <div className="space-y-2 w-full text-right">
+                                  <AlertDialogTitle className="text-xl font-black text-primary">نقل للمحذوفات</AlertDialogTitle>
+                                  <AlertDialogDescription className="font-bold text-muted-foreground text-xs leading-relaxed">
+                                    سيتم نقل مستند الطالب <span className="text-red-600 font-black">({item.student_name || item.studentName})</span> لسلة المحذوفات. هل تريد الاستمرار؟
+                                  </AlertDialogDescription>
+                                </div>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="flex flex-col gap-2 mt-6 w-full">
+                                <AlertDialogAction 
+                                  onClick={() => handleMoveToBin(item)} 
+                                  className="w-full rounded-xl bg-red-600 hover:bg-red-700 font-black h-12 text-white shadow-lg border-none order-1"
+                                >
+                                  نعم، انقل للسلة
+                                </AlertDialogAction>
+                                <AlertDialogCancel className="w-full rounded-xl font-black border-2 h-12 text-primary hover:bg-muted/50 transition-all order-2">
+                                  تراجع
+                                </AlertDialogCancel>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
                           <Badge className="bg-primary/80 backdrop-blur-md text-[8px] px-1.5 py-0 rounded-md font-bold">{item.term}</Badge>
@@ -288,7 +330,38 @@ export default function ArchivePage() {
                               <div className="flex justify-center gap-2">
                                 <Button size="icon" variant="ghost" className="rounded-xl hover:bg-primary/5 h-9 w-9" onClick={() => setViewingExam(item)} title="معاينة"><Eye className="w-4 h-4 text-primary" /></Button>
                                 <Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5 h-9 w-9" onClick={() => handleDownload(item)} title="تنزيل"><Download className="w-4 h-4 text-secondary" /></Button>
-                                <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5 h-9 w-9" onClick={() => handleMoveToBin(item)} title="حذف"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                                
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5 h-9 w-9" title="حذف">
+                                      <Trash2 className="w-4 h-4 text-destructive" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-6 max-w-[380px]" dir="rtl">
+                                    <AlertDialogHeader className="flex flex-col items-center space-y-4">
+                                      <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
+                                        <AlertTriangle className="w-8 h-8 text-red-500" />
+                                      </div>
+                                      <div className="space-y-2 w-full text-right">
+                                        <AlertDialogTitle className="text-xl font-black text-primary">تأكيد النقل للسلة</AlertDialogTitle>
+                                        <AlertDialogDescription className="font-bold text-muted-foreground text-xs leading-relaxed">
+                                          هل أنت متأكد من حذف ملف الطالب <span className="text-red-600 font-black">({item.student_name || item.studentName})</span>؟
+                                        </AlertDialogDescription>
+                                      </div>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter className="flex flex-col gap-2 mt-6 w-full">
+                                      <AlertDialogAction 
+                                        onClick={() => handleMoveToBin(item)} 
+                                        className="w-full rounded-xl bg-red-600 hover:bg-red-700 font-black h-12 text-white shadow-lg border-none order-1"
+                                      >
+                                        نعم، احذف الملف
+                                      </AlertDialogAction>
+                                      <AlertDialogCancel className="w-full rounded-xl font-black border-2 h-12 text-primary hover:bg-muted/50 transition-all order-2">
+                                        تراجع
+                                      </AlertDialogCancel>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                             </td>
                           </tr>
