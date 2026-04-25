@@ -212,7 +212,7 @@ export default function UsersPage() {
           <p className="text-muted-foreground font-bold">التحكم في حسابات الموظفين والمديرين وصلاحيات الوصول</p>
         </div>
         
-        <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2">
+        <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2 text-white">
           <UserPlus className="w-5 h-5" />
           إضافة مستخدم جديد
         </Button>
@@ -243,7 +243,7 @@ export default function UsersPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto opacity-20 text-primary" /></TableCell></TableRow>
               ) : filteredUsers.length > 0 ? filteredUsers.map((user) => (
                 <TableRow key={user.id} className="hover:bg-muted/20 border-b">
                   <TableCell className="p-4">
@@ -309,7 +309,7 @@ export default function UsersPage() {
                           </AlertDialogHeader>
                           <AlertDialogFooter className="flex flex-col gap-3 mt-10 w-full">
                             <AlertDialogAction onClick={() => handleDelete(user.id, user.name)} className="w-full rounded-2xl bg-red-600 hover:bg-red-700 font-black h-14 text-white shadow-xl shadow-red-100 border-none order-1">نعم، احذف المستخدم</AlertDialogAction>
-                            <AlertDialogCancel className="w-full rounded-2xl font-black border-2 h-14 text-primary hover:bg-muted/50 transition-all order-2">تراجع</AlertDialogCancel>
+                            <AlertDialogCancel className="w-full rounded-2xl font-black border-2 h-14 text-primary hover:bg-muted/50 transition-all order-2">تراجع عن القرار</AlertDialogCancel>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -378,7 +378,7 @@ export default function UsersPage() {
               </div>
             </div>
             <DialogFooter className="flex-row gap-3 pt-6">
-              <Button disabled={submitting} onClick={handleAddUser} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2">
+              <Button disabled={submitting} onClick={handleAddUser} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2 text-white">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 حفظ المستخدم
               </Button>
@@ -444,7 +444,7 @@ export default function UsersPage() {
               </div>
             </div>
             <DialogFooter className="flex-row gap-3 pt-6">
-              <Button disabled={submitting} onClick={handleUpdateUser} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2">
+              <Button disabled={submitting} onClick={handleUpdateUser} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2 text-white">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 حفظ التعديلات
               </Button>

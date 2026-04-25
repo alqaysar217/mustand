@@ -242,7 +242,7 @@ export default function AdminCollegesPage() {
           </div>
           <Button 
             onClick={() => activeTab === 'colleges' ? setIsAddCollegeOpen(true) : setIsAddYearOpen(true)}
-            className="rounded-2xl h-12 px-8 font-bold gradient-blue shadow-lg gap-2"
+            className="rounded-2xl h-12 px-8 font-bold gradient-blue shadow-lg gap-2 text-white"
           >
             <Plus className="w-5 h-5" />
             {activeTab === 'colleges' ? 'إضافة كلية' : 'إضافة عام دراسي'}

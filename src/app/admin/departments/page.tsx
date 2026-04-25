@@ -45,7 +45,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -189,7 +188,7 @@ export default function AdminDepartmentsPage() {
         
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2">
+            <Button className="rounded-2xl h-12 px-6 font-bold gradient-blue shadow-lg gap-2 text-white">
               <Plus className="w-5 h-5" />
               إضافة قسم إداري
             </Button>
@@ -265,7 +264,7 @@ export default function AdminDepartmentsPage() {
                 <Button 
                   disabled={submitting}
                   onClick={handleAddDept}
-                  className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                  className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg text-white"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "تفعيل القسم"}
                 </Button>
@@ -468,7 +467,7 @@ export default function AdminDepartmentsPage() {
               <Button 
                 disabled={submitting}
                 onClick={handleUpdateDept}
-                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg"
+                className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg text-white"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ التعديلات"}
               </Button>

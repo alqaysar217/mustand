@@ -17,7 +17,8 @@ import {
   Layers,
   RefreshCw,
   Save,
-  X
+  X,
+  AlertTriangle
 } from "lucide-react";
 import {
   Table,
@@ -37,6 +38,17 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -315,7 +327,31 @@ export default function SubjectsPage() {
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
                       <Button variant="ghost" size="icon" onClick={() => setEditingSubject(s)} className="text-secondary hover:bg-secondary/10 rounded-xl" title="تعديل"><Edit2 className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} className="text-destructive hover:bg-destructive/10 rounded-xl" title="حذف"><Trash2 className="w-4 h-4" /></Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 rounded-xl" title="حذف">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-2xl p-8 md:p-12 max-w-[440px]" dir="rtl">
+                          <AlertDialogHeader className="flex flex-col items-center text-center space-y-6">
+                            <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
+                              <AlertTriangle className="w-12 h-12 text-red-500" />
+                            </div>
+                            <div className="space-y-3">
+                              <AlertDialogTitle className="text-2xl font-black text-primary">حذف مادة دراسية</AlertDialogTitle>
+                              <AlertDialogDescription className="font-bold text-muted-foreground text-sm leading-relaxed max-w-[280px] mx-auto">
+                                سيتم حذف مادة <span className="text-red-600 font-black">({s.nameAr})</span> بشكل نهائي. هل أنت متأكد؟
+                              </AlertDialogDescription>
+                            </div>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="flex flex-col gap-3 mt-10 w-full">
+                            <AlertDialogAction onClick={() => handleDelete(s.id)} className="w-full rounded-2xl bg-red-600 hover:bg-red-700 font-black h-14 text-white shadow-xl shadow-red-100 border-none order-1">نعم، احذف المادة</AlertDialogAction>
+                            <AlertDialogCancel className="w-full rounded-2xl font-black border-2 h-14 text-primary hover:bg-muted/50 transition-all order-2">تراجع عن القرار</AlertDialogCancel>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>
