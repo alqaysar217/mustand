@@ -509,26 +509,26 @@ export default function AdminStudentsPage() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-2xl p-8 md:p-12 max-w-[440px]" dir="rtl">
-                          <AlertDialogHeader className="flex flex-col items-center text-center space-y-6">
-                            <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
-                              <AlertTriangle className="w-12 h-12 text-red-500" />
+                        <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-6 max-w-[380px]" dir="rtl">
+                          <AlertDialogHeader className="flex flex-col items-center space-y-4">
+                            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
+                              <AlertTriangle className="w-8 h-8 text-red-500" />
                             </div>
-                            <div className="space-y-3">
-                              <AlertDialogTitle className="text-2xl font-black text-primary">تأكيد حذف الطالب</AlertDialogTitle>
-                              <AlertDialogDescription className="font-bold text-muted-foreground text-sm leading-relaxed max-w-[280px] mx-auto">
+                            <div className="space-y-2 w-full text-right">
+                              <AlertDialogTitle className="text-xl font-black text-primary">تأكيد حذف الطالب</AlertDialogTitle>
+                              <AlertDialogDescription className="font-bold text-muted-foreground text-xs leading-relaxed">
                                 أنت على وشك حذف <span className="text-red-600 font-black">({student.name})</span>. سيتم نقل كافة سجلاته لسلة المحذوفات.
                               </AlertDialogDescription>
                             </div>
                           </AlertDialogHeader>
-                          <AlertDialogFooter className="flex flex-col gap-3 mt-10 w-full">
+                          <AlertDialogFooter className="flex flex-col gap-2 mt-6 w-full">
                             <AlertDialogAction 
                               onClick={() => handleMoveToBin(student)} 
-                              className="w-full rounded-2xl bg-red-600 hover:bg-red-700 font-black h-14 text-white shadow-xl shadow-red-100 border-none order-1"
+                              className="w-full rounded-xl bg-red-600 hover:bg-red-700 font-black h-12 text-white shadow-lg border-none order-1"
                             >
                               نعم، انقل لسلة المحذوفات
                             </AlertDialogAction>
-                            <AlertDialogCancel className="w-full rounded-2xl font-black border-2 h-14 text-primary hover:bg-muted/50 transition-all order-2">
+                            <AlertDialogCancel className="w-full rounded-xl font-black border-2 h-12 text-primary hover:bg-muted/50 transition-all order-2">
                               تراجع عن القرار
                             </AlertDialogCancel>
                           </AlertDialogFooter>
