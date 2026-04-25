@@ -512,26 +512,27 @@ export default function AdminCollegesPage() {
 
       {/* Universal Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfig.isOpen} onOpenChange={(open) => setDeleteDialog({ ...deleteConfig, isOpen: open })}>
-        <AlertDialogContent className="rounded-3xl border-none text-right shadow-2xl" dir="rtl">
-          <AlertDialogHeader className="text-right space-y-3">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-2">
-              <AlertTriangle className="w-8 h-8 text-red-500" />
+        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-2xl p-8 md:p-12 max-w-[440px]" dir="rtl">
+          <AlertDialogHeader className="flex flex-col items-center text-center space-y-6">
+            <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
+              <AlertTriangle className="w-12 h-12 text-red-500" />
             </div>
-            <AlertDialogTitle className="text-2xl font-black text-primary">هل أنت متأكد من الحذف؟</AlertDialogTitle>
-            <AlertDialogDescription className="font-bold text-muted-foreground text-base">
-              أنت على وشك حذف <span className="text-red-600 font-black">({deleteConfig.name})</span> بشكل نهائي. 
-              هذا الإجراء سيؤدي لإزالة كافة السجلات المرتبطة بهذا المورد ولا يمكن التراجع عنه.
-            </AlertDialogDescription>
+            <div className="space-y-3">
+              <AlertDialogTitle className="text-2xl font-black text-primary">تأكيد عملية الحذف</AlertDialogTitle>
+              <AlertDialogDescription className="font-bold text-muted-foreground text-sm leading-relaxed max-w-[280px] mx-auto">
+                أنت على وشك حذف <span className="text-red-600 font-black">({deleteConfig.name})</span> بشكل نهائي. سيتم إزالة كافة السجلات المرتبطة بهذا العنصر.
+              </AlertDialogDescription>
+            </div>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-3 pt-6">
+          <AlertDialogFooter className="flex flex-col gap-3 mt-10 w-full">
             <AlertDialogAction 
               onClick={executeDelete} 
-              className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 font-bold h-12"
+              className="w-full rounded-2xl bg-red-600 hover:bg-red-700 font-black h-14 text-white shadow-xl shadow-red-100 border-none order-1 sm:order-1"
             >
-              نعم، احذف نهائياً
+              نعم، احذف المورد الآن
             </AlertDialogAction>
-            <AlertDialogCancel className="flex-1 rounded-xl font-bold border-2 h-12">
-              إلغاء
+            <AlertDialogCancel className="w-full rounded-2xl font-black border-2 h-14 text-primary hover:bg-muted/50 transition-all order-2 sm:order-2">
+              تراجع عن القرار
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
