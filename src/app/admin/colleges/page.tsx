@@ -19,7 +19,9 @@ import {
   Type,
   CheckCircle,
   XCircle,
-  PlusCircle
+  PlusCircle,
+  AlertTriangle,
+  ArrowLeftRight
 } from "lucide-react";
 import {
   Table,
@@ -37,8 +39,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -68,7 +79,15 @@ export default function AdminCollegesPage() {
   // States for Years
   const [isAddYearOpen, setIsAddYearOpen] = useState(false);
   const [editingYear, setEditingYear] = useState<any>(null);
-  const [newYear, setNewYear] = useState({ label: '' });
+  const [newYear, setNewYear] = useState({ startYear: '', endYear: '', label: '' });
+
+  // Delete Dialog State
+  const [deleteConfig, setDeleteDialog] = useState<{ isOpen: boolean, id: string, type: 'colleges' | 'academicYears', name: string }>({
+    isOpen: false,
+    id: '',
+    type: 'colleges',
+    name: ''
+  });
 
   const { toast } = useToast();
 
@@ -88,6 +107,14 @@ export default function AdminCollegesPage() {
   // College Handlers
   const handleAddCollege = () => {
     if (!firestore || !newCollege.name || !newCollege.code) return;
+    
+    // منع تكرار اسم الكلية أو الرمز
+    const isDuplicate = colleges.some((c: any) => c.name === newCollege.name || c.code === newCollege.code);
+    if (isDuplicate) {
+      toast({ variant: "destructive", title: "هذه الكلية أو الرمز مسجل مسبقاً" });
+      return;
+    }
+
     setSubmitting(true);
     const ref = collection(firestore, "colleges");
     const data = { ...newCollege, createdAt: serverTimestamp() };
@@ -95,7 +122,7 @@ export default function AdminCollegesPage() {
       .then(() => {
         setIsAddCollegeOpen(false);
         setNewCollege({ name: '', code: '' });
-        toast({ title: "تم تفعيل الكلية" });
+        toast({ title: "تم تفعيل الكلية بنجاح" });
       })
       .finally(() => setSubmitting(false));
   };
@@ -107,22 +134,43 @@ export default function AdminCollegesPage() {
     updateDoc(docRef, { name: editingCollege.name || "", code: editingCollege.code || "" })
       .then(() => {
         setEditingCollege(null);
-        toast({ title: "تم التحديث" });
+        toast({ title: "تم تحديث بيانات الكلية" });
       })
       .finally(() => setSubmitting(false));
   };
 
   // Year Handlers
+  const handleYearStartChange = (val: string) => {
+    const start = parseInt(val);
+    if (!isNaN(start)) {
+      setNewYear({
+        startYear: val,
+        endYear: (start + 1).toString(),
+        label: `${val} / ${start + 1}`
+      });
+    } else {
+      setNewYear({ ...newYear, startYear: val, label: '' });
+    }
+  };
+
   const handleAddYear = () => {
     if (!firestore || !newYear.label) return;
+
+    // منع تكرار العام الدراسي
+    const isDuplicate = academicYears.some((y: any) => y.label === newYear.label);
+    if (isDuplicate) {
+      toast({ variant: "destructive", title: "هذا العام الدراسي مسجل مسبقاً في النظام" });
+      return;
+    }
+
     setSubmitting(true);
     const ref = collection(firestore, "academicYears");
-    const data = { ...newYear, createdAt: serverTimestamp() };
+    const data = { label: newYear.label, createdAt: serverTimestamp() };
     addDoc(ref, data)
       .then(() => {
         setIsAddYearOpen(false);
-        setNewYear({ label: '' });
-        toast({ title: "تم إضافة العام الدراسي" });
+        setNewYear({ startYear: '', endYear: '', label: '' });
+        toast({ title: "تم إضافة العام الدراسي الجديد" });
       })
       .finally(() => setSubmitting(false));
   };
@@ -134,18 +182,19 @@ export default function AdminCollegesPage() {
     updateDoc(docRef, { label: editingYear.label || "" })
       .then(() => {
         setEditingYear(null);
-        toast({ title: "تم تحديث العام" });
+        toast({ title: "تم تحديث مسمى العام" });
       })
       .finally(() => setSubmitting(false));
   };
 
-  const handleDelete = async (collectionName: string, id: string) => {
-    if (!firestore) return;
+  const executeDelete = async () => {
+    if (!firestore || !deleteConfig.id) return;
     try {
-      await deleteDoc(doc(firestore, collectionName, id));
-      toast({ variant: "destructive", title: "تم الحذف" });
+      await deleteDoc(doc(firestore, deleteConfig.type, deleteConfig.id));
+      toast({ variant: "destructive", title: "تم الحذف بنجاح" });
+      setDeleteDialog({ ...deleteConfig, isOpen: false });
     } catch (e) {
-      toast({ variant: "destructive", title: "خطأ في الحذف" });
+      toast({ variant: "destructive", title: "فشل الحذف، يرجى المحاولة لاحقاً" });
     }
   };
 
@@ -220,7 +269,7 @@ export default function AdminCollegesPage() {
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-1">
                         <Button variant="ghost" size="icon" onClick={() => setEditingCollege(college)} className="text-secondary hover:bg-secondary/10 rounded-xl"><Edit2 className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete('colleges', college.id)} className="text-destructive hover:bg-destructive/10 rounded-xl"><Trash2 className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteDialog({ isOpen: true, id: college.id, type: 'colleges', name: college.name })} className="text-destructive hover:bg-destructive/10 rounded-xl"><Trash2 className="w-4 h-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -252,7 +301,7 @@ export default function AdminCollegesPage() {
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-1">
                         <Button variant="ghost" size="icon" onClick={() => setEditingYear(year)} className="text-secondary hover:bg-secondary/10 rounded-xl"><Edit2 className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete('academicYears', year.id)} className="text-destructive hover:bg-destructive/10 rounded-xl"><Trash2 className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteDialog({ isOpen: true, id: year.id, type: 'academicYears', name: year.label })} className="text-destructive hover:bg-destructive/10 rounded-xl"><Trash2 className="w-4 h-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -311,7 +360,7 @@ export default function AdminCollegesPage() {
             <DialogFooter className="flex-row gap-3 pt-6">
               <Button onClick={handleAddCollege} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2 text-white">
                 {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
-                {submitting ? 'جاري الحفظ...' : 'تفعيل الكلية'}
+                تفعيل الكلية
               </Button>
               <Button variant="outline" onClick={() => setIsAddCollegeOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
             </DialogFooter>
@@ -319,7 +368,7 @@ export default function AdminCollegesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Year Add Dialog */}
+      {/* Year Add Dialog - Enhanced with Dual Inputs */}
       <Dialog open={isAddYearOpen} onOpenChange={setIsAddYearOpen}>
         <DialogContent className="rounded-3xl border-none text-right shadow-2xl p-0 overflow-hidden" dir="rtl">
           <div className="p-8">
@@ -328,29 +377,54 @@ export default function AdminCollegesPage() {
                 <Calendar className="w-6 h-6 text-secondary" />
                 عام دراسي جديد
               </DialogTitle>
-              <DialogDescription className="font-bold text-muted-foreground text-right">تحديد مسمى العام الجامعي (مثلاً: 2024 / 2025).</DialogDescription>
+              <DialogDescription className="font-bold text-muted-foreground text-right">تحديد السنة الدراسية (سيتم احتساب السنة الثانية تلقائياً).</DialogDescription>
             </DialogHeader>
+            
             <div className="space-y-6 py-4">
-              <div className="space-y-2">
-                <Label className="font-bold text-primary flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-secondary" />
-                  تسمية العام
-                </Label>
-                <div className="relative">
-                  <Input 
-                    placeholder="2024 / 2025" 
-                    value={newYear.label || ""} 
-                    onChange={(e) => setNewYear({...newYear, label: e.target.value})} 
-                    className="rounded-xl h-12 bg-muted/20 border-muted pr-10 font-bold text-right" 
-                  />
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <div className="grid grid-cols-2 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label className="font-bold text-primary text-xs pr-1">السنة الأولى</Label>
+                  <div className="relative">
+                    <Input 
+                      type="number"
+                      placeholder="2025" 
+                      value={newYear.startYear} 
+                      onChange={(e) => handleYearStartChange(e.target.value)} 
+                      className="rounded-xl h-12 bg-muted/20 border-muted pr-10 font-black text-center" 
+                    />
+                    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-bold text-primary text-xs pr-1">السنة الثانية</Label>
+                  <div className="relative">
+                    <Input 
+                      type="number"
+                      readOnly
+                      placeholder="2026" 
+                      value={newYear.endYear} 
+                      className="rounded-xl h-12 bg-muted/10 border-muted pr-10 font-black text-center opacity-70" 
+                    />
+                    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  </div>
                 </div>
               </div>
+
+              {newYear.label && (
+                <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 flex items-center justify-between animate-slide-up">
+                   <span className="text-xs font-bold text-muted-foreground">المسمى النهائي:</span>
+                   <span className="text-lg font-black text-primary flex items-center gap-2">
+                     {newYear.label}
+                     <ArrowLeftRight className="w-4 h-4 text-secondary" />
+                   </span>
+                </div>
+              )}
             </div>
+
             <DialogFooter className="flex-row gap-3 pt-6">
-              <Button onClick={handleAddYear} disabled={submitting} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2 text-white">
+              <Button onClick={handleAddYear} disabled={submitting || !newYear.label} className="flex-1 rounded-xl h-12 font-bold gradient-blue shadow-lg gap-2 text-white">
                 {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
-                {submitting ? 'جاري الحفظ...' : 'إضافة العام'}
+                إضافة العام
               </Button>
               <Button variant="outline" onClick={() => setIsAddYearOpen(false)} className="flex-1 rounded-xl h-12 font-bold border-2">إلغاء</Button>
             </DialogFooter>
@@ -394,7 +468,7 @@ export default function AdminCollegesPage() {
              <DialogFooter className="flex-row gap-3 pt-6">
                 <Button onClick={handleUpdateCollege} disabled={submitting} className="flex-1 h-12 font-bold rounded-xl gradient-blue shadow-lg gap-2 text-white">
                   {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
-                  {submitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+                  حفظ التغييرات
                 </Button>
                 <Button variant="outline" onClick={() => setEditingCollege(null)} className="flex-1 h-12 font-bold rounded-xl border-2">تراجع</Button>
              </DialogFooter>
@@ -428,13 +502,41 @@ export default function AdminCollegesPage() {
              <DialogFooter className="flex-row gap-3 pt-6">
                 <Button onClick={handleUpdateYear} disabled={submitting} className="flex-1 h-12 font-bold rounded-xl gradient-blue shadow-lg gap-2 text-white">
                   {submitting ? <Loader2 className="animate-spin w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
-                  {submitting ? 'جاري الحفظ...' : 'تحديث'}
+                  تحديث
                 </Button>
                 <Button variant="outline" onClick={() => setEditingYear(null)} className="flex-1 h-12 font-bold rounded-xl border-2">إلغاء</Button>
              </DialogFooter>
            </div>
         </DialogContent>
       </Dialog>
+
+      {/* Universal Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfig.isOpen} onOpenChange={(open) => setDeleteDialog({ ...deleteConfig, isOpen: open })}>
+        <AlertDialogContent className="rounded-3xl border-none text-right shadow-2xl" dir="rtl">
+          <AlertDialogHeader className="text-right space-y-3">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-2">
+              <AlertTriangle className="w-8 h-8 text-red-500" />
+            </div>
+            <AlertDialogTitle className="text-2xl font-black text-primary">هل أنت متأكد من الحذف؟</AlertDialogTitle>
+            <AlertDialogDescription className="font-bold text-muted-foreground text-base">
+              أنت على وشك حذف <span className="text-red-600 font-black">({deleteConfig.name})</span> بشكل نهائي. 
+              هذا الإجراء سيؤدي لإزالة كافة السجلات المرتبطة بهذا المورد ولا يمكن التراجع عنه.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-3 pt-6">
+            <AlertDialogAction 
+              onClick={executeDelete} 
+              className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 font-bold h-12"
+            >
+              نعم، احذف نهائياً
+            </AlertDialogAction>
+            <AlertDialogCancel className="flex-1 rounded-xl font-bold border-2 h-12">
+              إلغاء
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
