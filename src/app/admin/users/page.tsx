@@ -301,9 +301,9 @@ export default function UsersPage() {
                               <AlertTriangle className="w-8 h-8 text-red-500" />
                             </div>
                             <div className="space-y-2 w-full text-right">
-                              <AlertDialogTitle className="text-xl font-black text-primary">حذف حساب مستخدم</AlertDialogTitle>
+                              <AlertDialogTitle className="text-xl font-black text-primary">تأكيد عملية الحذف</AlertDialogTitle>
                               <AlertDialogDescription className="font-bold text-muted-foreground text-xs leading-relaxed">
-                                سيتم حذف حساب <span className="text-red-600 font-black">({user.name})</span> بشكل نهائي من النظام. لا يمكن التراجع عن هذا الإجراء.
+                                أنت على وشك حذف حساب <span className="text-red-600 font-black">({user.name})</span> بشكل نهائي. سيتم إزالة كافة السجلات المرتبطة به.
                               </AlertDialogDescription>
                             </div>
                           </AlertDialogHeader>
@@ -312,9 +312,9 @@ export default function UsersPage() {
                               onClick={() => handleDelete(user.id, user.name)} 
                               className="w-full rounded-xl bg-red-600 hover:bg-red-700 font-black h-12 text-white shadow-lg border-none order-1"
                             >
-                              نعم، احذف المستخدم
+                              نعم، احذف الحساب الآن
                             </AlertDialogAction>
-                            <AlertDialogCancel className="w-full rounded-xl font-bold border-2 h-12 text-primary hover:bg-muted/50 transition-all order-2">
+                            <AlertDialogCancel className="w-full rounded-xl font-black border-2 h-12 text-primary hover:bg-muted/50 transition-all order-2">
                               تراجع عن القرار
                             </AlertDialogCancel>
                           </AlertDialogFooter>
