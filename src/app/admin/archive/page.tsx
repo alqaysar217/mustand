@@ -25,7 +25,8 @@ import {
   Building2,
   Clock,
   Download,
-  ChevronLeft
+  ChevronLeft,
+  AlertTriangle
 } from "lucide-react";
 import {
   Dialog,
@@ -35,6 +36,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -129,7 +141,7 @@ export default function AdminArchivePage() {
       setIsSubmitting(false);
     }
   };
-    //------------------
+
   const handleMoveToBin = async (item: any) => {
     if (!firestore || !item.id) return;
     try {
@@ -283,7 +295,38 @@ export default function AdminArchivePage() {
                         <Button size="icon" onClick={() => setViewingArchive(item)} className="rounded-lg h-8 w-8 bg-white text-primary shadow-lg hover:bg-white/90" title="معاينة"><Eye className="w-4 h-4" /></Button>
                         <Button size="icon" onClick={() => setEditingArchive(item)} className="rounded-lg h-8 w-8 bg-blue-500 text-white shadow-lg hover:bg-blue-600" title="تعديل"><Edit2 className="w-4 h-4" /></Button>
                         <Button size="icon" onClick={() => handleDownload(item)} className="rounded-lg h-8 w-8 bg-secondary text-white shadow-lg hover:bg-secondary/90" title="تنزيل"><Download className="w-4 h-4" /></Button>
-                        <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" onClick={() => handleMoveToBin(item)} title="حذف"><Trash2 className="w-4 h-4" /></Button>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="icon" variant="destructive" className="rounded-lg h-8 w-8 shadow-lg" title="حذف">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-6 max-w-[380px]" dir="rtl">
+                            <AlertDialogHeader className="flex flex-col items-center space-y-4">
+                              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
+                                <AlertTriangle className="w-8 h-8 text-red-500" />
+                              </div>
+                              <div className="space-y-2 w-full text-right">
+                                <AlertDialogTitle className="text-xl font-black text-primary">نقل إلى المحذوفات</AlertDialogTitle>
+                                <AlertDialogDescription className="font-bold text-muted-foreground text-xs leading-relaxed">
+                                  سيتم نقل مستند <span className="text-red-600 font-black">({item.studentName})</span> إلى سلة المحذوفات. يمكنك استعادته لاحقاً.
+                                </AlertDialogDescription>
+                              </div>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="flex flex-col gap-2 mt-6 w-full">
+                              <AlertDialogAction 
+                                onClick={() => handleMoveToBin(item)} 
+                                className="w-full rounded-xl bg-red-600 hover:bg-red-700 font-black h-12 text-white shadow-lg border-none order-1"
+                              >
+                                نعم، انقل للسلة
+                              </AlertDialogAction>
+                              <AlertDialogCancel className="w-full rounded-xl font-black border-2 h-12 text-primary hover:bg-muted/50 transition-all order-2">
+                                تراجع
+                              </AlertDialogCancel>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                       <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
                         <Badge className="bg-primary/80 backdrop-blur-md text-[8px] px-1.5 py-0 rounded-md font-bold">{item.term}</Badge>
@@ -346,7 +389,38 @@ export default function AdminArchivePage() {
                               <Button size="icon" variant="ghost" className="rounded-xl hover:bg-primary/5 h-9 w-9" onClick={() => setViewingArchive(item)} title="معاينة"><Eye className="w-4 h-4 text-primary" /></Button>
                               <Button size="icon" variant="ghost" className="rounded-xl hover:bg-blue-50 h-9 w-9" onClick={() => setEditingArchive(item)} title="تعديل"><Edit2 className="w-4 h-4 text-blue-600" /></Button>
                               <Button size="icon" variant="ghost" className="rounded-xl hover:bg-secondary/5 h-9 w-9" onClick={() => handleDownload(item)} title="تنزيل"><Download className="w-4 h-4 text-secondary" /></Button>
-                              <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5 h-9 w-9" onClick={() => handleMoveToBin(item)} title="حذف"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                              
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="rounded-xl hover:bg-destructive/5 h-9 w-9" title="حذف">
+                                    <Trash2 className="w-4 h-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-6 max-w-[380px]" dir="rtl">
+                                  <AlertDialogHeader className="flex flex-col items-center space-y-4">
+                                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
+                                      <AlertTriangle className="w-8 h-8 text-red-500" />
+                                    </div>
+                                    <div className="space-y-2 w-full text-right">
+                                      <AlertDialogTitle className="text-xl font-black text-primary">تأكيد النقل للسلة</AlertDialogTitle>
+                                      <AlertDialogDescription className="font-bold text-muted-foreground text-xs leading-relaxed">
+                                        هل أنت متأكد من نقل ملف <span className="text-red-600 font-black">({item.studentName})</span> لسلة المحذوفات؟
+                                      </AlertDialogDescription>
+                                    </div>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className="flex flex-col gap-2 mt-6 w-full">
+                                    <AlertDialogAction 
+                                      onClick={() => handleMoveToBin(item)} 
+                                      className="w-full rounded-xl bg-red-600 hover:bg-red-700 font-black h-12 text-white shadow-lg border-none order-1"
+                                    >
+                                      نعم، انقل الآن
+                                    </AlertDialogAction>
+                                    <AlertDialogCancel className="w-full rounded-xl font-black border-2 h-12 text-primary hover:bg-muted/50 transition-all order-2">
+                                      تراجع
+                                    </AlertDialogCancel>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </td>
                         </tr>
@@ -555,3 +629,4 @@ export default function AdminArchivePage() {
     </div>
   );
 }
+

@@ -112,16 +112,28 @@ export default function RecycleBinPage() {
                 تفريغ السلة نهائياً
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="rounded-[2rem] border-none text-right" dir="rtl">
-              <AlertDialogHeader className="text-right">
-                <AlertDialogTitle className="text-2xl font-black text-primary flex items-center justify-end gap-2">تأكيد التفريغ الكامل<AlertTriangle className="w-6 h-6 text-destructive" /></AlertDialogTitle>
-                <AlertDialogDescription className="font-bold pt-2 text-base">
-                  أنت على وشك حذف جميع العناصر الموجودة في السلة بشكل نهائي. هذا الإجراء سيمسح البيانات من الخوادم السحابية ولا يمكن التراجع عنه.
-                </AlertDialogDescription>
+            <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-6 max-w-[380px]" dir="rtl">
+              <AlertDialogHeader className="flex flex-col items-center space-y-4">
+                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
+                  <AlertTriangle className="w-8 h-8 text-red-500" />
+                </div>
+                <div className="space-y-2 w-full text-right">
+                  <AlertDialogTitle className="text-xl font-black text-primary">تفريغ السلة بالكامل؟</AlertDialogTitle>
+                  <AlertDialogDescription className="font-bold text-muted-foreground text-xs leading-relaxed">
+                    أنت على وشك حذف <span className="text-red-600 font-black">كافة العناصر</span> نهائياً من السحابة. لا يمكن التراجع عن هذا الإجراء أبداً.
+                  </AlertDialogDescription>
+                </div>
               </AlertDialogHeader>
-              <AlertDialogFooter className="flex-row gap-3 mt-6">
-                <AlertDialogAction onClick={handleEmptyBin} className="flex-1 rounded-xl bg-destructive hover:bg-destructive/90 font-bold h-12">نعم، احذف الكل</AlertDialogAction>
-                <AlertDialogCancel className="flex-1 rounded-xl font-bold border-2 h-12">تراجع</AlertDialogCancel>
+              <AlertDialogFooter className="flex flex-col gap-2 mt-6 w-full">
+                <AlertDialogAction 
+                  onClick={handleEmptyBin} 
+                  className="w-full rounded-xl bg-red-600 hover:bg-red-700 font-black h-12 text-white shadow-lg border-none order-1"
+                >
+                  نعم، احذف الكل نهائياً
+                </AlertDialogAction>
+                <AlertDialogCancel className="w-full rounded-xl font-black border-2 h-12 text-primary hover:bg-muted/50 transition-all order-2">
+                  تراجع
+                </AlertDialogCancel>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -195,21 +207,33 @@ export default function RecycleBinPage() {
                             variant="ghost" 
                             size="icon" 
                             className="rounded-xl hover:bg-red-50 text-red-600 h-10 w-10 shadow-sm border border-transparent hover:border-red-100"
-                            title="حذف نهائي من السحابة"
+                            title="حذف نهائي"
                           >
                             <Trash2 className="w-5 h-5" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-[2rem] border-none text-right" dir="rtl">
-                          <AlertDialogHeader className="text-right">
-                            <AlertDialogTitle className="text-2xl font-black text-primary">حذف السجل للأبد؟</AlertDialogTitle>
-                            <AlertDialogDescription className="font-bold pt-2 text-base">
-                              أنت على وشك حذف بيانات <span className="text-red-600 font-black">{item.name}</span> بشكل نهائي. لا يمكن للمدير أو الموظف استرجاع هذا السجل بعد الآن.
-                            </AlertDialogDescription>
+                        <AlertDialogContent className="rounded-[2rem] border-none shadow-2xl p-6 max-w-[380px]" dir="rtl">
+                          <AlertDialogHeader className="flex flex-col items-center space-y-4">
+                            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center animate-bounce duration-[2000ms]">
+                              <AlertTriangle className="w-8 h-8 text-red-500" />
+                            </div>
+                            <div className="space-y-2 w-full text-right">
+                              <AlertDialogTitle className="text-xl font-black text-primary">حذف نهائي للأبد؟</AlertDialogTitle>
+                              <AlertDialogDescription className="font-bold text-muted-foreground text-xs leading-relaxed">
+                                سيتم حذف سجل <span className="text-red-600 font-black">({item.name})</span> بشكل نهائي من السحابة. لا يمكن استعادته مرة أخرى.
+                              </AlertDialogDescription>
+                            </div>
                           </AlertDialogHeader>
-                          <AlertDialogFooter className="flex-row gap-3 mt-6">
-                            <AlertDialogAction onClick={() => handlePermanentDelete(item.id)} className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 font-bold h-12">تأكيد الحذف النهائي</AlertDialogAction>
-                            <AlertDialogCancel className="flex-1 rounded-xl font-bold border-2 h-12">تراجع</AlertDialogCancel>
+                          <AlertDialogFooter className="flex flex-col gap-2 mt-6 w-full">
+                            <AlertDialogAction 
+                              onClick={() => handlePermanentDelete(item.id)} 
+                              className="w-full rounded-xl bg-red-600 hover:bg-red-700 font-black h-12 text-white shadow-lg border-none order-1"
+                            >
+                              نعم، احذف للأبد
+                            </AlertDialogAction>
+                            <AlertDialogCancel className="w-full rounded-xl font-black border-2 h-12 text-primary hover:bg-muted/50 transition-all order-2">
+                              تراجع
+                            </AlertDialogCancel>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -250,3 +274,4 @@ export default function RecycleBinPage() {
     </div>
   );
 }
+
