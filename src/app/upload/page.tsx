@@ -146,7 +146,6 @@ export default function UploadPage() {
 
   const processSingleImageAI = async (file: string): Promise<AIResult> => {
     try {
-      // الاتصال المباشر بـ Server Action بدلاً من API Route
       const responseData = await extractExamDetails({ examImageDataUri: file });
       
       const regId = responseData.studentRegistrationId || "";
@@ -321,13 +320,13 @@ export default function UploadPage() {
             <TabsList className="grid w-full grid-cols-2 h-14 md:h-16 bg-white rounded-2xl p-1.5 shadow-xl border overflow-hidden">
               <TabsTrigger 
                 value="manual" 
-                className="rounded-xl font-black text-xs md:text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white"
+                className="rounded-xl font-black text-xs md:text-sm transition-all data-[state=active]:bg-primary data-[state=active]:text-white"
               >
                 <Keyboard className="w-4 h-4 ml-2" /> أرشفة يدوية
               </TabsTrigger>
               <TabsTrigger 
                 value="ai" 
-                className="rounded-xl font-black text-xs md:text-sm transition-all data-[state=active]:gradient-blue data-[state=active]:text-white"
+                className="rounded-xl font-black text-xs md:text-sm transition-all data-[state=active]:bg-primary data-[state=active]:text-white"
               >
                 <Cpu className="w-4 h-4 ml-2" /> أرشفة ذكية
               </TabsTrigger>
