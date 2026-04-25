@@ -66,7 +66,7 @@ export function Sidebar() {
               key={item.href} 
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all group text-right",
+                "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group text-right",
                 isActive 
                   ? "bg-white text-primary shadow-lg font-bold" 
                   : "hover:bg-white/10 text-white/70 hover:text-white"
@@ -80,24 +80,24 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-6 mt-auto">
-        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 border border-white/10 shadow-xl">
-          <div className="flex items-center gap-4 mb-4 text-right">
-            <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-2 border-white/30 shadow-md shrink-0">
+      <div className="p-4 mt-auto">
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/10 shadow-xl">
+          <div className="flex items-center gap-3 mb-2.5 text-right">
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-white/30 shadow-md shrink-0">
               <Image src={currentUser?.avatar || "/emploeed-1.png"} alt="Profile" fill className="object-cover" />
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-black truncate text-white">{currentUser?.name || "موظف"}</p>
-              <p className="text-[10px] text-white/60 truncate font-bold uppercase tracking-wider">موظف أرشفة</p>
+              <p className="text-xs font-black truncate text-white leading-tight">{currentUser?.name || "موظف"}</p>
+              <p className="text-[9px] text-white/60 truncate font-bold uppercase tracking-wider">موظف أرشفة</p>
             </div>
           </div>
           <Button 
             variant="ghost" 
             onClick={handleLogout}
-            className="w-full justify-center bg-white/5 hover:bg-destructive hover:text-white text-white/80 rounded-2xl h-11 font-black transition-all gap-2 border border-white/5"
+            className="w-full justify-center bg-white/5 hover:bg-destructive hover:text-white text-white/80 rounded-xl h-9 font-black transition-all gap-2 border border-white/5 text-[10px]"
           >
-            <LogOut className="w-4 h-4" />
-            <span className="text-xs font-bold">تسجيل الخروج</span>
+            <LogOut className="w-3.5 h-3.5" />
+            <span>تسجيل الخروج</span>
           </Button>
         </div>
       </div>
