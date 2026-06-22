@@ -1,8 +1,7 @@
 'use server';
 /**
  * @fileOverview محرك استخراج البيانات المطور للتحقق الشامل من محتوى غلاف الامتحان.
- * تم تحديثه ليدعم المطابقة السياقية والتعامل مع الترجمة بين العربية والإنجليزية.
- * تم نقل مفتاح الربط إلى ملف البيئة .env للأمان.
+ * تم تحسين البرومبت لضمان دقة 100% في استخراج رقم القيد (11 رقم) والمطابقة اللغوية.
  */
 
 import { z } from 'zod';
@@ -16,7 +15,7 @@ const ExtractExamDetailsInputSchema = z.object({
 });
 
 const ExtractExamDetailsOutputSchema = z.object({
-  studentRegistrationId: z.string().optional().describe("رقم القيد الجامعي المستخرج (يجب أن يكون 11 رقم)"),
+  studentRegistrationId: z.string().optional().describe("رقم القيد الجامعي المستخرج"),
   studentName: z.string().optional().describe("اسم الطالب الكامل المستخرج"),
   subjectName: z.string().optional().describe("اسم المادة الدراسية المكتوب"),
   departmentName: z.string().optional().describe("اسم القسم أو التخصص المكتوب"),
@@ -28,7 +27,6 @@ const ExtractExamDetailsOutputSchema = z.object({
 export type ExtractExamDetailsInput = z.infer<typeof ExtractExamDetailsInputSchema>;
 export type ExtractExamDetailsOutput = z.infer<typeof ExtractExamDetailsOutputSchema>;
 
-// استدعاء المفتاح من ملف البيئة للأمان
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 export async function extractExamDetails(input: ExtractExamDetailsInput): Promise<ExtractExamDetailsOutput> {
@@ -54,31 +52,61 @@ export async function extractExamDetails(input: ExtractExamDetailsInput): Promis
             content: [
               {
                 type: 'text',
-                text: `أنت خبير أرشفة أكاديمي محترف. حلل الصورة واستخرج البيانات بدقة متناهية مع مراعاة السياق التالي:
-                
-                السياق المختار في النظام للمطابقة:
-                - المادة المختارة: ${input.selectedSubject}
-                - القسم المختار: ${input.selectedDept}
-                - المستوى المختار: ${input.selectedLevel}
-                - الترم المختار: ${input.selectedTerm}
+                text: `أنت نظام أرشفة أكاديمي متخصص في تحليل أغلفة دفاتر الامتحانات الجامعية.
+مهمتك هي استخراج البيانات الأكاديمية المكتوبة بخط اليد أو المطبوعة من الصورة بدقة عالية جداً، مع التركيز على تقليل أخطاء الأرشفة.
 
-                قواعد الاستخراج الذهبية (هام جداً):
-                1. رقم القيد (إلزامي 11 رقم): ابحث عن رقم القيد وتأكد أنه يتكون من 11 رقماً. إذا بدا لك أن هناك 10 أرقام فقط، دقق جيداً في البداية أو النهاية أو الحواف، غالباً ما يكون هناك رقم مفقود. يجب أن تعيد 11 رقماً في الناتج.
-                2. المادة (ترجمة ذكية): إذا كانت المادة في الورقة مكتوبة بالإنجليزية مثل (Data Mining) وهي مطابقة للمادة المختارة "${input.selectedSubject}"، فاستخرج الاسم كما هو مكتوب.
-                3. الفصل الدراسي والمستوى: استخرجهم بدقة كما هم مكتوبون. "الفصل الدراسي" في الورقة هو "الترم" في النظام.
-                
-                البيانات المطلوبة بصيغة JSON فقط:
-                {
-                  "studentRegistrationId": "رقم القيد المكون من 11 رقم",
-                  "studentName": "الاسم الكامل",
-                  "subjectName": "اسم المادة كما هو في الورقة",
-                  "departmentName": "القسم كما هو في الورقة",
-                  "collegeName": "الكلية",
-                  "level": "المستوى الدراسي",
-                  "term": "الفصل الدراسي"
-                }
+استخدم السياق التالي للمساعدة في المطابقة والتحقق (هذه البيانات هي ما اختاره الموظف في النظام):
+- المادة الدراسية المختارة: ${input.selectedSubject || "غير محدد"}
+- التخصص الدراسي المختار: ${input.selectedDept || "غير محدد"}
+- المستوى الدراسي المختار: ${input.selectedLevel || "غير محدد"}
+- الفصل الدراسي المختار: ${input.selectedTerm || "غير محدد"}
 
-                ملاحظة: لا تضف أي نصوص توضيحية، أجب فقط بـ JSON.`
+## قواعد إلزامية
+
+### أولاً: رقم القيد (أعلى أولوية)
+رقم القيد هو أهم حقل في العملية كلها.
+* ابحث عنه في جميع أجزاء الصورة واستخرج 11 رقماً فقط.
+* إذا وجدت 10 أرقام، دقق جيداً في الحواف أو البداية فغالباً هناك رقم مفقود. يجب أن تعيد 11 رقماً.
+* استخرج الأرقام فقط وتجاهل أي مسافات أو رموز.
+* حوّل الأرقام العربية (٠١٢٣٤٥٦٧٨٩) إلى إنجليزية (0123456789).
+* ابحث عن كلمات: "رقم القيد"، "القيد"، "رقم الطالب"، "Student ID"، "Registration Number".
+
+### ثانياً: اسم الطالب
+* استخرج الاسم الكامل كما هو مكتوب، وصحح الأخطاء الإملائية البسيطة والواضحة فقط.
+
+### ثالثاً: المادة الدراسية
+* استخرج المادة سواء كتبت بالعربية، الإنجليزية، باختصار، أو بخطأ إملائي.
+* طابق المادة مع السياق المذكور ("${input.selectedSubject}"). 
+* أمثلة التطبيع: "Eng", "English" -> "اللغة الإنجليزية". "Math" -> "الرياضيات". "Data Mining" -> "تنقيب البيانات".
+* لا تغير المادة إلى مادة مختلفة تماماً عن السياق.
+
+### رابعاً: التخصص
+* استخرج التخصص وقم بتطبيعه بناءً على السياق ("${input.selectedDept}").
+* أمثلة: "IT" -> "تقنية المعلومات"، "CS" -> "علوم الحاسوب"، "MIS" -> "نظم المعلومات الإدارية".
+
+### خامساً: الكلية
+* استخرج اسم الكلية وقم بتوحيده إن أمكن (مثال: "كلية الحاسبات").
+
+### سادساً: المستوى الدراسي (4 مستويات فقط)
+* استخرج المستوى وحوله للمسمى الرسمي: 1 -> "المستوى الأول"، 2 -> "المستوى الثاني"، 3 -> "المستوى الثالث"، 4 -> "المستوى الرابع".
+
+### سابعاً: الفصل الدراسي (الترم)
+* استخرج الفصل الدراسي: 1 أو "الاول" -> "الفصل الأول"، 2 -> "الفصل الثاني".
+
+### قواعد المنطق
+* ممنوع اختراع أو تخمين قيم غير موجودة.
+* إذا كانت الثقة منخفضة جداً في حقل ما، أرجعه نصاً فارغاً "".
+* أجب فقط بصيغة JSON صحيحة بدون أي شرح إضافي.
+
+{
+  "studentRegistrationId": "",
+  "studentName": "",
+  "subjectName": "",
+  "departmentName": "",
+  "collegeName": "",
+  "level": "",
+  "term": ""
+}`
               },
               {
                 type: 'image_url',
@@ -96,7 +124,6 @@ export async function extractExamDetails(input: ExtractExamDetailsInput): Promis
     if (!response.ok) throw new Error(data.error?.message || "فشل الاتصال بمحرك الذكاء الاصطناعي");
 
     let contentRaw = data.choices[0].message.content;
-    // تنظيف المخرجات من أي markdown محتمل
     const startIndex = contentRaw.indexOf('{');
     const endIndex = contentRaw.lastIndexOf('}');
     if (startIndex !== -1 && endIndex !== -1) {

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -232,7 +231,7 @@ export default function ArchivePage() {
                   <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none font-bold"><SelectValue placeholder="كافة المستويات" /></SelectTrigger>
                   <SelectContent className="rounded-xl font-bold">
                     <SelectItem value="all">كافة المستويات</SelectItem>
-                    {["المستوى الأول", "المستوى الثاني", "المستوى الثالث", "المستوى الرابع", "المستوى الخامس"].map(l => (
+                    {["المستوى الأول", "المستوى الثاني", "المستوى الثالث", "المستوى الرابع"].map(l => (
                       <SelectItem key={l} value={l}>{l}</SelectItem>
                     ))}
                   </SelectContent>
