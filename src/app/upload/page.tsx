@@ -80,7 +80,6 @@ interface AIResult {
 }
 
 export default function UploadPage() {
-  // التغيير المطلوب: جعل 'ai' هو الوضع الافتراضي
   const [activeMode, setActiveMode] = useState<'manual' | 'ai'>('ai');
   const [step, setStep] = useState(1); 
   const [loading, setLoading] = useState(false);
@@ -259,7 +258,6 @@ export default function UploadPage() {
       const aiSub = normalize(responseData.subjectName);
       
       // الكلمات المفتاحية للمادة (إذا كان الاسم يحتوي على كلمات من الاسم الأصلي أو ترجمته الشائعة)
-      const keywords = ["data", "mining", "تنقيب", "بيانات", "نظم", "معلومات", "برمجة", "حاسوب", "هندسة", "تطوير"];
       const isSemanticMatch = (contextSub.includes(aiSub) || aiSub.includes(contextSub)) || 
                              (aiSub.length > 3 && contextSub.includes(aiSub.substring(0, 4))) ||
                              (contextSub === "تنقيبالبيانات" && aiSub === "datamining") ||
@@ -497,8 +495,7 @@ export default function UploadPage() {
                       <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-md group border-2 border-white bg-white">
                         <Image src={doc.coverImage} alt="Cover" fill className="object-cover" />
                         <div className="absolute top-0 left-0 w-full p-1.5 flex flex-col gap-1">
-                           <Badge className={cn("text-[8px] font-black w-fit self-end", doc.type === 'pdf' ? "bg-red-500" : "bg-blue-500")}>{doc.type.toUpperCase()}</Badge>
-                           <Badge className={cn("text-[8px] font-black w-fit self-end", doc.sizeKB > 1000 ? "bg-red-600" : "bg-green-600")}>{Math.round(doc.sizeKB/10.24)/100} MB</Badge>
+                           <Badge className={cn("text-[8px] font-black w-fit self-end", doc.type === 'pdf' ? "bg-red-50" : "bg-blue-50")}>{doc.type.toUpperCase()}</Badge>
                         </div>
                         {aiResults.length === 0 && (
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]"><Button size="icon" variant="destructive" className="h-8 w-8 rounded-lg" onClick={(e) => { e.stopPropagation(); setDocs(prev => prev.filter((_, idx) => idx !== i)); }}><Trash2 className="w-4 h-4" /></Button></div>
@@ -528,7 +525,6 @@ export default function UploadPage() {
                                 {res.isVerified ? <Check className="w-4 h-4 mr-2" /> : <X className="w-4 h-4 mr-2" />}
                               </div>
                               {!res.isVerified && <p className="text-[9px] text-red-600 font-bold mt-1">الطالب غير مسجل في النظام!</p>}
-                              {res.studentRegistrationId && res.studentRegistrationId.length !== 11 && <p className="text-[8px] text-orange-600 font-bold">تنبيه: رقم القيد يجب أن يكون 11 رقم</p>}
                            </div>
                            
                            {res.status === 'error' ? (
@@ -559,7 +555,6 @@ export default function UploadPage() {
                            <div className="flex flex-col justify-center gap-2">
                               {res.status === 'mismatch' ? (<Badge variant="destructive" className="bg-orange-500 text-white h-10 w-full text-[10px] font-black gap-2"><XCircle className="w-4 h-4" /> بيانات غير متطابقة</Badge>) : 
                                res.status === 'error' ? (<Badge variant="destructive" className="h-10 text-[10px] font-black gap-2"><AlertCircle className="w-4 h-4" /> فشل التحليل</Badge>) : 
-                               res.sizeKB >= 1000 ? (<Badge variant="destructive" className="h-10 text-[10px] font-black gap-2"><AlertCircle className="w-4 h-4" /> الحجم كبير</Badge>) : 
                                res.status === 'not_found' ? (<Badge variant="outline" className="bg-red-50 text-red-700 h-10 text-[10px] font-black gap-2 border-red-200"><AlertTriangle className="w-4 h-4" /> غير مسجل</Badge>) :
                                (<Badge className="bg-green-600 text-white h-10 text-[10px] font-black gap-2"><ShieldCheck className="w-4 h-4" /> جاهز للأرشفة</Badge>)}
                               <Button variant="ghost" onClick={() => setAiResults(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive h-8 text-[10px] font-black hover:bg-red-50 rounded-xl">إزالة من القائمة</Button>
